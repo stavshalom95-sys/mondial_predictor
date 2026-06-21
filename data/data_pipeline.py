@@ -20,9 +20,22 @@ and scripts/fetch_schedule.py from football-data.org):
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
+from datetime import datetime, timezone, timedelta
 from typing import Optional
+
+from config.scoring_rules import TournamentStage
+
+# Maps the stage key stored in JSON (from fetch_schedule.py) to TournamentStage enum
+_STAGE_KEY_MAP: dict[str, TournamentStage] = {
+    "group_stage":  TournamentStage.GROUP_STAGE,
+    "round_of_32":  TournamentStage.ROUND_OF_32,
+    "round_of_16":  TournamentStage.ROUND_OF_16,
+    "quarter_final": TournamentStage.QUARTER_FINAL,
+    "semi_final":   TournamentStage.SEMI_FINAL,
+    "third_place":  TournamentStage.THIRD_PLACE,
+    "final_stage":  TournamentStage.FINAL,
+}
 
 
 @dataclass
@@ -31,9 +44,10 @@ class ScheduledMatch:
     home_team:      str
     away_team:      str
     start_time_utc: datetime
-    status:         str            # "scheduled" | "live" | "final"
+    status:         str                        # "scheduled" | "live" | "final"
     home_score:     Optional[int]
     away_score:     Optional[int]
+    stage:          TournamentStage = field(default=TournamentStage.GROUP_STAGE)
 
     def __str__(self) -> str:
         score = ""
@@ -71,6 +85,9 @@ def parse_world_cup_schedule(raw_games: list[dict]) -> list[ScheduledMatch]:
         if away_score is not None:
             away_score = int(away_score)
 
+        stage_key = g.get("stage", "group_stage")
+        stage = _STAGE_KEY_MAP.get(stage_key, TournamentStage.GROUP_STAGE)
+
         matches.append(ScheduledMatch(
             match_id       = str(g.get("id", "")),
             home_team      = home_name,
@@ -79,6 +96,7 @@ def parse_world_cup_schedule(raw_games: list[dict]) -> list[ScheduledMatch]:
             status         = g.get("status", "scheduled"),
             home_score     = home_score,
             away_score     = away_score,
+            stage          = stage,
         ))
 
     return matches
@@ -109,6 +127,24 @@ def get_next_unplayed_matches(
     upcoming = [m for m in all_matches if m.status == "scheduled" and m.start_time_utc > now]
     upcoming.sort(key=lambda m: m.start_time_utc)
     return upcoming[:limit]
+
+
+def get_todays_matches(
+    all_matches: list[ScheduledMatch],
+    hours_ahead: int = 24,
+) -> list[ScheduledMatch]:
+    """
+    Return matches that start within the next `hours_ahead` hours and are not finished.
+    Sorted by start time. Used by the auto-odds pipeline to know which matches need odds today.
+    """
+    now    = datetime.now(timezone.utc)
+    cutoff = now + timedelta(hours=hours_ahead)
+    today  = [
+        m for m in all_matches
+        if m.status != "final" and now <= m.start_time_utc <= cutoff
+    ]
+    today.sort(key=lambda m: m.start_time_utc)
+    return today
 
 
 def get_match_by_teams(

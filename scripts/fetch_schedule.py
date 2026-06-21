@@ -35,6 +35,17 @@ STATUS_MAP: dict[str, str] = {
     "CANCELLED":      "scheduled",
 }
 
+# football-data.org stage -> our internal stage key (used by data_pipeline for stage inference)
+STAGE_MAP: dict[str, str] = {
+    "GROUP_STAGE":    "group_stage",
+    "LAST_32":        "round_of_32",
+    "LAST_16":        "round_of_16",
+    "QUARTER_FINALS": "quarter_final",
+    "SEMI_FINALS":    "semi_final",
+    "THIRD_PLACE":    "third_place",
+    "FINAL":          "final_stage",
+}
+
 
 def fetch_wc_matches(api_key: str) -> list[dict]:
     headers = {"X-Auth-Token": api_key}
@@ -65,9 +76,13 @@ def fetch_wc_matches(api_key: str) -> list[dict]:
         raw_status = m.get("status", "SCHEDULED")
         status = STATUS_MAP.get(raw_status, "scheduled")
 
+        raw_stage = m.get("stage", "GROUP_STAGE")
+        stage = STAGE_MAP.get(raw_stage, "group_stage")
+
         matches.append({
             "id":         str(m.get("id", "")),
             "status":     status,
+            "stage":      stage,
             "start_time": m.get("utcDate", ""),
             "home":       home_abbr,
             "away":       away_abbr,

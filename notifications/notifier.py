@@ -22,6 +22,27 @@ class DailyPick:
     recommendation: StrategyRecommendation
 
 
+def _describe_score(home_team: str, away_team: str, home_goals: int, away_goals: int) -> str:
+    """
+    Return an RTL-safe, unambiguous score description.
+
+    WhatsApp's bidi renderer can flip "3:0" visually when mixed with Hebrew,
+    making it impossible to tell which side the goals belong to.
+    Fix: always name the winner explicitly + use dash separator + high-low order.
+
+    Examples:
+      home=Spain 3, away=Saudi Arabia 0  →  "Spain מנצחת 3-0"
+      home=Spain 0, away=Saudi Arabia 3  →  "Saudi Arabia מנצחת 3-0"
+      home=Spain 1, away=Saudi Arabia 1  →  "תיקו 1-1"
+    """
+    if home_goals > away_goals:
+        return f"{home_team} מנצחת {home_goals}-{away_goals}"
+    elif away_goals > home_goals:
+        return f"{away_team} מנצחת {away_goals}-{home_goals}"
+    else:
+        return f"תיקו {home_goals}-{away_goals}"
+
+
 def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> str:
     """
     Pure function — build the WhatsApp message string.
@@ -51,10 +72,13 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> 
         rec  = pick.recommendation
         icon = "🛡️" if rec.strategy == Strategy.SAFE else "🎲"
 
+        pick_desc = _describe_score(
+            pick.home_team, pick.away_team,
+            rec.recommended_pick.home_goals, rec.recommended_pick.away_goals,
+        )
         lines.append(f"{icon} *{pick.home_team} נגד {pick.away_team}*")
         lines.append(
-            f"   ניחוש: *{rec.recommended_pick.home_goals}:{rec.recommended_pick.away_goals}* "
-            f"({rec.recommended_pick.probability * 100:.0f}% סיכוי)"
+            f"   ניחוש: *{pick_desc}* ({rec.recommended_pick.probability * 100:.0f}% סיכוי)"
         )
         lines.append(
             f"   אסטרטגיה: {rec.strategy.value} | שלב: {rec.stage.value}"
@@ -65,7 +89,11 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> 
 
         if rec.strategy == Strategy.CONTRARIAN:
             safe = rec.alternative_safe_pick
-            lines.append(f"   (קונצנזוס היה: {safe.home_goals}:{safe.away_goals})")
+            consensus_desc = _describe_score(
+                pick.home_team, pick.away_team,
+                safe.home_goals, safe.away_goals,
+            )
+            lines.append(f"   (קונצנזוס היה: {consensus_desc})")
 
         lines.append("")
 

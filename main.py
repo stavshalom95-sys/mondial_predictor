@@ -50,6 +50,7 @@ from core.ai_ensemble import enhance
 from data.context_fetcher import fetch_match_context
 from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats
+from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 
 _MORNING_PICKS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "morning_picks.json")
 
@@ -206,6 +207,12 @@ def run_daily_pipeline(
         # true probabilities → Poisson model
         model = calibrate(true_probs, ou_probs)
         print(f"[pipeline]   lam_home={model.lambda_home:.2f}  lam_away={model.lambda_away:.2f}")
+
+        # FDR Strength Modifier: blend calibrated lambdas with vice-captain.com mu values
+        fdr_mu = fetch_fixture_mu(match.home_team, match.away_team)
+        if fdr_mu is not None:
+            model = apply_fdr_modifier(model, mu_home=fdr_mu[0], mu_away=fdr_mu[1])
+
         print(f"[pipeline]   top-3: {model.top_n(3)}")
 
         # Poisson model → strategy recommendation

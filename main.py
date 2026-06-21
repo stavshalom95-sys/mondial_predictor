@@ -2,7 +2,7 @@
 main.py — Fully automated daily orchestration pipeline.
 
 Zero manual steps required. Run sequence:
-  1. Fetch live standings from 365Scores (auth cookie) → override tournament_state.py defaults
+  1. Fetch live standings from 365Scores (public endpoint) → override tournament_state.py defaults
   2. Fetch today's match odds from The Odds API automatically
   3. Parse WC schedule (from fetch_schedule.py JSON) → get today's matches
   4. Match odds to schedule → run Poisson + game-theory engine per match
@@ -15,10 +15,10 @@ Usage (called by GitHub Actions):
 Required GitHub Secrets (env vars):
   FOOTBALL_DATA_API_KEY       — football-data.org (for fetch_schedule.py)
   THE_ODDS_API_KEY            — the-odds-api.com
-  SCORE365_AUTH_COOKIE        — browser session cookie from 365Scores
   GREEN_API_INSTANCE_ID       — green-api.com
   GREEN_API_TOKEN             — green-api.com
   WHATSAPP_RECIPIENT_PHONE    — recipient in international format (e.g. 972501234567)
+  (365Scores endpoint is public — no secret needed for standings)
 """
 from __future__ import annotations
 
@@ -94,8 +94,7 @@ def run_daily_pipeline(
     """
 
     # ── Step 1: Live standings sync ──────────────────────────────────────────
-    auth_cookie = os.environ.get("SCORE365_AUTH_COOKIE", "")
-    live_standings = fetch_standings(auth_cookie)
+    live_standings = fetch_standings()
 
     if live_standings:
         MY_CURRENT_STATE["my_points"]     = live_standings["my_points"]

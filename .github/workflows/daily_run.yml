@@ -31,7 +31,6 @@ jobs:
       - name: Run predictor and send notification
         env:
           THE_ODDS_API_KEY:         ${{ secrets.THE_ODDS_API_KEY }}
-          SCORE365_AUTH_COOKIE:     ${{ secrets.SCORE365_AUTH_COOKIE }}
           GREEN_API_INSTANCE_ID:    ${{ secrets.GREEN_API_INSTANCE_ID }}
           GREEN_API_TOKEN:          ${{ secrets.GREEN_API_TOKEN }}
           WHATSAPP_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_RECIPIENT_PHONE }}

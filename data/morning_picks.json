@@ -4,8 +4,8 @@
     "home_team": "Spain",
     "away_team": "Saudi Arabia",
     "stage": "שלב הבתים",
-    "lambda_home": 2.98,
-    "lambda_away": 0.36,
+    "lambda_home": 2.9,
+    "lambda_away": 0.34,
     "final_home_goals": 3,
     "final_away_goals": 0
   },
@@ -24,8 +24,8 @@
     "home_team": "Uruguay",
     "away_team": "Cape Verde Islands",
     "stage": "שלב הבתים",
-    "lambda_home": 1.72,
-    "lambda_away": 0.5,
+    "lambda_home": 1.76,
+    "lambda_away": 0.52,
     "final_home_goals": 2,
     "final_away_goals": 0
   },

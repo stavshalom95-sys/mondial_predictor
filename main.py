@@ -31,7 +31,7 @@ import sys
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from core.odds_converter import remove_overround, remove_overround_ou
+from core.odds_converter import MatchOdds1X2, remove_overround, remove_overround_ou
 from core.poisson_engine import calibrate
 from core.strategy_advisor import TournamentContext, recommend
 from data.data_pipeline import (
@@ -148,6 +148,14 @@ def run_daily_pipeline(
 
         odds_1x2 = cfg["odds_1x2"]
         ou_odds  = cfg.get("ou_odds")
+
+        # Defense-in-depth: if The Odds API listed teams in the opposite order to
+        # football-data.org, the odds_key home doesn't match the schedule home.
+        # Swap home/away odds so the Poisson model's "home" always = schedule home.
+        if odds_key[0] != normalize_team(match.home_team):
+            odds_1x2 = MatchOdds1X2(home=odds_1x2.away, draw=odds_1x2.draw, away=odds_1x2.home)
+            print(f"[pipeline]   NOTE: home/away odds swapped — API order differed from schedule")
+
         # Stage: prefer the one from the schedule (set by football-data.org), fall back to odds_fetcher inference
         stage    = match.stage if match.stage else cfg["stage"]
 

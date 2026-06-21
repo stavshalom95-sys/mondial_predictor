@@ -87,53 +87,41 @@ def _parse_commence_time(raw: str) -> datetime:
         return datetime.now(timezone.utc)
 
 
-def _extract_odds_from_bookmaker(bookmaker: dict) -> tuple[Optional[MatchOdds1X2], Optional[OverUnderOdds]]:
+def _extract_odds_from_bookmaker(
+    bookmaker: dict,
+    home_name: str,  # normalized home team name (from event.home_team)
+    away_name: str,  # normalized away team name (from event.away_team)
+) -> tuple[Optional[MatchOdds1X2], Optional[OverUnderOdds]]:
     """
     Parse h2h and totals markets from a single bookmaker entry.
     Returns (MatchOdds1X2|None, OverUnderOdds|None).
-    """
-    odds_1x2:  Optional[MatchOdds1X2]    = None
-    ou_odds:   Optional[OverUnderOdds]   = None
 
-    home_team_name = None  # resolved once we know the match
+    Outcomes are matched BY NAME, not by position. This is critical: bookmakers
+    do not guarantee that outcomes are listed in home-first order, so positional
+    assignment (non_draw[0] = home) randomly inverts the odds for some matches,
+    causing the Poisson model to treat the heavy favourite as the underdog.
+    """
+    odds_1x2: Optional[MatchOdds1X2]  = None
+    ou_odds:  Optional[OverUnderOdds] = None
 
     for market in bookmaker.get("markets", []):
-        key = market.get("key", "")
+        key      = market.get("key", "")
         outcomes = market.get("outcomes", [])
 
         if key == "h2h" and len(outcomes) >= 2:
-            # Outcomes: home team, away team (or "Draw")
-            home_price = draw_price = away_price = None
-            for o in outcomes:
-                oname = o.get("name", "").lower()
-                price = o.get("price", 0.0)
-                if oname == "draw":
-                    draw_price = price
-                elif home_team_name is None or oname == _normalize(home_team_name or ""):
-                    # First non-draw = home (API returns home first)
-                    if home_price is None:
-                        home_price = price
-                    else:
-                        away_price = price
-                else:
-                    away_price = price
+            # Build a name→price dict for safe lookup
+            named = {_normalize(o.get("name", "")): o.get("price") for o in outcomes}
 
-            # Simpler approach: outcomes order is [home, away] or [home, draw, away]
-            named = {o["name"].lower(): o["price"] for o in outcomes}
-            prices = [(o["name"], o["price"]) for o in outcomes]
+            home_price = named.get(home_name)
+            away_price = named.get(away_name)
+            draw_price = named.get("draw")
 
-            if "draw" in named and len(prices) == 3:
-                # Classic 1X2: find home and away around draw
-                non_draw = [(n, p) for n, p in prices if n.lower() != "draw"]
-                if len(non_draw) == 2:
-                    odds_1x2 = MatchOdds1X2(
-                        home=non_draw[0][1],
-                        draw=named["draw"],
-                        away=non_draw[1][1],
-                    )
-            elif len(prices) == 2:
-                # No draw (can happen in some markets) — skip
-                pass
+            if home_price and away_price:
+                odds_1x2 = MatchOdds1X2(
+                    home=home_price,
+                    draw=draw_price or 3.0,  # draw may be absent in some formats
+                    away=away_price,
+                )
 
         elif key == "totals" and len(outcomes) >= 2:
             over = under = None
@@ -211,7 +199,7 @@ def fetch_todays_match_odds(
         best_ou:   Optional[OverUnderOdds] = None
 
         for bookmaker in event.get("bookmakers", []):
-            odds_1x2, ou_odds = _extract_odds_from_bookmaker(bookmaker)
+            odds_1x2, ou_odds = _extract_odds_from_bookmaker(bookmaker, home_canonical, away_canonical)
             if odds_1x2 is not None:
                 best_1x2 = odds_1x2
                 if ou_odds is not None:

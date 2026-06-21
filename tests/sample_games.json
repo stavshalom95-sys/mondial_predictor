@@ -1,0 +1,74 @@
+[
+  {
+    "id": "sr:sport_event:66456001",
+    "status": "final",
+    "start_time": "2026-06-18T18:00:00+00:00",
+    "home": "CAN",
+    "away": "QAT",
+    "teams": {
+      "CAN": {"name": "Canada",  "abbreviation": "CAN"},
+      "QAT": {"name": "Qatar",   "abbreviation": "QAT"}
+    },
+    "score": {"CAN": 2, "QAT": 0}
+  },
+  {
+    "id": "sr:sport_event:66456002",
+    "status": "final",
+    "start_time": "2026-06-19T20:00:00+00:00",
+    "home": "GER",
+    "away": "JPN",
+    "teams": {
+      "GER": {"name": "Germany", "abbreviation": "GER"},
+      "JPN": {"name": "Japan",   "abbreviation": "JPN"}
+    },
+    "score": {"GER": 3, "JPN": 1}
+  },
+  {
+    "id": "sr:sport_event:66456998",
+    "status": "scheduled",
+    "start_time": "2026-06-21T16:00:00+00:00",
+    "home": "ESP",
+    "away": "KSA",
+    "teams": {
+      "ESP": {"name": "Spain",        "abbreviation": "ESP"},
+      "KSA": {"name": "Saudi Arabia", "abbreviation": "KSA"}
+    },
+    "score": {"ESP": null, "KSA": null}
+  },
+  {
+    "id": "sr:sport_event:66456999",
+    "status": "scheduled",
+    "start_time": "2026-06-21T19:00:00+00:00",
+    "home": "BRA",
+    "away": "MEX",
+    "teams": {
+      "BRA": {"name": "Brazil", "abbreviation": "BRA"},
+      "MEX": {"name": "Mexico", "abbreviation": "MEX"}
+    },
+    "score": {"BRA": null, "MEX": null}
+  },
+  {
+    "id": "sr:sport_event:66457000",
+    "status": "scheduled",
+    "start_time": "2026-06-22T16:00:00+00:00",
+    "home": "FRA",
+    "away": "ARG",
+    "teams": {
+      "FRA": {"name": "France",    "abbreviation": "FRA"},
+      "ARG": {"name": "Argentina", "abbreviation": "ARG"}
+    },
+    "score": {"FRA": null, "ARG": null}
+  },
+  {
+    "id": "sr:sport_event:66457001",
+    "status": "scheduled",
+    "start_time": "2026-06-23T19:00:00+00:00",
+    "home": "ENG",
+    "away": "USA",
+    "teams": {
+      "ENG": {"name": "England",       "abbreviation": "ENG"},
+      "USA": {"name": "United States", "abbreviation": "USA"}
+    },
+    "score": {"ENG": null, "USA": null}
+  }
+]

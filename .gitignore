@@ -1,0 +1,12 @@
+# Claude Code internal files — not part of the project
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+
+# IDE
+.vscode/
+.idea/

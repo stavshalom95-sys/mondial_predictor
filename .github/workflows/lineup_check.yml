@@ -1,0 +1,29 @@
+name: Mondial Predictor — Lineup Check
+
+on:
+  workflow_dispatch: {}   # manual trigger from the Actions tab (~60 min before kick-off)
+
+jobs:
+  lineup-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests anthropic
+
+      - name: Run lineup check (delta alert if prediction changed)
+        env:
+          RAPIDAPI_KEY:             ${{ secrets.RAPIDAPI_KEY }}
+          ANTHROPIC_API_KEY:        ${{ secrets.ANTHROPIC_API_KEY }}
+          GREEN_API_INSTANCE_ID:    ${{ secrets.GREEN_API_INSTANCE_ID }}
+          GREEN_API_TOKEN:          ${{ secrets.GREEN_API_TOKEN }}
+          WHATSAPP_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_RECIPIENT_PHONE }}
+        run: python main.py --lineup-check

@@ -12,6 +12,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
+from core.poisson_engine import ScoreProb
 from core.strategy_advisor import StrategyRecommendation, Strategy, TournamentContext
 
 
@@ -165,6 +166,8 @@ class DailyPick:
     home_team:      str
     away_team:      str
     recommendation: StrategyRecommendation
+    ai_pick:        Optional[ScoreProb] = None
+    ai_reasoning:   Optional[str]       = None
 
 
 def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> str:
@@ -195,18 +198,23 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> 
         rec  = pick.recommendation
         icon = "🛡️" if rec.strategy == Strategy.SAFE else "🎲"
 
+        # Use AI ensemble pick when available; fall back to strategy-advisor pick
+        final_score = pick.ai_pick if pick.ai_pick else rec.recommended_pick
         pick_desc = _describe_score(
             pick.home_team, pick.away_team,
-            rec.recommended_pick.home_goals, rec.recommended_pick.away_goals,
+            final_score.home_goals, final_score.away_goals,
         )
         home_label = _with_flag(pick.home_team)
         away_label = _with_flag(pick.away_team)
 
         lines.append(f"{icon} *{home_label} נגד {away_label}*")
         lines.append(
-            f"   ניחוש: *{pick_desc}* ({rec.recommended_pick.probability * 100:.0f}% סיכוי)"
+            f"   ניחוש: *{pick_desc}* ({final_score.probability * 100:.0f}% סיכוי)"
         )
         lines.append(f"   אסטרטגיה: {rec.strategy.value}")
+
+        if pick.ai_reasoning:
+            lines.append(f"   🤖 AI: {pick.ai_reasoning}")
 
         if rec.strategy == Strategy.CONTRARIAN:
             safe = rec.alternative_safe_pick
@@ -220,6 +228,38 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> 
 
     lines.append('_נשלח אוטומטית ע"י Mondial Predictor_')
     return "\n".join(lines)
+
+
+def format_lineup_alert(
+    home_team: str,
+    away_team: str,
+    old_home:  int,
+    old_away:  int,
+    new_home:  int,
+    new_away:  int,
+    reasoning: str,
+) -> str:
+    """
+    Build a WhatsApp alert sent when confirmed lineups change the AI prediction.
+    Called by run_lineup_check_pipeline() only when the score prediction changed.
+    """
+    home_label = _with_flag(home_team)
+    away_label = _with_flag(away_team)
+    old_desc   = _describe_score(home_team, away_team, old_home, old_away)
+    new_desc   = _describe_score(home_team, away_team, new_home, new_away)
+    return "\n".join([
+        "⚠️ *עדכון אסטרטגיה דחוף!*",
+        f"📋 {home_label} נגד {away_label}",
+        "הסגלים הרשמיים שינו את תחזית הבינה המלאכותית!",
+        "",
+        "🔄 הניחוש שונה:",
+        f"   לשעבר: {old_desc}",
+        f"   חדש: *{new_desc}*",
+        "",
+        f"🤖 {reasoning}",
+        "",
+        "*עדכן את ההימור שלך בהתאם!*",
+    ])
 
 
 def send_whatsapp_message(

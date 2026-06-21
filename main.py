@@ -32,7 +32,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from core.odds_converter import MatchOdds1X2, remove_overround, remove_overround_ou
-from core.poisson_engine import calibrate
+from core.poisson_engine import PoissonMatchModel, _build_matrix, calibrate
 from core.strategy_advisor import TournamentContext, recommend
 from data.data_pipeline import (
     parse_world_cup_schedule,
@@ -42,7 +42,13 @@ from data.data_pipeline import (
 from data.odds_fetcher import fetch_todays_match_odds, _normalize as normalize_team
 from data.scores365_sync import fetch_standings
 from data.tournament_state import MY_CURRENT_STATE
-from notifications.notifier import DailyPick, format_daily_message, send_whatsapp_message
+from notifications.notifier import DailyPick, format_daily_message, format_lineup_alert, send_whatsapp_message
+
+from config.scoring_rules import TournamentStage
+from core.ai_ensemble import enhance
+from data.context_fetcher import fetch_match_context
+
+_MORNING_PICKS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "morning_picks.json")
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +137,8 @@ def run_daily_pipeline(
     todays_matches = get_todays_matches(all_matches)
     print(f"[pipeline] Today's matches in schedule: {len(todays_matches)}")
 
-    picks: list[DailyPick] = []
+    picks:        list[DailyPick] = []
+    morning_data: list[dict]      = []
 
     for match in todays_matches:
         odds_key = _find_odds_for_match(match.home_team, match.away_team, odds_map)
@@ -178,11 +185,40 @@ def run_daily_pipeline(
         rec = recommend(model, context, stage)
         print(f"[pipeline]   recommendation: {rec.recommended_pick} [{rec.strategy.value}]")
 
+        # ── AI Ensemble: context (injuries, form) + Claude calibration ──────────
+        rapidapi_key    = os.environ.get("RAPIDAPI_KEY", "")
+        match_ctx       = fetch_match_context(match.home_team, match.away_team, api_key=rapidapi_key)
+        context_section = match_ctx.to_prompt_section() if match_ctx else ""
+
+        ai_pick_prob = None
+        ai_reasoning = None
+        ensemble_pick = enhance(
+            home_team       = match.home_team,
+            away_team       = match.away_team,
+            stage           = stage,
+            model           = model,
+            context_section = context_section,
+        )
+        if ensemble_pick:
+            ai_pick_prob = ensemble_pick.to_score_prob(model)
+            ai_reasoning = ensemble_pick.reasoning
+
         picks.append(DailyPick(
             home_team      = match.home_team,
             away_team      = match.away_team,
             recommendation = rec,
+            ai_pick        = ai_pick_prob,
+            ai_reasoning   = ai_reasoning,
         ))
+        morning_data.append({
+            "home_team":        match.home_team,
+            "away_team":        match.away_team,
+            "stage":            stage.value,
+            "lambda_home":      model.lambda_home,
+            "lambda_away":      model.lambda_away,
+            "final_home_goals": (ai_pick_prob.home_goals  if ai_pick_prob else rec.recommended_pick.home_goals),
+            "final_away_goals": (ai_pick_prob.away_goals  if ai_pick_prob else rec.recommended_pick.away_goals),
+        })
 
     if not picks:
         msg = "[pipeline] No matches could be analysed today (odds/schedule mismatch or all finished)."
@@ -201,7 +237,116 @@ def run_daily_pipeline(
         print(message)
         print("--- End of message ---\n")
 
+    save_morning_picks(morning_data)
     return message
+
+
+# ---------------------------------------------------------------------------
+# Morning picks persistence
+# ---------------------------------------------------------------------------
+
+def save_morning_picks(morning_data: list) -> None:
+    """Persist today's match records to morning_picks.json for the lineup-check run."""
+    if not morning_data:
+        return
+    os.makedirs(os.path.dirname(_MORNING_PICKS_PATH), exist_ok=True)
+    try:
+        with open(_MORNING_PICKS_PATH, "w", encoding="utf-8") as f:
+            json.dump(morning_data, f, indent=2, ensure_ascii=False)
+        print(f"[pipeline] Morning picks saved → {_MORNING_PICKS_PATH}")
+    except Exception as exc:
+        print(f"[pipeline] Warning: could not save morning picks: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# Lineup check pipeline (pre-match delta alert)
+# ---------------------------------------------------------------------------
+
+def run_lineup_check_pipeline(send_notification: bool = True) -> None:
+    """
+    Pre-match run (~60 min before kick-off).
+    Loads morning picks, fetches confirmed starting XIs, re-runs Claude.
+    Sends a WhatsApp alert ONLY if the AI prediction changed — no spam.
+    """
+    if not os.path.exists(_MORNING_PICKS_PATH):
+        print("[lineup] morning_picks.json not found — run the morning pipeline first.")
+        return
+
+    with open(_MORNING_PICKS_PATH, encoding="utf-8") as f:
+        morning_data = json.load(f)
+
+    print(f"[lineup] Loaded {len(morning_data)} morning picks.")
+    alerts_sent = 0
+
+    for record in morning_data:
+        home_team = record["home_team"]
+        away_team = record["away_team"]
+        stage     = TournamentStage(record["stage"])
+        old_h     = record["final_home_goals"]
+        old_a     = record["final_away_goals"]
+
+        print(f"\n[lineup] Checking {home_team} vs {away_team}...")
+
+        # Rebuild Poisson model from saved lambda values
+        lh, la = record["lambda_home"], record["lambda_away"]
+        model = PoissonMatchModel(
+            lambda_home = lh,
+            lambda_away = la,
+            _matrix     = _build_matrix(lh, la),
+        )
+
+        # Fetch confirmed starting XIs via API-Football
+        rapidapi_key = os.environ.get("RAPIDAPI_KEY", "")
+        match_ctx = fetch_match_context(
+            home_team, away_team,
+            include_lineups = True,
+            api_key         = rapidapi_key,
+        )
+
+        if match_ctx is None or not match_ctx.lineups_confirmed:
+            print(f"[lineup]   Lineups not yet confirmed — skipping.")
+            continue
+
+        # Re-run Claude with full context including confirmed XIs
+        ensemble_pick = enhance(
+            home_team       = home_team,
+            away_team       = away_team,
+            stage           = stage,
+            model           = model,
+            context_section = match_ctx.to_prompt_section(),
+        )
+        if ensemble_pick is None:
+            print(f"[lineup]   Claude unavailable — skipping.")
+            continue
+
+        new_h = ensemble_pick.chosen_home_goals
+        new_a = ensemble_pick.chosen_away_goals
+
+        if (new_h, new_a) == (old_h, old_a):
+            print(f"[lineup]   Prediction unchanged ({old_h}-{old_a}) — no alert sent.")
+            continue
+
+        # Prediction changed — build and send the delta alert
+        print(f"[lineup]   PREDICTION CHANGED: {old_h}-{old_a} → {new_h}-{new_a}")
+        alert = format_lineup_alert(
+            home_team = home_team,
+            away_team = away_team,
+            old_home  = old_h,
+            old_away  = old_a,
+            new_home  = new_h,
+            new_away  = new_a,
+            reasoning = ensemble_pick.reasoning,
+        )
+
+        if send_notification:
+            send_whatsapp_message(alert)
+        else:
+            print("\n--- Lineup Alert (notification disabled) ---")
+            print(alert)
+            print("--- End of alert ---\n")
+        alerts_sent += 1
+
+    print(f"\n[lineup] Done. {alerts_sent} alert(s) sent.")
 
 
 # ---------------------------------------------------------------------------
@@ -212,19 +357,30 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Mondial Predictor — fully automated daily pipeline")
     parser.add_argument(
         "games_json",
-        help="Path to JSON file produced by scripts/fetch_schedule.py",
+        nargs="?",
+        default=None,
+        help="Path to JSON file produced by scripts/fetch_schedule.py (required for morning run)",
     )
     parser.add_argument(
         "--no-notify",
         action="store_true",
         help="Skip sending WhatsApp notification (print message instead)",
     )
+    parser.add_argument(
+        "--lineup-check",
+        action="store_true",
+        help="Pre-match run: fetch confirmed lineups and send alert if prediction changed",
+    )
     args = parser.parse_args()
 
-    with open(args.games_json, encoding="utf-8") as f:
-        raw_games = json.load(f)
-
-    run_daily_pipeline(raw_games, send_notification=not args.no_notify)
+    if args.lineup_check:
+        run_lineup_check_pipeline(send_notification=not args.no_notify)
+    elif args.games_json:
+        with open(args.games_json, encoding="utf-8") as f:
+            raw_games = json.load(f)
+        run_daily_pipeline(raw_games, send_notification=not args.no_notify)
+    else:
+        parser.error("games_json is required for the morning run (or use --lineup-check)")
 
 
 if __name__ == "__main__":

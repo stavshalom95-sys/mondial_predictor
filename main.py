@@ -26,7 +26,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import date
+from datetime import date, datetime
 
 # Ensure stdout handles Unicode/emoji on all platforms (e.g. Windows cp1255 terminals)
 if hasattr(sys.stdout, "reconfigure"):
@@ -52,7 +52,9 @@ from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 
-_MORNING_PICKS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "morning_picks.json")
+_DATA_DIR           = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_MORNING_PICKS_PATH = os.path.join(_DATA_DIR, "morning_picks.json")
+_LAST_RUN_PATH      = os.path.join(_DATA_DIR, "last_run.json")
 
 
 # ---------------------------------------------------------------------------
@@ -92,16 +94,61 @@ def _find_odds_for_match(
 
 
 # ---------------------------------------------------------------------------
+# Single-run guard  (prevents double API charges on re-triggers)
+# ---------------------------------------------------------------------------
+
+def _already_ran_today() -> bool:
+    """
+    Return True if the pipeline already completed successfully today (UTC date).
+    Reads data/last_run.json written at the end of a successful pipeline run.
+    """
+    try:
+        with open(_LAST_RUN_PATH, encoding="utf-8") as f:
+            rec = json.load(f)
+        return rec.get("date") == date.today().isoformat()
+    except Exception:
+        return False
+
+
+def _save_last_run(picks_generated: int) -> None:
+    """Stamp data/last_run.json so re-triggers today are skipped."""
+    os.makedirs(_DATA_DIR, exist_ok=True)
+    try:
+        rec = {
+            "date":             date.today().isoformat(),
+            "completed_at":     datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "picks_generated":  picks_generated,
+        }
+        with open(_LAST_RUN_PATH, "w", encoding="utf-8") as f:
+            json.dump(rec, f, indent=2)
+        print(f"[pipeline] last_run.json written — guard active for the rest of today.")
+    except Exception as exc:
+        print(f"[pipeline] Warning: could not write last_run.json: {exc}")
+
+
+# ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
 
 def run_daily_pipeline(
     raw_games_from_api: list[dict],
     send_notification: bool = True,
+    force: bool = False,
 ) -> str:
     """
     Full automated pipeline. Returns formatted message string regardless of send_notification.
+
+    force=True bypasses the single-run guard (use --force on CLI for debugging).
     """
+    # ── Single-run guard ──────────────────────────────────────────────────────
+    if not force and _already_ran_today():
+        msg = (
+            f"[pipeline] Guard: pipeline already completed today "
+            f"({date.today().isoformat()}). "
+            f"Re-run with --force to override."
+        )
+        print(msg)
+        return msg
 
     # ── Step 0: Ingest yesterday's results + build performance report ────────
     rapidapi_key = os.environ.get("RAPIDAPI_KEY", "")
@@ -273,6 +320,7 @@ def run_daily_pipeline(
         print("--- End of message ---\n")
 
     save_morning_picks(morning_data)
+    _save_last_run(picks_generated=len(picks))
     return message
 
 
@@ -406,6 +454,11 @@ def main() -> None:
         action="store_true",
         help="Pre-match run: fetch confirmed lineups and send alert if prediction changed",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Bypass the single-run guard and re-run even if pipeline already ran today",
+    )
     args = parser.parse_args()
 
     if args.lineup_check:
@@ -413,7 +466,7 @@ def main() -> None:
     elif args.games_json:
         with open(args.games_json, encoding="utf-8") as f:
             raw_games = json.load(f)
-        run_daily_pipeline(raw_games, send_notification=not args.no_notify)
+        run_daily_pipeline(raw_games, send_notification=not args.no_notify, force=args.force)
     else:
         parser.error("games_json is required for the morning run (or use --lineup-check)")
 

@@ -2,9 +2,10 @@ name: Mondial Predictor — Daily Run
 
 on:
   schedule:
-    # 05:00 UTC = 08:00 IDT (summer, UTC+3).
-    # In winter (UTC+2) change to "0 6 * * *" for 08:00 IDT.
-    - cron: "0 5 * * *"
+    # 06:00 UTC = 09:00 IDT (summer, UTC+3) / 08:00 IDT (winter, UTC+2).
+    # WC 2026 latest games (21:00 PDT = 00:00 UTC) finish by ~02:00 UTC,
+    # giving a 4-hour safety margin before this run fetches results.
+    - cron: "0 6 * * *"
   workflow_dispatch: {}   # allow manual trigger from the Actions tab
 
 jobs:

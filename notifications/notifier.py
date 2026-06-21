@@ -15,32 +15,156 @@ from typing import Optional
 from core.strategy_advisor import StrategyRecommendation, Strategy, TournamentContext
 
 
+# ---------------------------------------------------------------------------
+# Country flag emoji lookup (keyed by lowercase team name)
+# ---------------------------------------------------------------------------
+
+_FLAGS: dict[str, str] = {
+    # North & Central America
+    "united states":          "🇺🇸",
+    "usa":                    "🇺🇸",
+    "mexico":                 "🇲🇽",
+    "canada":                 "🇨🇦",
+    "honduras":               "🇭🇳",
+    "panama":                 "🇵🇦",
+    "costa rica":             "🇨🇷",
+    "jamaica":                "🇯🇲",
+    "guatemala":              "🇬🇹",
+    "el salvador":            "🇸🇻",
+    "trinidad and tobago":    "🇹🇹",
+    # South America
+    "brazil":                 "🇧🇷",
+    "argentina":              "🇦🇷",
+    "uruguay":                "🇺🇾",
+    "colombia":               "🇨🇴",
+    "chile":                  "🇨🇱",
+    "ecuador":                "🇪🇨",
+    "peru":                   "🇵🇪",
+    "venezuela":              "🇻🇪",
+    "paraguay":               "🇵🇾",
+    "bolivia":                "🇧🇴",
+    # Europe
+    "spain":                  "🇪🇸",
+    "france":                 "🇫🇷",
+    "germany":                "🇩🇪",
+    "england":                "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "portugal":               "🇵🇹",
+    "netherlands":            "🇳🇱",
+    "belgium":                "🇧🇪",
+    "croatia":                "🇭🇷",
+    "denmark":                "🇩🇰",
+    "switzerland":            "🇨🇭",
+    "austria":                "🇦🇹",
+    "serbia":                 "🇷🇸",
+    "poland":                 "🇵🇱",
+    "ukraine":                "🇺🇦",
+    "hungary":                "🇭🇺",
+    "romania":                "🇷🇴",
+    "czech republic":         "🇨🇿",
+    "czechia":                "🇨🇿",
+    "slovakia":               "🇸🇰",
+    "albania":                "🇦🇱",
+    "slovenia":               "🇸🇮",
+    "turkey":                 "🇹🇷",
+    "scotland":               "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+    "wales":                  "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+    "north macedonia":        "🇲🇰",
+    "bosnia and herzegovina": "🇧🇦",
+    "greece":                 "🇬🇷",
+    "norway":                 "🇳🇴",
+    "sweden":                 "🇸🇪",
+    "finland":                "🇫🇮",
+    "iceland":                "🇮🇸",
+    "georgia":                "🇬🇪",
+    # Asia / Oceania
+    "japan":                  "🇯🇵",
+    "korea republic":         "🇰🇷",
+    "south korea":            "🇰🇷",
+    "australia":              "🇦🇺",
+    "saudi arabia":           "🇸🇦",
+    "iran":                   "🇮🇷",
+    "qatar":                  "🇶🇦",
+    "iraq":                   "🇮🇶",
+    "jordan":                 "🇯🇴",
+    "oman":                   "🇴🇲",
+    "bahrain":                "🇧🇭",
+    "uzbekistan":             "🇺🇿",
+    "new zealand":            "🇳🇿",
+    "indonesia":              "🇮🇩",
+    # Africa
+    "morocco":                "🇲🇦",
+    "senegal":                "🇸🇳",
+    "nigeria":                "🇳🇬",
+    "ghana":                  "🇬🇭",
+    "ivory coast":            "🇨🇮",
+    "cameroon":               "🇨🇲",
+    "egypt":                  "🇪🇬",
+    "algeria":                "🇩🇿",
+    "tunisia":                "🇹🇳",
+    "mali":                   "🇲🇱",
+    "angola":                 "🇦🇴",
+    "south africa":           "🇿🇦",
+    "dr congo":               "🇨🇩",
+    "cape verde islands":     "🇨🇻",
+    "cabo verde":             "🇨🇻",
+    "tanzania":               "🇹🇿",
+    "zambia":                 "🇿🇲",
+    "mozambique":             "🇲🇿",
+    "benin":                  "🇧🇯",
+}
+
+
+def _flag(team_name: str) -> str:
+    """Return the flag emoji for a team, or empty string if unknown."""
+    return _FLAGS.get(team_name.lower(), "")
+
+
+def _with_flag(team_name: str) -> str:
+    """Return 'FLAG TeamName' if a flag is known, else just 'TeamName'."""
+    flag = _flag(team_name)
+    return f"{flag} {team_name}" if flag else team_name
+
+
+# ---------------------------------------------------------------------------
+# Score description
+# ---------------------------------------------------------------------------
+
+def _describe_score(home_team: str, away_team: str, home_goals: int, away_goals: int) -> str:
+    """
+    Return a fully LTR-safe, unambiguous score description.
+
+    Root cause of the inversion bug: inserting a Hebrew word ("מנצחת") between
+    English text and digits forces WhatsApp's bidi renderer into mixed-direction
+    mode, which can reorder the digits visually (3-0 → 0-3). Using the English
+    word "wins" keeps the entire phrase in a single LTR flow, which is immune
+    to bidi reordering regardless of surrounding Hebrew context.
+
+    Score is always shown as WINNER_GOALS-LOSER_GOALS (high first), so the
+    number itself is unambiguous even if the winner name is read right-to-left
+    by a human — the bigger number always belongs to the named team.
+
+    Examples:
+      home=Spain 3, away=Saudi Arabia 0  →  "Spain wins 3-0"
+      home=Spain 0, away=Saudi Arabia 3  →  "Saudi Arabia wins 3-0"
+      home=Spain 1, away=Saudi Arabia 1  →  "Draw 1-1"
+    """
+    if home_goals > away_goals:
+        return f"{home_team} wins {home_goals}-{away_goals}"
+    elif away_goals > home_goals:
+        return f"{away_team} wins {away_goals}-{home_goals}"
+    else:
+        return f"Draw {home_goals}-{away_goals}"
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
 @dataclass
 class DailyPick:
     home_team:      str
     away_team:      str
     recommendation: StrategyRecommendation
-
-
-def _describe_score(home_team: str, away_team: str, home_goals: int, away_goals: int) -> str:
-    """
-    Return an RTL-safe, unambiguous score description.
-
-    WhatsApp's bidi renderer can flip "3:0" visually when mixed with Hebrew,
-    making it impossible to tell which side the goals belong to.
-    Fix: always name the winner explicitly + use dash separator + high-low order.
-
-    Examples:
-      home=Spain 3, away=Saudi Arabia 0  →  "Spain מנצחת 3-0"
-      home=Spain 0, away=Saudi Arabia 3  →  "Saudi Arabia מנצחת 3-0"
-      home=Spain 1, away=Saudi Arabia 1  →  "תיקו 1-1"
-    """
-    if home_goals > away_goals:
-        return f"{home_team} מנצחת {home_goals}-{away_goals}"
-    elif away_goals > home_goals:
-        return f"{away_team} מנצחת {away_goals}-{home_goals}"
-    else:
-        return f"תיקו {home_goals}-{away_goals}"
 
 
 def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> str:
@@ -51,13 +175,12 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> 
     Example output:
       ⚽ *תחזית מונדיאל שטראוס - היום*
       📊 מצב נוכחי: 22 נק' (אתה) | 33 נק' (מוביל)
-      📉 פער: 11 נק' | 2 משחקים נותרו
+      📉 פער: 11 נק' | 4 משחקים נותרו
 
-      🎲 *Spain נגד Saudi Arabia*
-         ניחוש: *1:0* (10% סיכוי)
-         אסטרטגיה: קונטרארי | שלב: שלב הבתים
-         ניקוד: בול=3 | כיוון=1
-         (קונצנזוס היה: 2:0)
+      🎲 *🇪🇸 Spain נגד 🇸🇦 Saudi Arabia*
+         ניחוש: *Spain wins 3-0* (11% סיכוי)
+         אסטרטגיה: קונטרארי
+         (קונצנזוס היה: Spain wins 2-0)
 
       _נשלח אוטומטית ע"י Mondial Predictor_
     """
@@ -76,16 +199,14 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> 
             pick.home_team, pick.away_team,
             rec.recommended_pick.home_goals, rec.recommended_pick.away_goals,
         )
-        lines.append(f"{icon} *{pick.home_team} נגד {pick.away_team}*")
+        home_label = _with_flag(pick.home_team)
+        away_label = _with_flag(pick.away_team)
+
+        lines.append(f"{icon} *{home_label} נגד {away_label}*")
         lines.append(
             f"   ניחוש: *{pick_desc}* ({rec.recommended_pick.probability * 100:.0f}% סיכוי)"
         )
-        lines.append(
-            f"   אסטרטגיה: {rec.strategy.value} | שלב: {rec.stage.value}"
-        )
-        lines.append(
-            f"   ניקוד: בול={rec.points_if_exact} | כיוון={rec.points_if_direction_only}"
-        )
+        lines.append(f"   אסטרטגיה: {rec.strategy.value}")
 
         if rec.strategy == Strategy.CONTRARIAN:
             safe = rec.alternative_safe_pick

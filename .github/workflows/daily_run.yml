@@ -41,10 +41,10 @@ jobs:
           WHATSAPP_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_RECIPIENT_PHONE }}
         run: python main.py tests/sample_games.json
 
-      - name: Commit morning picks for lineup-check
+      - name: Commit morning picks and history
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/morning_picks.json
-          git diff --staged --quiet || git commit -m "chore: update morning picks [skip ci]"
+          git add data/morning_picks.json data/history.json
+          git diff --staged --quiet || git commit -m "chore: update picks and history [skip ci]"
           git push

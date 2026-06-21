@@ -170,7 +170,7 @@ class DailyPick:
     ai_reasoning:   Optional[str]       = None
 
 
-def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> str:
+def format_daily_message(picks: list[DailyPick], context: TournamentContext, perf_report: Optional[dict] = None) -> str:
     """
     Pure function — build the WhatsApp message string.
     Safe to call in tests with assert, no network involved.
@@ -193,6 +193,18 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext) -> 
         f"📉 פער: {context.point_gap} נק' | {context.matches_remaining} משחקים נותרו",
         "",
     ]
+
+    if perf_report:
+        date_label   = perf_report.get("date_label", "")
+        correct      = perf_report.get("correct", 0)
+        total        = perf_report.get("total", 0)
+        exact        = perf_report.get("exact", 0)
+        pts_earned   = perf_report.get("pts_earned", 0)
+        pts_possible = perf_report.get("pts_possible", 0)
+        lines.append(f"📈 *ביצועי אתמול ({date_label})*")
+        lines.append(f"   ✅ תוצאה נכונה: {correct}/{total}")
+        lines.append(f"   🎯 ניחוש מדויק: {exact}/{total} | {pts_earned}/{pts_possible} נק'")
+        lines.append("")
 
     for pick in picks:
         rec  = pick.recommendation

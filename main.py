@@ -26,6 +26,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import date
 
 # Ensure stdout handles Unicode/emoji on all platforms (e.g. Windows cp1255 terminals)
 if hasattr(sys.stdout, "reconfigure"):
@@ -47,6 +48,8 @@ from notifications.notifier import DailyPick, format_daily_message, format_lineu
 from config.scoring_rules import TournamentStage
 from core.ai_ensemble import enhance
 from data.context_fetcher import fetch_match_context
+from data.results_fetcher import fetch_yesterday_results
+from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats
 
 _MORNING_PICKS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "morning_picks.json")
 
@@ -98,6 +101,30 @@ def run_daily_pipeline(
     """
     Full automated pipeline. Returns formatted message string regardless of send_notification.
     """
+
+    # ── Step 0: Ingest yesterday's results + build performance report ────────
+    rapidapi_key = os.environ.get("RAPIDAPI_KEY", "")
+    yesterday_results = fetch_yesterday_results(api_key=rapidapi_key)
+    history = load_history()
+
+    if yesterday_results:
+        # Load this morning's picks to know what was predicted yesterday
+        perf_report: dict | None = None
+        if os.path.exists(_MORNING_PICKS_PATH):
+            try:
+                with open(_MORNING_PICKS_PATH, encoding="utf-8") as f:
+                    yesterday_picks = json.load(f)
+                history = ingest_results(yesterday_picks, yesterday_results, history)
+                save_history(history)
+                perf_report = yesterday_stats(history)
+            except Exception as exc:
+                print(f"[pipeline] Warning: result ingestion failed: {exc}")
+                perf_report = None
+        else:
+            print("[pipeline] morning_picks.json not found — cannot score yesterday's predictions.")
+            perf_report = None
+    else:
+        perf_report = yesterday_stats(history)
 
     # ── Step 1: Live standings sync ──────────────────────────────────────────
     live_standings = fetch_standings()
@@ -211,6 +238,7 @@ def run_daily_pipeline(
             ai_reasoning   = ai_reasoning,
         ))
         morning_data.append({
+            "date":             date.today().isoformat(),
             "home_team":        match.home_team,
             "away_team":        match.away_team,
             "stage":            stage.value,
@@ -228,7 +256,7 @@ def run_daily_pipeline(
         return msg
 
     # ── Step 5: Format + send ────────────────────────────────────────────────
-    message = format_daily_message(picks, context)
+    message = format_daily_message(picks, context, perf_report=perf_report)
 
     if send_notification:
         send_whatsapp_message(message)

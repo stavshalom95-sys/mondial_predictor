@@ -44,7 +44,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests anthropic
+        run: pip install requests anthropic numpy
 
       - name: Fetch World Cup schedule
         # Skipped in dry-run mode — uses the tests/sample_games.json already in the repo.

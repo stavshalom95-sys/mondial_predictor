@@ -219,6 +219,79 @@ else:
 
 st.divider()
 
+# ── Market vs AI Simulation ─────────────────────────────────────────────────
+_SIM_COLS = {"sim_p_home", "sim_p_draw", "sim_p_away",
+             "market_p_home", "market_p_draw", "market_p_away"}
+has_sim = not picks.empty and _SIM_COLS.issubset(set(picks.columns))
+
+if has_sim:
+    st.subheader("🔥 Market vs AI Simulation")
+    st.caption(
+        "Bookmaker implied probability (after overround removal) vs "
+        "Monte Carlo simulation (10,000 Poisson draws). Edge > 5% = Value Bet 🔥"
+    )
+
+    sim_df = picks.copy()
+    sim_df["Match"] = sim_df["home_team"] + " vs " + sim_df["away_team"]
+
+    # Grouped bar chart
+    fig_sim = go.Figure()
+    OUTCOMES = [("Home", "p_home"), ("Draw", "p_draw"), ("Away", "p_away")]
+    MKT_COLORS = ["#0077b6", "#4a4e69", "#774b3b"]
+    SIM_COLORS = ["#00b4d8", "#9d8df1", "#f4a261"]
+
+    for i, (label, key) in enumerate(OUTCOMES):
+        fig_sim.add_trace(go.Bar(
+            name=f"Market {label}",
+            x=sim_df["Match"],
+            y=(sim_df[f"market_{key}"] * 100).round(1),
+            marker_color=MKT_COLORS[i],
+            text=(sim_df[f"market_{key}"] * 100).round(1).astype(str) + "%",
+            textposition="outside", textfont=dict(size=10),
+        ))
+        fig_sim.add_trace(go.Bar(
+            name=f"Sim {label}",
+            x=sim_df["Match"],
+            y=(sim_df[f"sim_{key}"] * 100).round(1),
+            marker_color=SIM_COLORS[i],
+            text=(sim_df[f"sim_{key}"] * 100).round(1).astype(str) + "%",
+            textposition="outside", textfont=dict(size=10),
+        ))
+
+    fig_sim.update_layout(
+        **PLOTLY_LAYOUT, height=360,
+        barmode="group",
+        bargap=0.20, bargroupgap=0.05,
+        legend=dict(orientation="h", y=1.15, x=0),
+        yaxis=dict(gridcolor="#2c2f3e", title="Probability (%)", range=[0, 90]),
+        xaxis=dict(gridcolor="#2c2f3e"),
+    )
+    st.plotly_chart(fig_sim, use_container_width=True, config={"displayModeBar": False})
+
+    # Detail table with edge columns
+    tbl = sim_df.copy()
+    for label, scol, mcol in [
+        ("H", "sim_p_home", "market_p_home"),
+        ("D", "sim_p_draw", "market_p_draw"),
+        ("A", "sim_p_away", "market_p_away"),
+    ]:
+        tbl[f"Mkt {label}"]  = (tbl[mcol] * 100).round(1).astype(str) + "%"
+        tbl[f"Sim {label}"]  = (tbl[scol] * 100).round(1).astype(str) + "%"
+        raw_edge = (tbl[scol] - tbl[mcol]) * 100
+        tbl[f"Edge {label}"] = raw_edge.round(1).apply(lambda x: f"{x:+.1f}%")
+
+    tbl["Value Bet"] = tbl.get("sim_value_bet", pd.Series([None] * len(tbl))).map(
+        lambda x: f"🔥 {str(x).title()}" if x and str(x) not in ("nan", "None", "") else "—"
+    )
+
+    show = ["Match",
+            "Mkt H", "Sim H", "Edge H",
+            "Mkt D", "Sim D", "Edge D",
+            "Mkt A", "Sim A", "Edge A",
+            "Value Bet"]
+    st.dataframe(tbl[show], use_container_width=True, hide_index=True)
+    st.divider()
+
 # ── Charts (only when history exists) ────────────────────────────────────────
 if hist.empty:
     st.info("📭 No historical data yet. Scores are logged automatically each morning after matches finish.")

@@ -52,6 +52,7 @@ from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis
+from core.simulator import simulate
 
 _DATA_DIR           = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _MORNING_PICKS_PATH = os.path.join(_DATA_DIR, "morning_picks.json")
@@ -417,6 +418,28 @@ def run_daily_pipeline(
 
         print(f"[pipeline]   top-3: {model.top_n(3)}")
 
+        # ── Monte Carlo Simulation ──────────────────────────────────────────
+        sim = simulate(model.lambda_home, model.lambda_away)
+        print(
+            f"[sim] Monte Carlo (n={sim.n_sims:,}): "
+            f"H={sim.p_home:.1%}  D={sim.p_draw:.1%}  A={sim.p_away:.1%}"
+        )
+        # Compare sim vs market (true_probs already computed above)
+        _VALUE_THRESHOLD = 0.05
+        edge_h = sim.p_home - true_probs.home
+        edge_d = sim.p_draw - true_probs.draw
+        edge_a = sim.p_away - true_probs.away
+        sim_value_bet: str | None = None
+        if edge_h >= _VALUE_THRESHOLD:
+            sim_value_bet = "home"
+            print(f"[sim] \U0001f525 VALUE (Home): sim={sim.p_home:.1%} vs mkt={true_probs.home:.1%} edge={edge_h:+.1%}")
+        elif edge_a >= _VALUE_THRESHOLD:
+            sim_value_bet = "away"
+            print(f"[sim] \U0001f525 VALUE (Away): sim={sim.p_away:.1%} vs mkt={true_probs.away:.1%} edge={edge_a:+.1%}")
+        elif edge_d >= _VALUE_THRESHOLD:
+            sim_value_bet = "draw"
+            print(f"[sim] \U0001f525 VALUE (Draw): sim={sim.p_draw:.1%} vs mkt={true_probs.draw:.1%} edge={edge_d:+.1%}")
+
         # ── Kelly / Value Bet analysis ──────────────────────────────────────
         kelly_analyses = analyse_match_bets(model, odds_1x2)
         _append_ev_log(match.home_team, match.away_team, kelly_analyses)
@@ -468,6 +491,13 @@ def run_daily_pipeline(
             "lambda_away":      model.lambda_away,
             "final_home_goals": (ai_pick_prob.home_goals  if ai_pick_prob else rec.recommended_pick.home_goals),
             "final_away_goals": (ai_pick_prob.away_goals  if ai_pick_prob else rec.recommended_pick.away_goals),
+            "sim_p_home":       round(sim.p_home,       4),
+            "sim_p_draw":       round(sim.p_draw,       4),
+            "sim_p_away":       round(sim.p_away,       4),
+            "market_p_home":    round(true_probs.home,  4),
+            "market_p_draw":    round(true_probs.draw,  4),
+            "market_p_away":    round(true_probs.away,  4),
+            "sim_value_bet":    sim_value_bet,
         })
 
     if not picks:

@@ -26,36 +26,62 @@
     "score": {"GER": 3, "JPN": 1}
   },
   {
-    "id": "sr:sport_event:66456998",
-    "status": "scheduled",
+    "id": "sr:sport_event:66456010",
+    "status": "final",
     "stage": "group_stage",
-    "start_time": "2026-06-21T16:00:00+00:00",
+    "start_time": "2026-06-21T14:00:00+00:00",
     "home": "ESP",
     "away": "KSA",
     "teams": {
       "ESP": {"name": "Spain",        "abbreviation": "ESP"},
       "KSA": {"name": "Saudi Arabia", "abbreviation": "KSA"}
     },
-    "score": {"ESP": null, "KSA": null}
+    "score": {"ESP": 4, "KSA": 0}
   },
   {
-    "id": "sr:sport_event:66456999",
-    "status": "scheduled",
+    "id": "sr:sport_event:66456011",
+    "status": "final",
     "stage": "group_stage",
-    "start_time": "2026-06-21T19:00:00+00:00",
-    "home": "BRA",
-    "away": "MEX",
+    "start_time": "2026-06-21T17:00:00+00:00",
+    "home": "BEL",
+    "away": "IRN",
     "teams": {
-      "BRA": {"name": "Brazil", "abbreviation": "BRA"},
-      "MEX": {"name": "Mexico", "abbreviation": "MEX"}
+      "BEL": {"name": "Belgium", "abbreviation": "BEL"},
+      "IRN": {"name": "Iran",    "abbreviation": "IRN"}
     },
-    "score": {"BRA": null, "MEX": null}
+    "score": {"BEL": 0, "IRN": 0}
+  },
+  {
+    "id": "sr:sport_event:66456012",
+    "status": "final",
+    "stage": "group_stage",
+    "start_time": "2026-06-21T20:00:00+00:00",
+    "home": "URU",
+    "away": "CPV",
+    "teams": {
+      "URU": {"name": "Uruguay",              "abbreviation": "URU"},
+      "CPV": {"name": "Cape Verde Islands",   "abbreviation": "CPV"}
+    },
+    "score": {"URU": 2, "CPV": 2}
+  },
+  {
+    "id": "sr:sport_event:66456013",
+    "status": "final",
+    "stage": "group_stage",
+    "start_time": "2026-06-21T23:00:00+00:00",
+    "home": "NZL",
+    "away": "EGY",
+    "teams": {
+      "NZL": {"name": "New Zealand", "abbreviation": "NZL"},
+      "EGY": {"name": "Egypt",       "abbreviation": "EGY"}
+    },
+    "score": {"NZL": 1, "EGY": 3}
   },
   {
     "id": "sr:sport_event:66457000",
     "status": "scheduled",
     "stage": "group_stage",
-    "start_time": "2026-06-22T16:00:00+00:00",
+    "start_time": "2026-06-23T16:00:00+00:00",
     "home": "FRA",
     "away": "ARG",
     "teams": {

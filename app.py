@@ -73,13 +73,17 @@ p  { font-size: 0.95rem !important; line-height: 1.6 !important; }
 /* ── Tables ──────────────────────────────────────────── */
 .stDataFrame { border-radius: 10px !important; overflow: hidden !important; }
 [data-testid="stDataFrameResizable"] th {
-    font-size: 0.76rem !important;
+    font-size: 16px !important;
     font-weight: 700 !important;
     letter-spacing: 0.06em !important;
     text-transform: uppercase !important;
     color: #7a8499 !important;
+    text-align: center !important;
 }
-[data-testid="stDataFrameResizable"] td { font-size: 0.93rem !important; }
+[data-testid="stDataFrameResizable"] td {
+    font-size: 20px !important;   /* 20px renders flag emoji crisply */
+    text-align: center !important;
+}
 
 /* ── Live badge ──────────────────────────────────────── */
 .live-badge {

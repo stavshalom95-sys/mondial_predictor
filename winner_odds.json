@@ -1,0 +1,30 @@
+[
+  {
+    "home_team": "Argentina",
+    "away_team": "Austria",
+    "odds_home": 1.30,
+    "odds_draw": 5.50,
+    "odds_away": 11.00
+  },
+  {
+    "home_team": "France",
+    "away_team": "Iraq",
+    "odds_home": 1.18,
+    "odds_draw": 7.00,
+    "odds_away": 17.00
+  },
+  {
+    "home_team": "Norway",
+    "away_team": "Senegal",
+    "odds_home": 2.10,
+    "odds_draw": 3.30,
+    "odds_away": 3.60
+  },
+  {
+    "home_team": "Jordan",
+    "away_team": "Algeria",
+    "odds_home": 2.80,
+    "odds_draw": 3.10,
+    "odds_away": 2.60
+  }
+]

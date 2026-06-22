@@ -53,11 +53,13 @@ from data.performance_tracker import ingest_results, load_history, save_history,
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis
 from core.simulator import simulate
+from data.winner_odds_loader import enrich_picks
 
 _DATA_DIR           = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _MORNING_PICKS_PATH = os.path.join(_DATA_DIR, "morning_picks.json")
 _LAST_RUN_PATH      = os.path.join(_DATA_DIR, "last_run.json")
 _EV_LOG_PATH        = os.path.join(_DATA_DIR, "ev_log.json")
+_WINNER_ODDS_PATH   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "winner_odds.json")
 
 
 # ---------------------------------------------------------------------------
@@ -506,6 +508,9 @@ def run_daily_pipeline(
         if send_notification:
             send_whatsapp_message(msg)
         return msg
+
+    # ── EV enrichment from winner_odds.json (no-op if file absent) ──────────
+    morning_data = enrich_picks(morning_data, odds_path=_WINNER_ODDS_PATH)
 
     # ── Step 5: Format + send ────────────────────────────────────────────────
     message = format_daily_message(picks, context, perf_report=perf_report)

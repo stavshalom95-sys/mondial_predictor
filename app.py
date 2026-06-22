@@ -286,6 +286,16 @@ def result_badge(row: pd.Series) -> str:
     return "❌ Wrong"
 
 
+def ev_badge(row: pd.Series) -> str:
+    """Color-coded EV badge: 🟢 positive, 🔴 negative, — if no odds loaded."""
+    ev      = row.get("ev_winner")
+    outcome = row.get("ev_winner_outcome")
+    if ev is None or (isinstance(ev, float) and pd.isna(ev)):
+        return "—"
+    lbl = str(outcome).title() if outcome else ""
+    return f"🟢 {ev:+.1%} {lbl}" if ev > 0 else f"🔴 {ev:+.1%} {lbl}"
+
+
 def plotly_chart(fig: go.Figure, height: int = 300) -> None:
     fig.update_layout(**PLOTLY_LAYOUT, height=height)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
@@ -380,8 +390,10 @@ else:
     display["λ Home"] = display["lambda_home"]
     display["λ Away"] = display["lambda_away"]
     display["Stage"]  = display.get("stage_en", display.get("stage", ""))
+    if "ev_winner" in display.columns:
+        display["EV Bet"] = display.apply(ev_badge, axis=1)
 
-    show_cols = ["Home Team", "Away Team", "Stage", "Predicted Score", "λ Home", "λ Away"]
+    show_cols = ["Home Team", "Away Team", "Stage", "Predicted Score", "λ Home", "λ Away", "EV Bet"]
     show_cols = [c for c in show_cols if c in display.columns]
 
     st.dataframe(

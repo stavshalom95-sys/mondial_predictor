@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import date, timedelta
 
 import requests
 
@@ -76,6 +77,20 @@ def fetch_wc_matches(api_key: str) -> list[dict]:
         raw_status = m.get("status", "SCHEDULED")
         status = STATUS_MAP.get(raw_status, "scheduled")
 
+        # DIAGNOSTIC: log raw API status for matches within ±2 days of today
+        match_date = m.get("utcDate", "")[:10]
+        try:
+            delta = abs((date.fromisoformat(match_date) - date.today()).days)
+        except ValueError:
+            delta = 999
+        if delta <= 2:
+            print(
+                f"[fetch_schedule] DIAG {match_date} | "
+                f"{home_info.get('name','?')} vs {away_info.get('name','?')} | "
+                f"API_status={raw_status!r} → mapped={status!r} | "
+                f"score={score_full}"
+            )
+
         raw_stage = m.get("stage", "GROUP_STAGE")
         stage = STAGE_MAP.get(raw_stage, "group_stage")
 
@@ -125,6 +140,29 @@ def main() -> None:
         json.dump(matches, f, ensure_ascii=False, indent=2)
 
     print(f"Saved {len(matches)} matches to {args.output}")
+
+    # DIAGNOSTIC: summary of matches ±2 days around today
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    today_str  = date.today().isoformat()
+    print(f"\n[fetch_schedule] DIAG SUMMARY — matches within ±2 days of {today_str}:")
+    nearby = [
+        m for m in matches
+        if abs((date.fromisoformat(m["start_time"][:10]) - date.today()).days) <= 2
+    ]
+    if not nearby:
+        print("  (none found — check that WC 2026 matches are in this API plan)")
+    for m in nearby:
+        home_abbr = m["home"]
+        away_abbr = m["away"]
+        home_name = m["teams"][home_abbr]["name"]
+        away_name = m["teams"][away_abbr]["name"]
+        score_h   = m["score"].get(home_abbr)
+        score_a   = m["score"].get(away_abbr)
+        print(
+            f"  {m['start_time'][:10]} | {home_name} vs {away_name} | "
+            f"status={m['status']!r} | "
+            f"score={score_h}-{score_a}"
+        )
 
 
 if __name__ == "__main__":

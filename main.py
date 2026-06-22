@@ -60,6 +60,43 @@ _EV_LOG_PATH        = os.path.join(_DATA_DIR, "ev_log.json")
 
 
 # ---------------------------------------------------------------------------
+# Schedule-derived results (primary fallback for history ingestion)
+# ---------------------------------------------------------------------------
+
+def _results_from_schedule(raw_games: list[dict]) -> list[dict]:
+    """
+    Extract completed match scores directly from the schedule JSON.
+
+    football-data.org marks finished matches with status="final" and includes
+    fulltime scores. This gives us results without needing RAPIDAPI_KEY —
+    the schedule is already fetched by fetch_schedule.py before main.py runs.
+
+    Returns list of {"home_team": str, "away_team": str, "home_goals": int, "away_goals": int}
+    """
+    results = []
+    for g in raw_games:
+        if g.get("status") != "final":
+            continue
+        teams      = g.get("teams", {})
+        home_key   = g.get("home", "")
+        away_key   = g.get("away", "")
+        score      = g.get("score", {})
+        home_goals = score.get(home_key)
+        away_goals = score.get(away_key)
+        if home_goals is None or away_goals is None:
+            continue
+        home_name = teams.get(home_key, {}).get("name", home_key)
+        away_name = teams.get(away_key, {}).get("name", away_key)
+        results.append({
+            "home_team":  home_name,
+            "away_team":  away_name,
+            "home_goals": int(home_goals),
+            "away_goals": int(away_goals),
+        })
+    return results
+
+
+# ---------------------------------------------------------------------------
 # Team name matching
 # ---------------------------------------------------------------------------
 
@@ -199,28 +236,45 @@ def run_daily_pipeline(
         print(msg)
         return msg
 
-    # ── Step 0: Ingest yesterday's results + build performance report ────────
-    rapidapi_key = os.environ.get("RAPIDAPI_KEY", "")
-    yesterday_results = fetch_yesterday_results(api_key=rapidapi_key)
-    history = load_history()
+    # ── Step 0: Ingest completed results into history ────────────────────────
+    #
+    # Primary source: schedule JSON from football-data.org (always available).
+    # Every finished match already carries status="final" + fulltime score.
+    #
+    # Supplementary: RapidAPI (fetch_yesterday_results) — adds any matches
+    # not yet reflected in the schedule snapshot.
 
-    if yesterday_results:
-        # Load this morning's picks to know what was predicted yesterday
-        perf_report: dict | None = None
-        if os.path.exists(_MORNING_PICKS_PATH):
-            try:
-                with open(_MORNING_PICKS_PATH, encoding="utf-8") as f:
-                    yesterday_picks = json.load(f)
-                history = ingest_results(yesterday_picks, yesterday_results, history)
-                save_history(history)
-                perf_report = yesterday_stats(history)
-            except Exception as exc:
-                print(f"[pipeline] Warning: result ingestion failed: {exc}")
-                perf_report = None
-        else:
-            print("[pipeline] morning_picks.json not found — cannot score yesterday's predictions.")
-            perf_report = None
+    # Primary: extract all "final" entries from the schedule we just received
+    schedule_results = _results_from_schedule(raw_games_from_api)
+    print(f"[pipeline] Schedule-based results: {len(schedule_results)} finished match(es).")
+
+    # Supplementary: RapidAPI for yesterday — merge in without duplicating
+    rapidapi_key    = os.environ.get("RAPIDAPI_KEY", "")
+    api_results     = fetch_yesterday_results(api_key=rapidapi_key)
+    seen_pairs      = {(r["home_team"].lower(), r["away_team"].lower()) for r in schedule_results}
+    for r in api_results:
+        if (r["home_team"].lower(), r["away_team"].lower()) not in seen_pairs:
+            schedule_results.append(r)
+
+    combined_results = schedule_results
+    history          = load_history()
+    perf_report: dict | None = None
+
+    if combined_results and os.path.exists(_MORNING_PICKS_PATH):
+        try:
+            with open(_MORNING_PICKS_PATH, encoding="utf-8") as f:
+                yesterday_picks = json.load(f)
+            history    = ingest_results(yesterday_picks, combined_results, history)
+            save_history(history)
+            perf_report = yesterday_stats(history)
+        except Exception as exc:
+            print(f"[pipeline] Warning: result ingestion failed: {exc}")
+            perf_report = yesterday_stats(history)
+    elif not os.path.exists(_MORNING_PICKS_PATH):
+        print("[pipeline] morning_picks.json not found — skipping history update (first run).")
+        perf_report = yesterday_stats(history)
     else:
+        print("[pipeline] No finished match results in schedule or RapidAPI yet.")
         perf_report = yesterday_stats(history)
 
     # ── Step 1: Live standings sync ──────────────────────────────────────────

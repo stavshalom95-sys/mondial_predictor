@@ -19,7 +19,7 @@ import streamlit as st
 
 # ── Page config ─────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Mondial Predictor 2026",
+    page_title="Mundial Predictor 2026",
     page_icon="⚽",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -28,37 +28,111 @@ st.set_page_config(
 # ── Global CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Tighten default Streamlit padding */
-    .block-container { padding-top: 1.5rem; padding-bottom: 1rem; }
+/* ── Layout ──────────────────────────────────────────── */
+.main .block-container {
+    padding-top: 1.6rem;
+    padding-bottom: 3rem;
+    max-width: 1100px;
+}
 
-    /* KPI card styling */
-    [data-testid="metric-container"] {
-        background: #1e2130;
-        border-radius: 10px;
-        padding: 16px 20px;
-        border-left: 4px solid #00b4d8;
-    }
-    [data-testid="metric-container"] label { color: #adb5bd !important; }
-    [data-testid="metric-container"] [data-testid="stMetricValue"] {
-        font-size: 1.9rem !important;
-        color: #f8f9fa !important;
-    }
-    [data-testid="metric-container"] [data-testid="stMetricDelta"] {
-        color: #6c757d !important;
-    }
+/* ── KPI cards ───────────────────────────────────────── */
+[data-testid="metric-container"] {
+    background: linear-gradient(135deg, #1a1d2e 0%, #1e2236 100%);
+    border-radius: 14px;
+    padding: 20px 22px;
+    border-left: 4px solid #00b4d8;
+    box-shadow: 0 4px 18px rgba(0,180,216,0.12);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+[data-testid="metric-container"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,180,216,0.22);
+}
+[data-testid="metric-container"] label {
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.10em !important;
+    text-transform: uppercase !important;
+    color: #7a8499 !important;
+}
+[data-testid="stMetricValue"] {
+    font-size: 2.2rem !important;
+    font-weight: 800 !important;
+    color: #eef2ff !important;
+}
+[data-testid="stMetricDelta"] {
+    font-size: 0.80rem !important;
+    color: #5a6478 !important;
+}
 
-    /* Table tweaks */
-    .stDataFrame { border-radius: 8px; overflow: hidden; }
+/* ── Typography ──────────────────────────────────────── */
+h1 { font-size: 2.0rem !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+h2 { font-size: 1.25rem !important; font-weight: 700 !important; }
+p  { font-size: 0.95rem !important; line-height: 1.6 !important; }
 
-    /* Hide default footer */
-    footer { visibility: hidden; }
+/* ── Tables ──────────────────────────────────────────── */
+.stDataFrame { border-radius: 10px !important; overflow: hidden !important; }
+[data-testid="stDataFrameResizable"] th {
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    color: #7a8499 !important;
+}
+[data-testid="stDataFrameResizable"] td { font-size: 0.93rem !important; }
+
+/* ── Live badge ──────────────────────────────────────── */
+.live-badge {
+    display: inline-block;
+    background: rgba(46,196,182,0.15);
+    color: #2ec4b6;
+    border: 1px solid rgba(46,196,182,0.35);
+    border-radius: 20px;
+    padding: 3px 14px;
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+/* ── Sidebar ─────────────────────────────────────────── */
+[data-testid="stSidebar"] { background: #10121f !important; }
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] li { font-size: 0.88rem !important; }
+
+/* ── Footer ──────────────────────────────────────────── */
+.footer-wrap {
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+    border-top: 1px solid #252840;
+    color: #40485a;
+    font-size: 0.80rem;
+    line-height: 2.2;
+}
+.footer-wrap a { color: #00b4d8 !important; text-decoration: none !important; }
+.footer-wrap a:hover { text-decoration: underline !important; }
+
+/* ── Mobile ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .main .block-container { padding-left: 0.6rem !important; padding-right: 0.6rem !important; }
+    h1 { font-size: 1.55rem !important; }
+    h2 { font-size: 1.05rem !important; }
+    [data-testid="stMetricValue"]    { font-size: 1.6rem !important; }
+    [data-testid="metric-container"] { padding: 13px 15px !important; }
+    [data-testid="stMetricDelta"]    { display: none !important; }
+}
+
+/* ── Hide Streamlit chrome ───────────────────────────── */
+footer { visibility: hidden; }
+#MainMenu { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Constants ────────────────────────────────────────────────────────────────
-ROOT          = Path(__file__).parent
-HISTORY_PATH  = ROOT / "data" / "history.json"
-PICKS_PATH    = ROOT / "data" / "morning_picks.json"
+ROOT         = Path(__file__).parent
+HISTORY_PATH = ROOT / "data" / "history.json"
+PICKS_PATH   = ROOT / "data" / "morning_picks.json"
 
 STAGE_EN: dict[str, str] = {
     "שלב הבתים":   "Group Stage",
@@ -77,6 +151,74 @@ PLOTLY_LAYOUT = dict(
     margin=dict(l=0, r=0, t=10, b=0),
 )
 
+# ── Country flag lookup ───────────────────────────────────────────────────────
+_FLAGS: dict[str, str] = {
+    # CONMEBOL
+    "Argentina": "🇦🇷", "Brazil": "🇧🇷", "Uruguay": "🇺🇾", "Colombia": "🇨🇴",
+    "Ecuador": "🇪🇨", "Venezuela": "🇻🇪", "Paraguay": "🇵🇾", "Chile": "🇨🇱",
+    "Peru": "🇵🇪", "Bolivia": "🇧🇴",
+    # UEFA
+    "France": "🇫🇷", "England": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "Germany": "🇩🇪", "Spain": "🇪🇸",
+    "Netherlands": "🇳🇱", "Portugal": "🇵🇹", "Italy": "🇮🇹", "Belgium": "🇧🇪",
+    "Croatia": "🇭🇷", "Denmark": "🇩🇰", "Austria": "🇦🇹", "Switzerland": "🇨🇭",
+    "Scotland": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "Turkey": "🇹🇷", "Serbia": "🇷🇸",
+    "Czech Republic": "🇨🇿", "Hungary": "🇭🇺", "Slovakia": "🇸🇰",
+    "Romania": "🇷🇴", "Georgia": "🇬🇪", "Slovenia": "🇸🇮", "Ukraine": "🇺🇦",
+    "Albania": "🇦🇱", "Poland": "🇵🇱", "Wales": "🏴󠁧󠁢󠁷󠁬󠁳󠁿", "Greece": "🇬🇷",
+    "Norway": "🇳🇴", "Sweden": "🇸🇪",
+    # CONCACAF
+    "USA": "🇺🇸", "United States": "🇺🇸", "Mexico": "🇲🇽", "Canada": "🇨🇦",
+    "Jamaica": "🇯🇲", "Honduras": "🇭🇳", "Costa Rica": "🇨🇷", "Panama": "🇵🇦",
+    "Trinidad & Tobago": "🇹🇹", "El Salvador": "🇸🇻", "Guatemala": "🇬🇹",
+    # CAF
+    "Morocco": "🇲🇦", "Senegal": "🇸🇳", "Nigeria": "🇳🇬", "Egypt": "🇪🇬",
+    "Cameroon": "🇨🇲", "South Africa": "🇿🇦", "Ghana": "🇬🇭", "Tunisia": "🇹🇳",
+    "Ivory Coast": "🇨🇮", "Côte d'Ivoire": "🇨🇮", "Algeria": "🇩🇿",
+    "Mali": "🇲🇱", "DR Congo": "🇨🇩", "Angola": "🇦🇴", "Zambia": "🇿🇲",
+    "Cape Verde Islands": "🇨🇻", "Cape Verde": "🇨🇻", "Mozambique": "🇲🇿",
+    # AFC
+    "Japan": "🇯🇵", "South Korea": "🇰🇷", "Australia": "🇦🇺", "Iran": "🇮🇷",
+    "Saudi Arabia": "🇸🇦", "Qatar": "🇶🇦", "Jordan": "🇯🇴", "UAE": "🇦🇪",
+    "Uzbekistan": "🇺🇿", "Indonesia": "🇮🇩", "Iraq": "🇮🇶", "Oman": "🇴🇲",
+    "China": "🇨🇳", "Bahrain": "🇧🇭", "Palestine": "🇵🇸", "India": "🇮🇳",
+    # OFC
+    "New Zealand": "🇳🇿",
+}
+
+
+def get_flag(team_name: str) -> str:
+    """
+    Return team name with flag prefix.
+    - If the name already starts with a non-ASCII char (flag already present), return as-is.
+    - Otherwise try exact match, then substring match.
+    - Falls back to the original name with no flag if nothing matches.
+    """
+    if not team_name:
+        return team_name
+    # Already has a flag (first char is a non-ASCII emoji)
+    if not team_name[0].isascii():
+        return team_name
+    clean = team_name.strip()
+    if clean in _FLAGS:
+        return f"{_FLAGS[clean]} {clean}"
+    # Substring match — handles "IR Iran" → matches "Iran"
+    for key, flag in _FLAGS.items():
+        if key.lower() in clean.lower():
+            return f"{flag} {clean}"
+    return clean
+
+
+def flag_short(team_name: str) -> str:
+    """Flag + first word only — compact label for chart axes."""
+    flagged = get_flag(team_name)
+    parts   = flagged.split()
+    if not parts:
+        return team_name
+    # Non-ASCII first token = emoji → return flag + next word
+    if not parts[0].isascii() and len(parts) > 1:
+        return f"{parts[0]} {parts[1]}"
+    return parts[0]
+
 
 # ── Data loaders ─────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300)
@@ -91,7 +233,6 @@ def load_history() -> pd.DataFrame:
         df = pd.DataFrame(records)
         df["date"] = pd.to_datetime(df["date"])
         df["stage_en"] = df["stage"].map(STAGE_EN).fillna(df["stage"])
-        # Ensure numeric columns
         for col in ("predicted_home", "predicted_away", "actual_home", "actual_away",
                     "points_earned", "points_possible"):
             if col in df.columns:
@@ -150,49 +291,85 @@ def plotly_chart(fig: go.Figure, height: int = 300) -> None:
 hist  = load_history()
 picks = load_picks()
 
+# ── Sidebar ───────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("## ⚽ Mundial 2026")
+    st.markdown("**AI-Powered Match Predictor**")
+    st.divider()
+
+    st.markdown("#### 🧠 How It Works")
+    st.markdown(
+        "- **Poisson model** calibrated from live bookmaker odds\n"
+        "- **Monte Carlo** simulation (10k draws per match)\n"
+        "- **Claude AI** (Anthropic) calibrates using injury reports, form & lineup data\n"
+        "- **Kelly criterion** identifies value bets"
+    )
+    st.divider()
+
+    n_hist = len(hist)
+    if n_hist:
+        n_correct = int(hist["correct_result"].sum())
+        pct_sb    = n_correct / n_hist
+        st.markdown("#### 📊 Season Stats")
+        st.markdown(f"**{n_correct}/{n_hist}** correct results")
+        st.progress(pct_sb, text=f"{pct_sb*100:.0f}% accuracy")
+
+    st.divider()
+
+    st.markdown("#### 📬 Stay Updated")
+    st.markdown(
+        "Want daily picks sent to your WhatsApp before every match?\n\n"
+        "📩 **[Contact / Subscribe](#)** *(coming soon)*"
+    )
+    st.caption("Daily picks at 09:00 IDT · Free during WC 2026")
+
+
 # ── Header ───────────────────────────────────────────────────────────────────
-st.title("⚽ Mondial Predictor 2026")
-st.caption(
-    f"Live performance dashboard · "
-    f"Updated: {datetime.utcnow().strftime('%d %b %Y %H:%M')} UTC"
+st.markdown("# ⚽ Mundial Predictor 2026")
+st.markdown(
+    f'<span class="live-badge">🔴 Live</span>'
+    f'&nbsp;&nbsp;Last updated: <strong>{datetime.utcnow().strftime("%d %b %Y · %H:%M UTC")}</strong>',
+    unsafe_allow_html=True,
 )
+st.caption("Poisson · Monte Carlo · Claude AI · Kelly Criterion")
 st.divider()
 
 # ── KPI Metrics ──────────────────────────────────────────────────────────────
-total      = len(hist)
-correct    = int(hist["correct_result"].sum())  if total else 0
-exact      = int(hist["exact_match"].sum())     if total else 0
-pts_earn   = int(hist["points_earned"].sum())   if total else 0
-pts_poss   = int(hist["points_possible"].sum()) if total else 0
+total    = len(hist)
+correct  = int(hist["correct_result"].sum())  if total else 0
+exact    = int(hist["exact_match"].sum())     if total else 0
+pts_earn = int(hist["points_earned"].sum())   if total else 0
+pts_poss = int(hist["points_possible"].sum()) if total else 0
 
 pct_correct = f"{correct/total*100:.0f}%" if total else "—"
 pct_exact   = f"{exact/total*100:.0f}%"   if total else "—"
 pct_pts     = f"{pts_earn/pts_poss*100:.0f}% of {pts_poss}" if pts_poss else "—"
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Predictions",    total,         help="Matches scored so far")
-col2.metric("Correct Results",      pct_correct,   f"{correct}/{total} matches",  help="Right 1X2 outcome")
-col3.metric("Exact Score Hits",     pct_exact,     f"{exact}/{total} matches",    help="Perfect scoreline")
-col4.metric("Points Earned",        str(pts_earn), pct_pts,                       help="vs. maximum possible")
+col1.metric("Predictions",      total,         help="Total matches scored so far")
+col2.metric("Correct Results",  pct_correct,   f"{correct}/{total} matches",  help="Right 1X2 outcome")
+col3.metric("Exact Score Hits", pct_exact,     f"{exact}/{total} matches",    help="Perfect scoreline")
+col4.metric("Points Earned",    str(pts_earn), pct_pts,                       help="vs. maximum possible")
 
 st.divider()
 
 # ── Today's Predictions ──────────────────────────────────────────────────────
 st.subheader("📋 Today's Predictions")
-st.caption("Scores are FDR-adjusted (via vice-captain.com) and AI-calibrated (Claude claude-opus-4-6). λ = Poisson rate (expected goals).")
+st.caption(
+    "Scores are FDR-adjusted (vice-captain.com) and AI-calibrated (Claude claude-opus-4-6). "
+    "λ = Poisson rate (expected goals per 90 min)."
+)
 
 if picks.empty:
     st.info("No picks found. Predictions are generated each morning by the GitHub Actions pipeline.")
 else:
-    # Show most-recent picks and note the date
     picks_date = picks["date"].iloc[0].date() if "date" in picks.columns else None
-    if picks_date:
-        is_today = picks_date == date.today()
-        date_note = "today" if is_today else picks_date.strftime("%d %b %Y")
-        if not is_today:
-            st.warning(f"⚠️ Showing predictions from {date_note} — today's pipeline hasn't run yet.")
+    if picks_date and picks_date != date.today():
+        st.warning(f"⚠️ Showing predictions from {picks_date.strftime('%d %b %Y')} — today's pipeline hasn't run yet.")
 
     display = picks.copy()
+    display["Home Team"]       = display["home_team"].apply(get_flag)
+    display["Away Team"]       = display["away_team"].apply(get_flag)
     display["Predicted Score"] = display.apply(
         lambda r: fmt_score(r["final_home_goals"], r["final_away_goals"]), axis=1
     )
@@ -200,15 +377,11 @@ else:
     display["λ Away"] = display["lambda_away"]
     display["Stage"]  = display.get("stage_en", display.get("stage", ""))
 
-    col_map = {
-        "home_team": "Home Team",
-        "away_team": "Away Team",
-    }
-    show_cols = ["home_team", "away_team", "Stage", "Predicted Score", "λ Home", "λ Away"]
+    show_cols = ["Home Team", "Away Team", "Stage", "Predicted Score", "λ Home", "λ Away"]
     show_cols = [c for c in show_cols if c in display.columns]
 
     st.dataframe(
-        display[show_cols].rename(columns=col_map),
+        display[show_cols],
         use_container_width=True,
         hide_index=True,
         column_config={
@@ -232,11 +405,12 @@ if has_sim:
     )
 
     sim_df = picks.copy()
-    sim_df["Match"] = sim_df["home_team"] + " vs " + sim_df["away_team"]
+    sim_df["Match"] = sim_df.apply(
+        lambda r: f"{get_flag(r['home_team'])} vs {get_flag(r['away_team'])}", axis=1
+    )
 
-    # Grouped bar chart
-    fig_sim = go.Figure()
-    OUTCOMES = [("Home", "p_home"), ("Draw", "p_draw"), ("Away", "p_away")]
+    fig_sim    = go.Figure()
+    OUTCOMES   = [("Home", "p_home"), ("Draw", "p_draw"), ("Away", "p_away")]
     MKT_COLORS = ["#0077b6", "#4a4e69", "#774b3b"]
     SIM_COLORS = ["#00b4d8", "#9d8df1", "#f4a261"]
 
@@ -264,11 +438,10 @@ if has_sim:
         bargap=0.20, bargroupgap=0.05,
         legend=dict(orientation="h", y=1.15, x=0),
         yaxis=dict(gridcolor="#2c2f3e", title="Probability (%)", range=[0, 90]),
-        xaxis=dict(gridcolor="#2c2f3e"),
+        xaxis=dict(gridcolor="#2c2f3e", tickangle=-15),
     )
     st.plotly_chart(fig_sim, use_container_width=True, config={"displayModeBar": False})
 
-    # Detail table with edge columns
     tbl = sim_df.copy()
     for label, scol, mcol in [
         ("H", "sim_p_home", "market_p_home"),
@@ -358,10 +531,8 @@ else:
     st.subheader("🔄 Strategy vs Result — Last 10 Matches")
 
     recent = hist.tail(10).copy()
-    recent["Match"] = (
-        recent["home_team"].str.split().str[0]
-        + " vs "
-        + recent["away_team"].str.split().str[0]
+    recent["Match"] = recent.apply(
+        lambda r: f"{flag_short(r['home_team'])} vs {flag_short(r['away_team'])}", axis=1
     )
 
     fig_bar = go.Figure()
@@ -424,7 +595,9 @@ else:
     with st.expander("📊 Full Prediction History", expanded=False):
         full = hist.copy()
         full["Date"]      = full["date"].dt.strftime("%-d %b %Y")
-        full["Match"]     = full["home_team"] + " vs " + full["away_team"]
+        full["Match"]     = full.apply(
+            lambda r: f"{get_flag(r['home_team'])} vs {get_flag(r['away_team'])}", axis=1
+        )
         full["Stage"]     = full["stage_en"]
         full["Predicted"] = full.apply(
             lambda r: fmt_score(r["predicted_home"], r["predicted_away"]), axis=1
@@ -444,9 +617,20 @@ else:
         )
 
 # ── Footer ───────────────────────────────────────────────────────────────────
-st.markdown("---")
-st.caption(
-    "Mondial Predictor 2026 · "
-    "Data: API-Football · The Odds API · vice-captain.com · "
-    "AI: Claude claude-opus-4-6 (Anthropic)"
-)
+st.markdown("""
+<div class="footer-wrap">
+    <p>
+        ⚽ <strong>Mundial Predictor 2026</strong>
+        &nbsp;·&nbsp; AI by <a href="https://www.anthropic.com" target="_blank">Claude (Anthropic)</a>
+        &nbsp;·&nbsp; Data: The Odds API · API-Football · vice-captain.com
+    </p>
+    <p>
+        📬 Want daily picks on WhatsApp?
+        &nbsp;<a href="mailto:placeholder@example.com">Contact us</a>
+        &nbsp;·&nbsp; <a href="#">Subscribe</a> <em>(coming soon)</em>
+    </p>
+    <p style="color:#252840; font-size:0.72rem; margin-top:0.4rem;">
+        For entertainment purposes only · Not financial or betting advice · Gamble responsibly
+    </p>
+</div>
+""", unsafe_allow_html=True)

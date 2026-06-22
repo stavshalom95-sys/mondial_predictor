@@ -7,17 +7,31 @@
     "lambda_home": 1.76,
     "lambda_away": 0.62,
     "final_home_goals": 2,
-    "final_away_goals": 0
+    "final_away_goals": 0,
+    "sim_p_home": 0.651,
+    "sim_p_draw": 0.2253,
+    "sim_p_away": 0.1237,
+    "market_p_home": 0.6496,
+    "market_p_draw": 0.2266,
+    "market_p_away": 0.1239,
+    "sim_value_bet": null
   },
   {
     "date": "2026-06-22",
     "home_team": "France",
     "away_team": "Iraq",
     "stage": "שלב הבתים",
-    "lambda_home": 3.32,
-    "lambda_away": 0.44,
+    "lambda_home": 3.3,
+    "lambda_away": 0.48,
     "final_home_goals": 3,
-    "final_away_goals": 0
+    "final_away_goals": 0,
+    "sim_p_home": 0.8963,
+    "sim_p_draw": 0.0756,
+    "sim_p_away": 0.0281,
+    "market_p_home": 0.8918,
+    "market_p_draw": 0.078,
+    "market_p_away": 0.0302,
+    "sim_value_bet": null
   },
   {
     "date": "2026-06-22",
@@ -27,16 +41,30 @@
     "lambda_home": 1.36,
     "lambda_away": 1.04,
     "final_home_goals": 1,
-    "final_away_goals": 1
+    "final_away_goals": 1,
+    "sim_p_home": 0.4417,
+    "sim_p_draw": 0.2669,
+    "sim_p_away": 0.2914,
+    "market_p_home": 0.4414,
+    "market_p_draw": 0.2742,
+    "market_p_away": 0.2845,
+    "sim_value_bet": null
   },
   {
     "date": "2026-06-22",
     "home_team": "Jordan",
     "away_team": "Algeria",
     "stage": "שלב הבתים",
-    "lambda_home": 0.74,
-    "lambda_away": 1.74,
+    "lambda_home": 0.72,
+    "lambda_away": 1.76,
     "final_home_goals": 0,
-    "final_away_goals": 1
+    "final_away_goals": 1,
+    "sim_p_home": 0.1475,
+    "sim_p_draw": 0.2342,
+    "sim_p_away": 0.6183,
+    "market_p_home": 0.1503,
+    "market_p_draw": 0.2298,
+    "market_p_away": 0.62,
+    "sim_value_bet": null
   }
 ]

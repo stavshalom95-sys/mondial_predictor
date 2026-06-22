@@ -2,10 +2,13 @@ name: Mondial Predictor — Daily Run
 
 on:
   schedule:
-    # 06:00 UTC = 09:00 IDT (summer, UTC+3) / 08:00 IDT (winter, UTC+2).
+    # Primary: 06:00 UTC = 09:00 IDT (summer, UTC+3).
     # WC 2026 latest games (21:00 PDT = 00:00 UTC) finish by ~02:00 UTC,
     # giving a 4-hour safety margin before this run fetches results.
     - cron: "0 6 * * *"
+    # Backup: 07:00 UTC — fires if GitHub skips the 06:00 slot.
+    # last_run.json guard ensures the pipeline runs only once per day.
+    - cron: "0 7 * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -13,6 +16,12 @@ on:
         required: false
         default: "true"
         type: boolean
+
+# Prevent two scheduled runs from executing simultaneously.
+# last_run.json ensures idempotency if both crons happen to fire.
+concurrency:
+  group: mondial-daily-run
+  cancel-in-progress: false
 
 jobs:
   run-predictor:
@@ -48,7 +57,7 @@ jobs:
           WHATSAPP_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_RECIPIENT_PHONE }}
         run: |
           FORCE_FLAG=""
-          [ "${{ github.event.inputs.force }}" = "true" ] && FORCE_FLAG="--force"
+          [ "${{ github.event.inputs.force || 'false' }}" = "true" ] && FORCE_FLAG="--force"
           python main.py tests/sample_games.json $FORCE_FLAG
 
       - name: Commit morning picks and history

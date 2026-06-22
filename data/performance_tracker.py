@@ -204,8 +204,33 @@ def compute_stats(records: list[dict]) -> dict:
 # Private helpers
 # ---------------------------------------------------------------------------
 
+def clean_team_name(name: str) -> str:
+    """
+    Remove emoji, flag characters, and non-letter symbols from a team name.
+
+    Unicode categories kept: Letters (L*), Numbers (N*), Space separators (Zs),
+    and Punctuation (P* — hyphens, apostrophes, etc.).
+
+    Everything else is stripped:
+      S* — Symbol categories (So = emoji/flags, Sc = currency, Sm = math, Sk = modifier)
+      C* — Control/Format (Cf = ZWJ used in emoji sequences, Cc = control chars)
+      M* — Combining marks (handled further by NFD in _normalize)
+
+    Examples:
+      '🇪🇸 Spain'             → 'Spain'
+      '🏴\u200d☠️ Somalia'   → 'Somalia'
+      'Côte d\'Ivoire'        → 'Côte d\'Ivoire'  (preserved for NFD in _normalize)
+    """
+    filtered = "".join(
+        c for c in name
+        if unicodedata.category(c).startswith(("L", "N", "Z", "P"))
+    )
+    return " ".join(filtered.split())
+
+
 def _normalize(name: str) -> str:
-    """Lowercase, strip, collapse whitespace, remove diacritics."""
+    """Lowercase, strip, collapse whitespace, remove emoji and diacritics."""
+    name = clean_team_name(name)            # strip emoji / flags / symbols first
     name = unicodedata.normalize("NFD", name)
     name = "".join(c for c in name if unicodedata.category(c) != "Mn")
     return " ".join(name.lower().split())

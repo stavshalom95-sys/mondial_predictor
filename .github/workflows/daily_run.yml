@@ -16,6 +16,11 @@ on:
         required: false
         default: "true"
         type: boolean
+      dry_run:
+        description: "Dry run — skip all live API calls; test history ingestion + matching only (no notification, no state changes)"
+        required: false
+        default: "false"
+        type: boolean
 
 # Prevent two scheduled runs from executing simultaneously.
 # last_run.json ensures idempotency if both crons happen to fire.
@@ -42,6 +47,8 @@ jobs:
         run: pip install requests anthropic
 
       - name: Fetch World Cup schedule
+        # Skipped in dry-run mode — uses the tests/sample_games.json already in the repo.
+        if: github.event.inputs.dry_run != 'true'
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: python scripts/fetch_schedule.py --output tests/sample_games.json
@@ -58,7 +65,9 @@ jobs:
         run: |
           FORCE_FLAG=""
           [ "${{ github.event.inputs.force || 'false' }}" = "true" ] && FORCE_FLAG="--force"
-          python main.py tests/sample_games.json $FORCE_FLAG
+          DRY_FLAG=""
+          [ "${{ github.event.inputs.dry_run || 'false' }}" = "true" ] && DRY_FLAG="--dry-run"
+          python main.py tests/sample_games.json $FORCE_FLAG $DRY_FLAG
 
       - name: Commit morning picks and history
         run: |

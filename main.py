@@ -220,11 +220,16 @@ def run_daily_pipeline(
     raw_games_from_api: list[dict],
     send_notification: bool = True,
     force: bool = False,
+    dry_run: bool = False,
 ) -> str:
     """
     Full automated pipeline. Returns formatted message string regardless of send_notification.
 
-    force=True bypasses the single-run guard (use --force on CLI for debugging).
+    force=True   — bypass the single-run guard.
+    dry_run=True — skip ALL external API calls (odds, standings, AI, notification).
+                   Step 0 (history ingestion + clean_team_name matching) still runs so
+                   you can verify it without wasting API quota. Does not write
+                   morning_picks.json or last_run.json so repeated dry runs are idempotent.
     """
     # ── Single-run guard ──────────────────────────────────────────────────────
     if not force and _already_ran_today():
@@ -308,14 +313,16 @@ def run_daily_pipeline(
             perf_report = yesterday_stats(history)
 
     # ── Step 1: Live standings sync ──────────────────────────────────────────
-    live_standings = fetch_standings()
-
-    if live_standings:
-        MY_CURRENT_STATE["my_points"]     = live_standings["my_points"]
-        MY_CURRENT_STATE["leader_points"] = live_standings["leader_points"]
-        MY_CURRENT_STATE["leader_name"]   = live_standings["leader_name"]
+    if dry_run:
+        print("[pipeline] Dry run — skipping standings sync (using hardcoded state).")
     else:
-        print("[pipeline] Using hardcoded standings from tournament_state.py (365Scores sync unavailable).")
+        live_standings = fetch_standings()
+        if live_standings:
+            MY_CURRENT_STATE["my_points"]     = live_standings["my_points"]
+            MY_CURRENT_STATE["leader_points"] = live_standings["leader_points"]
+            MY_CURRENT_STATE["leader_name"]   = live_standings["leader_name"]
+        else:
+            print("[pipeline] Using hardcoded standings from tournament_state.py (365Scores sync unavailable).")
 
     # ── Step 2: Parse schedule + compute remaining matches ───────────────────
     all_matches = parse_world_cup_schedule(raw_games_from_api)
@@ -331,6 +338,21 @@ def run_daily_pipeline(
     )
 
     # ── Step 3: Auto-fetch today's odds ──────────────────────────────────────
+    if dry_run:
+        msg = (
+            "[pipeline] Dry run complete.\n"
+            "  • Schedule fetch:   skipped (used cached tests/sample_games.json)\n"
+            "  • Standings sync:   skipped\n"
+            "  • Odds API:         skipped\n"
+            "  • AI / RapidAPI:    skipped\n"
+            "  • Notification:     skipped\n"
+            "  • morning_picks:    not overwritten\n"
+            "  • last_run.json:    not updated\n"
+            "Check the [tracker] lines above to verify history ingestion and clean_team_name matching."
+        )
+        print(msg)
+        return msg
+
     odds_api_key = os.environ.get("THE_ODDS_API_KEY", "")
     odds_map = fetch_todays_match_odds(odds_api_key)
 
@@ -465,8 +487,9 @@ def run_daily_pipeline(
         print(message)
         print("--- End of message ---\n")
 
-    save_morning_picks(morning_data)
-    _save_last_run(picks_generated=len(picks))
+    if not dry_run:
+        save_morning_picks(morning_data)
+        _save_last_run(picks_generated=len(picks))
     return message
 
 
@@ -605,6 +628,17 @@ def main() -> None:
         action="store_true",
         help="Bypass the single-run guard and re-run even if pipeline already ran today",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        help=(
+            "Skip all external API calls (odds, standings, AI, RapidAPI, notification). "
+            "Step 0 (history ingestion + team-name matching) still runs so you can verify "
+            "clean_team_name() without wasting quota. Implies --no-notify and --force. "
+            "Does not write morning_picks.json or last_run.json."
+        ),
+    )
     args = parser.parse_args()
 
     if args.lineup_check:
@@ -612,7 +646,12 @@ def main() -> None:
     elif args.games_json:
         with open(args.games_json, encoding="utf-8") as f:
             raw_games = json.load(f)
-        run_daily_pipeline(raw_games, send_notification=not args.no_notify, force=args.force)
+        run_daily_pipeline(
+            raw_games,
+            send_notification=not args.no_notify and not args.dry_run,
+            force=args.force or args.dry_run,   # dry-run always bypasses last_run guard
+            dry_run=args.dry_run,
+        )
     else:
         parser.error("games_json is required for the morning run (or use --lineup-check)")
 

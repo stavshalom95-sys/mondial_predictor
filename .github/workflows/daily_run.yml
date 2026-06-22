@@ -6,7 +6,13 @@ on:
     # WC 2026 latest games (21:00 PDT = 00:00 UTC) finish by ~02:00 UTC,
     # giving a 4-hour safety margin before this run fetches results.
     - cron: "0 6 * * *"
-  workflow_dispatch: {}   # allow manual trigger from the Actions tab
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Bypass last_run.json guard and re-process today"
+        required: false
+        default: "true"
+        type: boolean
 
 jobs:
   run-predictor:
@@ -40,7 +46,10 @@ jobs:
           GREEN_API_INSTANCE_ID:    ${{ secrets.GREEN_API_INSTANCE_ID }}
           GREEN_API_TOKEN:          ${{ secrets.GREEN_API_TOKEN }}
           WHATSAPP_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_RECIPIENT_PHONE }}
-        run: python main.py tests/sample_games.json
+        run: |
+          FORCE_FLAG=""
+          [ "${{ github.event.inputs.force }}" = "true" ] && FORCE_FLAG="--force"
+          python main.py tests/sample_games.json $FORCE_FLAG
 
       - name: Commit morning picks and history
         run: |

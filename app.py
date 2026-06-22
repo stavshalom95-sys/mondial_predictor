@@ -286,13 +286,24 @@ def result_badge(row: pd.Series) -> str:
     return "❌ Wrong"
 
 
+_HIGH_EV_THRESHOLD = 0.20   # matches ensemble.py's _HIGH_VALUE_THRESHOLD
+
+
 def ev_badge(row: pd.Series) -> str:
-    """Color-coded EV badge: 🟢 positive, 🔴 negative, — if no odds loaded."""
+    """
+    Color-coded EV badge.
+    ⭐ gold  — EV ≥ +20% (high-confidence value bet, ensemble gets value-priority prompt)
+    🟢 green — EV > 0 but < +20% (standard value bet)
+    🔴 red   — EV ≤ 0 (bookmaker has the edge)
+    —        — no odds loaded for this match
+    """
     ev      = row.get("ev_winner")
     outcome = row.get("ev_winner_outcome")
     if ev is None or (isinstance(ev, float) and pd.isna(ev)):
         return "—"
     lbl = str(outcome).title() if outcome else ""
+    if ev >= _HIGH_EV_THRESHOLD:
+        return f"⭐ {ev:+.1%} {lbl}"
     return f"🟢 {ev:+.1%} {lbl}" if ev > 0 else f"🔴 {ev:+.1%} {lbl}"
 
 
@@ -417,7 +428,9 @@ if has_sim:
     st.subheader("🔥 Market vs AI Simulation")
     st.caption(
         "Bookmaker implied probability (after overround removal) vs "
-        "Monte Carlo simulation (10,000 Poisson draws). Edge > 5% = Value Bet 🔥"
+        "Monte Carlo simulation (10,000 Poisson draws).  "
+        "🔥 Edge > 5% = Value Bet · ⭐ Edge ≥ 20% = High-Confidence Value Bet "
+        "(Claude's reasoning explicitly prioritises the statistical edge)"
     )
 
     sim_df = picks.copy()
@@ -469,9 +482,22 @@ if has_sim:
         raw_edge = (tbl[scol] - tbl[mcol]) * 100
         tbl[f"Edge {label}"] = raw_edge.round(1).apply(lambda x: f"{x:+.1f}%")
 
-    tbl["Value Bet"] = tbl.get("sim_value_bet", pd.Series([None] * len(tbl))).map(
-        lambda x: f"🔥 {str(x).title()}" if x and str(x) not in ("nan", "None", "") else "—"
-    )
+    def _sim_value_badge(row: pd.Series) -> str:
+        vb = row.get("sim_value_bet", "")
+        if not vb or str(vb) in ("nan", "None", ""):
+            return "—"
+        edge_map = {
+            "home": row.get("sim_p_home", 0) - row.get("market_p_home", 0),
+            "draw": row.get("sim_p_draw", 0) - row.get("market_p_draw", 0),
+            "away": row.get("sim_p_away", 0) - row.get("market_p_away", 0),
+        }
+        edge  = edge_map.get(str(vb).lower(), 0.0)
+        label = str(vb).title()
+        if edge >= _HIGH_EV_THRESHOLD:
+            return f"⭐ {label} ({edge:+.0%})"
+        return f"🔥 {label}"
+
+    tbl["Value Bet"] = tbl.apply(_sim_value_badge, axis=1)
 
     show = ["Match",
             "Mkt H", "Sim H", "Edge H",

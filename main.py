@@ -476,20 +476,28 @@ def run_daily_pipeline(
             f"H={sim.p_home:.1%}  D={sim.p_draw:.1%}  A={sim.p_away:.1%}"
         )
         # Compare sim vs market (true_probs already computed above)
-        _VALUE_THRESHOLD = 0.05
+        _VALUE_THRESHOLD      = 0.05
+        _HIGH_VALUE_THRESHOLD = 0.20
         edge_h = sim.p_home - true_probs.home
         edge_d = sim.p_draw - true_probs.draw
         edge_a = sim.p_away - true_probs.away
         sim_value_bet: str | None = None
         if edge_h >= _VALUE_THRESHOLD:
             sim_value_bet = "home"
-            print(f"[sim] \U0001f525 VALUE (Home): sim={sim.p_home:.1%} vs mkt={true_probs.home:.1%} edge={edge_h:+.1%}")
+            tag = "⭐ HIGH-VALUE" if edge_h >= _HIGH_VALUE_THRESHOLD else "\U0001f525 VALUE"
+            print(f"[sim] {tag} (Home): sim={sim.p_home:.1%} vs mkt={true_probs.home:.1%} edge={edge_h:+.1%}")
         elif edge_a >= _VALUE_THRESHOLD:
             sim_value_bet = "away"
-            print(f"[sim] \U0001f525 VALUE (Away): sim={sim.p_away:.1%} vs mkt={true_probs.away:.1%} edge={edge_a:+.1%}")
+            tag = "⭐ HIGH-VALUE" if edge_a >= _HIGH_VALUE_THRESHOLD else "\U0001f525 VALUE"
+            print(f"[sim] {tag} (Away): sim={sim.p_away:.1%} vs mkt={true_probs.away:.1%} edge={edge_a:+.1%}")
         elif edge_d >= _VALUE_THRESHOLD:
             sim_value_bet = "draw"
-            print(f"[sim] \U0001f525 VALUE (Draw): sim={sim.p_draw:.1%} vs mkt={true_probs.draw:.1%} edge={edge_d:+.1%}")
+            tag = "⭐ HIGH-VALUE" if edge_d >= _HIGH_VALUE_THRESHOLD else "\U0001f525 VALUE"
+            print(f"[sim] {tag} (Draw): sim={sim.p_draw:.1%} vs mkt={true_probs.draw:.1%} edge={edge_d:+.1%}")
+
+        # Edge value passed to ensemble to trigger value-priority prompt when edge ≥ 20%
+        _edge_map = {"home": edge_h, "draw": edge_d, "away": edge_a}
+        _active_edge = _edge_map.get(sim_value_bet or "", 0.0)
 
         # ── Kelly / Value Bet analysis ──────────────────────────────────────
         kelly_analyses = analyse_match_bets(model, odds_1x2)
@@ -515,11 +523,13 @@ def run_daily_pipeline(
         ai_pick_prob = None
         ai_reasoning = None
         ensemble_pick = enhance(
-            home_team       = match.home_team,
-            away_team       = match.away_team,
-            stage           = stage,
-            model           = model,
-            context_section = context_section,
+            home_team          = match.home_team,
+            away_team          = match.away_team,
+            stage              = stage,
+            model              = model,
+            context_section    = context_section,
+            value_bet_edge     = _active_edge,
+            value_bet_outcome  = sim_value_bet or "",
         )
         if ensemble_pick:
             ai_pick_prob = ensemble_pick.to_score_prob(model)

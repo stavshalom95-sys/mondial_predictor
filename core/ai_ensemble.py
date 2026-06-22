@@ -108,12 +108,17 @@ class EnsemblePick:
 # Private helpers
 # ---------------------------------------------------------------------------
 
+_HIGH_VALUE_THRESHOLD = 0.20   # edge at which simulation outweighs Poisson exact-score bias
+
+
 def _build_user_prompt(
-    home_team:       str,
-    away_team:       str,
-    stage:           TournamentStage,
-    model:           PoissonMatchModel,
-    context_section: str,
+    home_team:          str,
+    away_team:          str,
+    stage:              TournamentStage,
+    model:              PoissonMatchModel,
+    context_section:    str,
+    value_bet_edge:     float = 0.0,
+    value_bet_outcome:  str   = "",
 ) -> str:
     top3 = model.top_n(3)
     candidates = "\n".join(
@@ -123,13 +128,29 @@ def _build_user_prompt(
     context_block = context_section.strip() if context_section.strip() else (
         "No live context available — base your decision on statistics only."
     )
+
+    # VALUE ALERT: injected when simulation edge over market is significant
+    value_alert = ""
+    if value_bet_edge >= _HIGH_VALUE_THRESHOLD:
+        value_alert = (
+            f"\n⚠️  VALUE ALERT — Monte Carlo edge: {value_bet_edge:+.1%} on {value_bet_outcome.upper()} outcome.\n"
+            f"The simulation's implied probability is {value_bet_edge:.0%} higher than the bookmaker's "
+            f"implied probability for {value_bet_outcome}. This is a statistically significant mispricing.\n"
+            f"REQUIREMENT: Your reasoning MUST explicitly state that the statistical edge (value) "
+            f"outweighs the default Poisson exact-score bias toward low-scoring draws. "
+            f"Explain why backing the {value_bet_outcome.upper()} side is the rational choice "
+            f"given this {value_bet_edge:.0%} edge. Do NOT default to a conservative draw prediction "
+            f"if the edge points clearly to {value_bet_outcome}.\n"
+        )
+
     return (
         f"Match: {home_team} vs {away_team}\n"
         f"Stage: {stage.value}\n\n"
         f"Poisson statistical model (calibrated from market odds):\n"
         f"  Expected goals — {home_team}: {model.lambda_home:.2f} | {away_team}: {model.lambda_away:.2f}\n"
         f"  Top-3 most likely exact scores:\n{candidates}\n\n"
-        f"Live pre-match context:\n{context_block}\n\n"
+        f"Live pre-match context:\n{context_block}\n"
+        f"{value_alert}\n"
         f"Based on the above, choose the best exact score prediction. "
         f"Explain briefly whether the context reinforces or changes the statistical outlook."
     )
@@ -140,12 +161,14 @@ def _build_user_prompt(
 # ---------------------------------------------------------------------------
 
 def enhance(
-    home_team:       str,
-    away_team:       str,
-    stage:           TournamentStage,
-    model:           PoissonMatchModel,
-    context_section: str = "",
-    api_key:         Optional[str] = None,
+    home_team:          str,
+    away_team:          str,
+    stage:              TournamentStage,
+    model:              PoissonMatchModel,
+    context_section:    str   = "",
+    api_key:            Optional[str] = None,
+    value_bet_edge:     float = 0.0,
+    value_bet_outcome:  str   = "",
 ) -> Optional[EnsemblePick]:
     """
     Call Claude to select the best exact score given Poisson stats + live context.
@@ -171,8 +194,17 @@ def enhance(
         print("[ensemble] ANTHROPIC_API_KEY not set — skipping AI ensemble.")
         return None
 
+    if value_bet_edge >= _HIGH_VALUE_THRESHOLD:
+        print(
+            f"[ensemble] ⭐ HIGH-VALUE ALERT: {value_bet_edge:+.1%} edge on {value_bet_outcome} — "
+            f"injecting value-priority directive into prompt."
+        )
+
     client = _anthropic.Anthropic(api_key=api_key)
-    prompt = _build_user_prompt(home_team, away_team, stage, model, context_section)
+    prompt = _build_user_prompt(
+        home_team, away_team, stage, model, context_section,
+        value_bet_edge, value_bet_outcome,
+    )
 
     print(f"[ensemble] Calling {_MODEL} for {home_team} vs {away_team}...")
 

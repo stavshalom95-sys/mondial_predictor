@@ -56,12 +56,13 @@ def load_history() -> list[dict]:
 def save_history(history: list[dict]) -> None:
     """Persist history list to history.json."""
     os.makedirs(os.path.dirname(_HISTORY_PATH), exist_ok=True)
+    print(f"[tracker] save_history() called with {len(history)} record(s).")
     try:
         with open(_HISTORY_PATH, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=2, ensure_ascii=False)
-        print(f"[tracker] History saved ({len(history)} records) → {_HISTORY_PATH}")
+        print(f"[tracker] history.json written ({len(history)} records) → {_HISTORY_PATH}")
     except Exception as exc:
-        print(f"[tracker] Warning: could not save history: {exc}")
+        print(f"[tracker] ERROR: could not write history.json: {exc}")
 
 
 def ingest_results(
@@ -86,6 +87,7 @@ def ingest_results(
         if "date" in _r
     }
 
+    print(f"[tracker] ingest_results(): {len(morning_picks)} pick(s), {len(results)} result(s), {len(existing_history)} existing record(s).")
     new_records: list[dict] = []
 
     for pick in morning_picks:

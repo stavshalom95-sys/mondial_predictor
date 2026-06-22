@@ -260,22 +260,48 @@ def run_daily_pipeline(
     history          = load_history()
     perf_report: dict | None = None
 
-    if combined_results and os.path.exists(_MORNING_PICKS_PATH):
+    if not combined_results:
+        print("[pipeline] Step 0: no finished matches found in schedule or RapidAPI — skipping ingestion.")
+        perf_report = yesterday_stats(history)
+    elif not os.path.exists(_MORNING_PICKS_PATH):
+        print("[pipeline] Step 0: morning_picks.json not found — skipping ingestion (first run).")
+        perf_report = yesterday_stats(history)
+    else:
         try:
             with open(_MORNING_PICKS_PATH, encoding="utf-8") as f:
                 yesterday_picks = json.load(f)
-            history    = ingest_results(yesterday_picks, combined_results, history)
-            save_history(history)
+
+            # Diagnostic: show what we're trying to match
+            pick_date   = yesterday_picks[0].get("date", "?") if yesterday_picks else "?"
+            pick_teams  = [(p["home_team"], p["away_team"]) for p in yesterday_picks]
+            result_teams = [(r["home_team"], r["away_team"]) for r in combined_results]
+            print(f"[pipeline] Step 0: picks in morning_picks.json → {len(yesterday_picks)} for {pick_date}")
+            print(f"[pipeline]   pick teams  : {pick_teams}")
+            print(f"[pipeline]   result teams: {result_teams}")
+            if not any(
+                pt[0].lower() in rt[0].lower() or rt[0].lower() in pt[0].lower()
+                for pt in pick_teams for rt in result_teams
+            ):
+                print(
+                    "[pipeline] Step 0: NO OVERLAP between pick teams and finished results. "
+                    "Tonight's matches haven't finished yet — history will be populated on "
+                    "tomorrow's 06:00 UTC run once the schedule shows them as 'final'."
+                )
+
+            prev_len = len(history)
+            history  = ingest_results(yesterday_picks, combined_results, history)
+            new_recs = len(history) - prev_len
+            print(f"[pipeline] Step 0: ingested {new_recs} new record(s) → history now has {len(history)} total.")
+
+            if len(history) > 0:
+                save_history(history)
+            else:
+                print("[pipeline] Step 0: skipping history.json write — 0 records (no picks matched results yet).")
+
             perf_report = yesterday_stats(history)
         except Exception as exc:
             print(f"[pipeline] Warning: result ingestion failed: {exc}")
             perf_report = yesterday_stats(history)
-    elif not os.path.exists(_MORNING_PICKS_PATH):
-        print("[pipeline] morning_picks.json not found — skipping history update (first run).")
-        perf_report = yesterday_stats(history)
-    else:
-        print("[pipeline] No finished match results in schedule or RapidAPI yet.")
-        perf_report = yesterday_stats(history)
 
     # ── Step 1: Live standings sync ──────────────────────────────────────────
     live_standings = fetch_standings()

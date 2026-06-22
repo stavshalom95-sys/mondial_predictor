@@ -51,10 +51,12 @@ from data.context_fetcher import fetch_match_context
 from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
+from core.kelly import analyse_match as analyse_match_bets, BetAnalysis
 
 _DATA_DIR           = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _MORNING_PICKS_PATH = os.path.join(_DATA_DIR, "morning_picks.json")
 _LAST_RUN_PATH      = os.path.join(_DATA_DIR, "last_run.json")
+_EV_LOG_PATH        = os.path.join(_DATA_DIR, "ev_log.json")
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +126,53 @@ def _save_last_run(picks_generated: int) -> None:
         print(f"[pipeline] last_run.json written — guard active for the rest of today.")
     except Exception as exc:
         print(f"[pipeline] Warning: could not write last_run.json: {exc}")
+
+
+def _append_ev_log(home_team: str, away_team: str, analyses: list[BetAnalysis]) -> None:
+    """
+    Append Kelly/EV analysis records to data/ev_log.json.
+    Idempotent: replaces any existing records for the same (date, home, away, outcome).
+    """
+    today = date.today().isoformat()
+    os.makedirs(_DATA_DIR, exist_ok=True)
+    try:
+        existing: list[dict] = []
+        if os.path.exists(_EV_LOG_PATH):
+            with open(_EV_LOG_PATH, encoding="utf-8") as f:
+                existing = json.load(f)
+    except Exception:
+        existing = []
+
+    # Remove stale entries for the same match today (re-run idempotency)
+    key = (today, home_team, away_team)
+    existing = [
+        r for r in existing
+        if not (r.get("date") == key[0]
+                and r.get("home_team") == key[1]
+                and r.get("away_team") == key[2])
+    ]
+
+    for a in analyses:
+        existing.append({
+            "date":           today,
+            "home_team":      home_team,
+            "away_team":      away_team,
+            "outcome":        a.outcome,
+            "our_prob":       round(a.our_prob, 4),
+            "decimal_odds":   round(a.decimal_odds, 2),
+            "implied_prob":   round(a.implied_prob, 4),
+            "edge_pct":       round(a.edge_pct, 2),
+            "ev_per_unit":    round(a.ev_per_unit, 4),
+            "kelly_fraction": round(a.kelly_fraction, 4),
+            "half_kelly":     round(a.half_kelly, 4),
+            "is_value":       a.is_value,
+        })
+
+    try:
+        with open(_EV_LOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(existing, f, indent=2, ensure_ascii=False)
+    except Exception as exc:
+        print(f"[pipeline] Warning: could not write ev_log.json: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +311,18 @@ def run_daily_pipeline(
 
         print(f"[pipeline]   top-3: {model.top_n(3)}")
 
+        # ── Kelly / Value Bet analysis ──────────────────────────────────────
+        kelly_analyses = analyse_match_bets(model, odds_1x2)
+        _append_ev_log(match.home_team, match.away_team, kelly_analyses)
+        value_bets = [a for a in kelly_analyses if a.is_value]
+        if value_bets:
+            for vb in value_bets:
+                print(
+                    f"[kelly] VALUE BET: {vb.outcome} | odds={vb.decimal_odds:.2f} "
+                    f"| edge={vb.edge_pct:+.1f}% | EV={vb.ev_per_unit:+.1%} "
+                    f"| half-Kelly={vb.half_kelly:.1%}"
+                )
+
         # Poisson model → strategy recommendation
         rec = recommend(model, context, stage)
         print(f"[pipeline]   recommendation: {rec.recommended_pick} [{rec.strategy.value}]")
@@ -290,6 +351,7 @@ def run_daily_pipeline(
             recommendation = rec,
             ai_pick        = ai_pick_prob,
             ai_reasoning   = ai_reasoning,
+            value_bets     = value_bets if value_bets else None,
         ))
         morning_data.append({
             "date":             date.today().isoformat(),

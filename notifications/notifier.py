@@ -14,6 +14,7 @@ from typing import Optional
 
 from core.poisson_engine import ScoreProb
 from core.strategy_advisor import StrategyRecommendation, Strategy, TournamentContext
+from core.kelly import BetAnalysis
 
 
 # ---------------------------------------------------------------------------
@@ -166,8 +167,9 @@ class DailyPick:
     home_team:      str
     away_team:      str
     recommendation: StrategyRecommendation
-    ai_pick:        Optional[ScoreProb] = None
-    ai_reasoning:   Optional[str]       = None
+    ai_pick:        Optional[ScoreProb]       = None
+    ai_reasoning:   Optional[str]             = None
+    value_bets:     Optional[list[BetAnalysis]] = None
 
 
 def format_daily_message(picks: list[DailyPick], context: TournamentContext, perf_report: Optional[dict] = None) -> str:
@@ -236,6 +238,29 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
             )
             lines.append(f"   (קונצנזוס היה: {consensus_desc})")
 
+        lines.append("")
+
+    # ── Value Bets section (only when at least one value bet exists) ─────────
+    all_value_bets: list[tuple[str, str, BetAnalysis]] = [
+        (pick.home_team, pick.away_team, vb)
+        for pick in picks
+        if pick.value_bets
+        for vb in pick.value_bets
+    ]
+    if all_value_bets:
+        lines.append("💰 *הימורי ערך — יתרון מעל 10%*")
+        for home, away, vb in all_value_bets:
+            outcome_he = {"Home Win": f"ניצחון {home}", "Draw": "תיקו", "Away Win": f"ניצחון {away}"}.get(vb.outcome, vb.outcome)
+            lines.append(
+                f"   ✨ {_with_flag(home)} נגד {_with_flag(away)} — {outcome_he}"
+            )
+            lines.append(
+                f"      אודס: {vb.decimal_odds:.2f} | "
+                f"Edge: {vb.edge_pct:+.1f}% | "
+                f"EV: {vb.ev_per_unit:+.1%} | "
+                f"Half-Kelly: {vb.half_kelly:.1%} מהבנק"
+            )
+        lines.append("   ⚠️ _ניתוח מתמטי בלבד — הימרו באחריות_")
         lines.append("")
 
     lines.append('_נשלח אוטומטית ע"י Mondial Predictor_')

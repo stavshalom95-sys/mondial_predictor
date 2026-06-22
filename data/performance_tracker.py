@@ -88,6 +88,14 @@ def ingest_results(
     }
 
     print(f"[tracker] ingest_results(): {len(morning_picks)} pick(s), {len(results)} result(s), {len(existing_history)} existing record(s).")
+    # Always dump the full result list so we can see exactly what the API returned
+    if results:
+        print(f"[tracker] All finished results available for matching:")
+        for _r in results:
+            print(f"[tracker]   '{_r['home_team']}' vs '{_r['away_team']}' "
+                  f"({_r.get('home_goals', '?')}-{_r.get('away_goals', '?')})")
+    else:
+        print("[tracker] WARNING: results list is empty — no finished matches were passed in.")
     new_records: list[dict] = []
 
     for pick in morning_picks:
@@ -103,7 +111,8 @@ def ingest_results(
         # Find corresponding actual result
         result = _find_result(home_team, away_team, results)
         if result is None:
-            print(f"[tracker]   No result yet for {home_team} vs {away_team} — skipping.")
+            print(f"[tracker]   ✗ No match for pick '{home_team}' vs '{away_team}' "
+                  f"(pick date: {pick_date}) — not in any finished result above.")
             continue
 
         actual_home = result["home_goals"]
@@ -203,9 +212,22 @@ def _normalize(name: str) -> str:
 
 
 def _teams_match(a: str, b: str) -> bool:
-    """True if two team names refer to the same team after normalization."""
+    """True if two team names refer to the same team after normalization.
+
+    Matching tiers (first match wins):
+      1. Exact normalized strings       "south korea" == "south korea"
+      2. Substring                      "iran" in "ir iran"
+      3. Significant-word overlap       "korea republic" ∩ "south korea" → {"korea"}
+    """
     na, nb = _normalize(a), _normalize(b)
-    return na == nb or na in nb or nb in na
+    if na == nb or na in nb or nb in na:
+        return True
+    # Tier 3: any word >3 chars in common handles common API variant names:
+    #   "Korea Republic" vs "South Korea", "Ivory Coast" vs "Cote d'Ivoire" (partial),
+    #   "United States" vs "USA" will NOT match here (both <4 chars) — kept intentionally strict
+    words_a = {w for w in na.split() if len(w) > 3}
+    words_b = {w for w in nb.split() if len(w) > 3}
+    return bool(words_a & words_b)
 
 
 def _find_result(

@@ -293,10 +293,14 @@ def run_daily_pipeline(
             new_recs = len(history) - prev_len
             print(f"[pipeline] Step 0: ingested {new_recs} new record(s) → history now has {len(history)} total.")
 
-            if len(history) > 0:
+            if new_recs > 0:
+                save_history(history)
+            elif len(history) > 0:
+                # Pre-existing records but nothing new today — still keep the file intact
                 save_history(history)
             else:
-                print("[pipeline] Step 0: skipping history.json write — 0 records (no picks matched results yet).")
+                print("[pipeline] Step 0: skipping history.json write — 0 records. "
+                      "Check tracker logs above to see which result names the API returned.")
 
             perf_report = yesterday_stats(history)
         except Exception as exc:

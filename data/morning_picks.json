@@ -1,42 +1,42 @@
 [
   {
-    "date": "2026-06-21",
-    "home_team": "🇪🇸 Spain",
-    "away_team": "🇸🇦 Saudi Arabia",
+    "date": "2026-06-22",
+    "home_team": "Argentina",
+    "away_team": "Austria",
     "stage": "שלב הבתים",
-    "lambda_home": 2.85,
-    "lambda_away": 0.55,
-    "final_home_goals": 3,
-    "final_away_goals": 0
-  },
-  {
-    "date": "2026-06-21",
-    "home_team": "🇧🇪 Belgium",
-    "away_team": "🇮🇷 Iran",
-    "stage": "שלב הבתים",
-    "lambda_home": 1.62,
-    "lambda_away": 0.71,
-    "final_home_goals": 1,
-    "final_away_goals": 0
-  },
-  {
-    "date": "2026-06-21",
-    "home_team": "🇺🇾 Uruguay",
-    "away_team": "🇨🇻 Cape Verde Islands",
-    "stage": "שלב הבתים",
-    "lambda_home": 1.95,
-    "lambda_away": 0.60,
+    "lambda_home": 1.76,
+    "lambda_away": 0.62,
     "final_home_goals": 2,
     "final_away_goals": 0
   },
   {
-    "date": "2026-06-21",
-    "home_team": "🇳🇿 New Zealand",
-    "away_team": "🇪🇬 Egypt",
+    "date": "2026-06-22",
+    "home_team": "France",
+    "away_team": "Iraq",
     "stage": "שלב הבתים",
-    "lambda_home": 0.88,
-    "lambda_away": 1.45,
+    "lambda_home": 3.32,
+    "lambda_away": 0.44,
+    "final_home_goals": 3,
+    "final_away_goals": 0
+  },
+  {
+    "date": "2026-06-22",
+    "home_team": "Norway",
+    "away_team": "Senegal",
+    "stage": "שלב הבתים",
+    "lambda_home": 1.36,
+    "lambda_away": 1.04,
+    "final_home_goals": 1,
+    "final_away_goals": 1
+  },
+  {
+    "date": "2026-06-22",
+    "home_team": "Jordan",
+    "away_team": "Algeria",
+    "stage": "שלב הבתים",
+    "lambda_home": 0.74,
+    "lambda_away": 1.74,
     "final_home_goals": 0,
-    "final_away_goals": 2
+    "final_away_goals": 1
   }
 ]

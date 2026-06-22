@@ -53,6 +53,7 @@ from data.performance_tracker import ingest_results, load_history, save_history,
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis
 from core.simulator import simulate
+from core.strength_model import build_strength_model, MIN_BLEND, BLEND_WEIGHT, _norm as _sm_norm
 from data.winner_odds_loader import enrich_picks
 
 _DATA_DIR           = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
@@ -216,6 +217,35 @@ def _append_ev_log(home_team: str, away_team: str, analyses: list[BetAnalysis]) 
 
 
 # ---------------------------------------------------------------------------
+# Strength-model helpers
+# ---------------------------------------------------------------------------
+
+def get_team_strength(team_name: str, strength_model) -> dict:
+    """
+    Return {'attack': float, 'defence': float, 'games': int} for team_name.
+    Falls back to tournament average when the team has no WC data yet.
+    """
+    if not strength_model:
+        avg = 1.3
+        return {"attack": avg, "defence": avg, "games": 0}
+    avg = strength_model.avg_goals
+    ts  = strength_model._stats.get(_sm_norm(team_name))
+    if ts and ts.games:
+        return {"attack": ts.attack, "defence": ts.defence, "games": ts.games}
+    return {"attack": avg, "defence": avg, "games": 0}
+
+
+def calculate_lambda(home_team: str, away_team: str, strength_model) -> tuple[float, float]:
+    """
+    Return (λ_home, λ_away) from Dixon-Coles strength ratings.
+    Returns (None, None) when strength model is unavailable.
+    """
+    if not strength_model:
+        return None, None
+    return strength_model.lambdas(home_team, away_team)
+
+
+# ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
 
@@ -265,6 +295,12 @@ def run_daily_pipeline(
             schedule_results.append(r)
 
     combined_results = schedule_results
+
+    # Build strength model from completed WC matches (returns None if < MIN_MATCHES)
+    strength_model = build_strength_model(combined_results)
+    if strength_model:
+        print(strength_model.summary())
+
     history          = load_history()
     perf_report: dict | None = None
 
@@ -420,8 +456,21 @@ def run_daily_pipeline(
 
         print(f"[pipeline]   top-3: {model.top_n(3)}")
 
+        # ── Strength-model λ blending ────────────────────────────────────────
+        str_lh, str_la = calculate_lambda(match.home_team, match.away_team, strength_model)
+
+        if str_lh and strength_model and strength_model.n_matches >= MIN_BLEND:
+            lam_h = round((1 - BLEND_WEIGHT) * model.lambda_home + BLEND_WEIGHT * str_lh, 3)
+            lam_a = round((1 - BLEND_WEIGHT) * model.lambda_away + BLEND_WEIGHT * str_la, 3)
+            print(
+                f"[strength] blended λ: H={model.lambda_home}→{lam_h}  "
+                f"A={model.lambda_away}→{lam_a}  (str={str_lh},{str_la})"
+            )
+        else:
+            lam_h, lam_a = model.lambda_home, model.lambda_away
+
         # ── Monte Carlo Simulation ──────────────────────────────────────────
-        sim = simulate(model.lambda_home, model.lambda_away)
+        sim = simulate(lam_h, lam_a)
         print(
             f"[sim] Monte Carlo (n={sim.n_sims:,}): "
             f"H={sim.p_home:.1%}  D={sim.p_draw:.1%}  A={sim.p_away:.1%}"

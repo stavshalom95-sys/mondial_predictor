@@ -1,5 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-23T09:12:36Z. Fill in decimal odds before the daily pipeline runs.",
+  "_note": "Reset by master_reset.py on 2026-06-23T09:45:32Z. Fill in decimal odds before the daily pipeline runs.",
   "Portugal vs Uzbekistan": {
     "winner": {
       "home": 0.0,
@@ -35,6 +35,23 @@
     }
   },
   "Panama vs Croatia": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Colombia vs Congo DR": {
     "winner": {
       "home": 0.0,
       "draw": 0.0,

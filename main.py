@@ -422,7 +422,11 @@ def run_daily_pipeline(
 
     # ── Step 4: Match odds to today's schedule ────────────────────────────────
     todays_matches = get_todays_matches(all_matches)
-    print(f"[pipeline] Today's matches in schedule: {len(todays_matches)}")
+    print(f"[pipeline] ── TODAY'S MATCHES FROM SCHEDULE ({len(todays_matches)} found) ──")
+    for _i, _m in enumerate(todays_matches, 1):
+        print(f"[pipeline]   {_i}. {_m.home_team} vs {_m.away_team}  "
+              f"[{_m.start_time_utc.strftime('%Y-%m-%d %H:%M UTC')}]  status={_m.status}")
+    print(f"[pipeline] ── END MATCH LIST ──────────────────────────────────────")
 
     # Pre-load bookmaker odds once (no-op if winner_odds.json absent)
     _winner_odds_cache = get_all_odds(_WINNER_ODDS_PATH)

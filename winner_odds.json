@@ -1,5 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-23T09:03:04Z. Fill in decimal odds before the daily pipeline runs.",
+  "_note": "Reset by master_reset.py on 2026-06-23T09:16:59Z. Fill in decimal odds before the daily pipeline runs.",
   "Portugal vs Uzbekistan": {
     "winner": {
       "home": 0.0,
@@ -50,5 +50,10 @@
       "9-11": 0.0,
       "12+": 0.0
     }
-  }
+  },
+  "_played_today": [
+    "France vs Iraq",
+    "Norway vs Senegal",
+    "Jordan vs Algeria"
+  ]
 }

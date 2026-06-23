@@ -53,7 +53,7 @@ from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats
 from core.bias_corrector import build_bias_corrector
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
-from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket, build_probability_ticket
+from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket, build_probability_ticket, build_confidence_value_ticket, ConfidenceTicket
 from core.simulator import simulate
 from core.strength_model import build_strength_model, MIN_BLEND, BLEND_WEIGHT, _norm as _sm_norm
 from core.market_calculator import calculate_all_markets
@@ -925,10 +925,27 @@ def run_daily_pipeline(
             f"stake={_prob_ticket.stake_nis:.0f} NIS"
         )
 
+    # ── Build Confidence Value ticket (Sim ≥ 60% + edge ≥ 5% vs market) ─────
+    # Uses the same _prob_candidates list (Home/Away Win only) but with lower
+    # sim floor (60% vs 65%) so the edge filter does the heavy lifting.
+    _conf_candidates = [
+        (label, outcome, winner, sim_prob, dec_odds)
+        for label, outcome, winner, sim_prob, dec_odds in _prob_candidates
+    ]
+    _conf_ticket = build_confidence_value_ticket(_conf_candidates, bankroll=TOTAL_BANKROLL)
+    if _conf_ticket:
+        print(
+            f"[ticket/conf] {len(_conf_ticket.legs)}-leg confidence-value ticket: "
+            f"odds={_conf_ticket.combined_odds:.2f}  prob={_conf_ticket.combined_prob:.1%}  "
+            f"EV={_conf_ticket.total_ev:+.1%}  stake={_conf_ticket.stake_nis:.0f} NIS"
+        )
+    else:
+        print("[ticket/conf] No Confidence Value bets found (Sim ≥ 60% + edge ≥ 5% on Winner).")
+
     # ── Step 5: Format + send ────────────────────────────────────────────────
     message = format_daily_message(
         picks, context, perf_report=perf_report,
-        ticket=_ticket, prob_ticket=_prob_ticket,
+        ticket=_ticket, prob_ticket=_prob_ticket, conf_ticket=_conf_ticket,
     )
 
     # Append schedule matches that had no bookmaker odds yet

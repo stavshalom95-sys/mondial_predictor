@@ -229,6 +229,103 @@ def build_probability_ticket(
     )
 
 
+@dataclass
+class ConfidenceLeg:
+    """
+    One leg of a Confidence Value ticket — carries full transparency data.
+    Displayed as: "Model thinks X%, Market thinks Y%. Value Edge: +Z%"
+    """
+    match_label:  str
+    outcome:      str    # "Home Win" | "Away Win"
+    winner_name:  str
+    decimal_odds: float
+    sim_prob:     float  # MC simulation probability (our model)
+    implied_prob: float  # 1 / decimal_odds (market's belief)
+    edge:         float  # sim_prob - implied_prob (positive = market undervaluing us)
+    ev:           float  # sim_prob * decimal_odds - 1
+
+
+@dataclass
+class ConfidenceTicket:
+    legs:          list[ConfidenceLeg]
+    combined_odds: float
+    combined_prob: float   # product of sim_probs
+    total_ev:      float   # sum of individual EVs (additive, not multiplicative)
+    kelly_frac:    float
+    stake_nis:     float
+
+
+def build_confidence_value_ticket(
+    candidates:     list[tuple[str, str, str, float, float]],
+    # (match_label, outcome, winner_name, sim_prob, decimal_odds)
+    bankroll:       float,
+    min_sim_prob:   float = 0.60,   # gate 1: simulation probability floor
+    min_edge:       float = 0.05,   # gate 2: model prob must exceed implied by ≥ 5pp
+    max_legs:       int   = 3,
+) -> Optional["ConfidenceTicket"]:
+    """
+    Build a Confidence Value ticket: high-probability wins that the market undervalues.
+
+    Both gates must pass for a leg to qualify:
+      Gate 1 — sim_prob >= min_sim_prob  (likely winner per our model)
+      Gate 2 — sim_prob - (1/decimal_odds) >= min_edge  (bookmaker underpricing us)
+
+    Draws are structurally excluded (candidates should be Home/Away Win only).
+    Legs ranked by EV descending (not raw probability) to maximise expected return.
+
+    Returns None when fewer than 2 legs pass both gates.
+    """
+    qualified: list[ConfidenceLeg] = []
+    for label, outcome, winner, sim_prob, dec_odds in candidates:
+        if dec_odds <= 0:
+            continue
+        implied = 1.0 / dec_odds
+        edge    = sim_prob - implied
+        ev      = sim_prob * dec_odds - 1.0
+        if sim_prob >= min_sim_prob and edge >= min_edge:
+            qualified.append(ConfidenceLeg(
+                match_label  = label,
+                outcome      = outcome,
+                winner_name  = winner,
+                decimal_odds = dec_odds,
+                sim_prob     = round(sim_prob, 4),
+                implied_prob = round(implied,  4),
+                edge         = round(edge,     4),
+                ev           = round(ev,       4),
+            ))
+
+    if len(qualified) < 2:
+        return None
+
+    # Rank by EV descending — maximises expected return on the ticket
+    qualified.sort(key=lambda x: x.ev, reverse=True)
+    legs = qualified[:max_legs]
+
+    combined_odds = 1.0
+    combined_prob = 1.0
+    for leg in legs:
+        combined_odds *= leg.decimal_odds
+        combined_prob *= leg.sim_prob
+
+    total_ev     = sum(leg.ev for leg in legs)          # additive EV for display
+    ev_parlay    = combined_prob * combined_odds - 1.0  # parlay EV for Kelly
+    net_combined = combined_odds - 1.0
+    kelly_frac   = (
+        min(ev_parlay / net_combined, MAX_KELLY_FRACTION)
+        if ev_parlay > 0 and net_combined > 0 else 0.0
+    )
+    stake_nis = (kelly_frac / 2.0) * bankroll
+
+    return ConfidenceTicket(
+        legs          = legs,
+        combined_odds = round(combined_odds, 2),
+        combined_prob = round(combined_prob, 4),
+        total_ev      = round(total_ev,      4),
+        kelly_frac    = round(kelly_frac,    4),
+        stake_nis     = round(stake_nis,     1),
+    )
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def analyse_match(

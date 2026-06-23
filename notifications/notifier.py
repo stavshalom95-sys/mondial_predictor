@@ -14,7 +14,7 @@ from typing import Optional
 
 from core.poisson_engine import ScoreProb
 from core.strategy_advisor import StrategyRecommendation, Strategy, TournamentContext
-from core.kelly import BetAnalysis, Ticket
+from core.kelly import BetAnalysis, Ticket, ConfidenceLeg, ConfidenceTicket
 
 try:
     from core.market_calculator import MarketResult as _MarketResult
@@ -200,9 +200,10 @@ class DailyPick:
 def format_daily_message(
     picks:       list[DailyPick],
     context:     TournamentContext,
-    perf_report: Optional[dict]   = None,
-    ticket:      Optional[Ticket] = None,
-    prob_ticket: Optional[Ticket] = None,
+    perf_report: Optional[dict]             = None,
+    ticket:      Optional[Ticket]           = None,
+    prob_ticket: Optional[Ticket]           = None,
+    conf_ticket: Optional[ConfidenceTicket] = None,
 ) -> str:
     """
     Pure function — build the WhatsApp message string.
@@ -440,6 +441,30 @@ def format_daily_message(
         lines.append(f"   🏆 Potential return: {prob_ticket.stake_nis * prob_ticket.combined_odds:.0f} ₪")
         lines.append("")
 
+    # ── Confidence Value Ticket (Sim ≥ 60% + edge ≥ 5% on Winner) ───────────
+    if conf_ticket and len(conf_ticket.legs) >= 2:
+        ct_type = {2: "Double 🎯", 3: "Triple 🔥"}.get(len(conf_ticket.legs), "Parlay")
+        lines.append(f"💎 *CONFIDENCE VALUE TICKET — {ct_type}*")
+        lines.append(f"   _(Sim ≥ 60% + Model edge ≥ 5% מול המסחר — ניצחונות בלבד)_")
+        for i, leg in enumerate(conf_ticket.legs, 1):
+            lines.append(
+                f"   {i}. {leg.match_label} — {_with_flag(leg.winner_name.strip())} Win"
+                f"  Odds {leg.decimal_odds:.2f}"
+            )
+            lines.append(
+                f"      📐 Model thinks {leg.sim_prob:.0%}, "
+                f"Market thinks {leg.implied_prob:.0%}. "
+                f"Value Edge: +{leg.edge:.0%}"
+            )
+            lines.append(f"      EV: {leg.ev:+.1%}")
+        lines.append(
+            f"   📊 Combined odds: {conf_ticket.combined_odds:.2f} | "
+            f"Combined prob: {conf_ticket.combined_prob:.1%} | "
+            f"Total EV: {conf_ticket.total_ev:+.1%}"
+        )
+        lines.append(f"   💰 Recommended stake: {conf_ticket.stake_nis:.0f} ₪")
+        lines.append(f"   🏆 Potential return: {conf_ticket.stake_nis * conf_ticket.combined_odds:.0f} ₪")
+        lines.append("")
     lines.append('_נשלח אוטומטית ע"י Mondial Predictor_')
     return "\n".join(lines)
 

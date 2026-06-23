@@ -15,7 +15,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 
@@ -77,17 +77,20 @@ def fetch_wc_matches(api_key: str) -> list[dict]:
         raw_status = m.get("status", "SCHEDULED")
         status = STATUS_MAP.get(raw_status, "scheduled")
 
-        # DIAGNOSTIC: log raw API status for matches within ±2 days of today
-        match_date = m.get("utcDate", "")[:10]
+        # DIAGNOSTIC: log raw API status for matches within ±48 h of now (UTC).
+        # Uses UTC-aware datetime comparison — avoids date.today() locale traps.
         try:
-            delta = abs((date.fromisoformat(match_date) - date.today()).days)
-        except ValueError:
-            delta = 999
-        if delta <= 2:
+            match_dt = datetime.fromisoformat(
+                m.get("utcDate", "").replace("Z", "+00:00")
+            )
+            delta_h = abs((match_dt - datetime.now(timezone.utc)).total_seconds() / 3600)
+        except (ValueError, TypeError):
+            delta_h = 999
+        if delta_h <= 48:
             print(
-                f"[fetch_schedule] DIAG {match_date} | "
+                f"[fetch_schedule] DIAG {m.get('utcDate','')[:16]}Z | "
                 f"{home_info.get('name','?')} vs {away_info.get('name','?')} | "
-                f"API_status={raw_status!r} → mapped={status!r} | "
+                f"API_status={raw_status!r} -> mapped={status!r} | "
                 f"score={score_full}"
             )
 
@@ -141,14 +144,24 @@ def main() -> None:
 
     print(f"Saved {len(matches)} matches to {args.output}")
 
-    # DIAGNOSTIC: summary of matches ±2 days around today
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
-    today_str  = date.today().isoformat()
-    print(f"\n[fetch_schedule] DIAG SUMMARY — matches within ±2 days of {today_str}:")
-    nearby = [
-        m for m in matches
-        if abs((date.fromisoformat(m["start_time"][:10]) - date.today()).days) <= 2
-    ]
+    # DIAGNOSTIC: summary of IDT-day matches (prev day 21:00 UTC → today 23:59 UTC).
+    # IDT = UTC+3; midnight IDT = 21:00 UTC previous day.
+    now_utc      = datetime.now(timezone.utc)
+    idt_start    = now_utc.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+    idt_end      = idt_start + timedelta(hours=27)   # covers full IDT calendar day
+    print(
+        f"\n[fetch_schedule] DIAG SUMMARY — IDT-day window "
+        f"({idt_start.strftime('%Y-%m-%d %H:%M')} UTC "
+        f"-> {idt_end.strftime('%Y-%m-%d %H:%M')} UTC):"
+    )
+    nearby = []
+    for m in matches:
+        try:
+            mdt = datetime.fromisoformat(m["start_time"].replace("Z", "+00:00"))
+            if idt_start <= mdt <= idt_end:
+                nearby.append(m)
+        except (ValueError, TypeError):
+            pass
     if not nearby:
         print("  (none found — check that WC 2026 matches are in this API plan)")
     for m in nearby:
@@ -159,7 +172,7 @@ def main() -> None:
         score_h   = m["score"].get(home_abbr)
         score_a   = m["score"].get(away_abbr)
         print(
-            f"  {m['start_time'][:10]} | {home_name} vs {away_name} | "
+            f"  {m['start_time'][:16]}Z | {home_name} vs {away_name} | "
             f"status={m['status']!r} | "
             f"score={score_h}-{score_a}"
         )

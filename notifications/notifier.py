@@ -22,6 +22,12 @@ except ImportError:
     _MarketResult = None   # type: ignore[assignment,misc]
 
 
+# ── Budget configuration ──────────────────────────────────────────────────────
+# Edit these two values to match your situation.
+TOTAL_BANKROLL   = 10_000   # NIS — your full betting bankroll
+DAILY_BUDGET_CAP =    100   # NIS — maximum you are willing to stake today
+
+
 # ---------------------------------------------------------------------------
 # Country flag emoji lookup (keyed by lowercase team name)
 # ---------------------------------------------------------------------------
@@ -308,12 +314,21 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
             lines.append(
                 f"   ✨ {_with_flag(home)} נגד {_with_flag(away)} — {outcome_he}"
             )
+            _stake_raw = vb.half_kelly * TOTAL_BANKROLL
+            _capped    = _stake_raw > DAILY_BUDGET_CAP
+            _stake     = DAILY_BUDGET_CAP if _capped else _stake_raw
+            _stake_str = (
+                f"{_stake:.0f} ₪ ⚠️ (מקסימום יומי)"
+                if _capped
+                else f"{_stake:.0f} ₪"
+            )
             lines.append(
                 f"      אודס: {vb.decimal_odds:.2f} | "
                 f"Edge: {vb.edge_pct:+.1f}% | "
                 f"EV: {vb.ev_per_unit:+.1%} | "
                 f"Half-Kelly: {vb.half_kelly:.1%} מהבנק"
             )
+            lines.append(f"      💰 הימור מומלץ: {_stake_str}")
         lines.append("   ⚠️ _ניתוח מתמטי בלבד — הימרו באחריות_")
         lines.append("")
 

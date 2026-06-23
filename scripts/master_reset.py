@@ -163,10 +163,11 @@ def todays_matches(raw_games: list[dict]) -> list[dict]:
 
     result: list[dict] = []
     for g in raw_games:
-        if g.get("status") == "final":
-            continue
         start = _parse_start(g.get("start_time", ""))
         if window_start <= start < today_end:
+            # Include ALL matches in the IDT window — finished early-morning games
+            # are recorded in winner_odds.json under _played_today for traceability.
+            # The main pipeline (get_todays_matches) still skips status="final" games.
             result.append(g)
 
     result.sort(key=lambda g: _parse_start(g.get("start_time", "")))
@@ -182,8 +183,16 @@ def _team_name(game: dict, key: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def reset_winner_odds(matches: list[dict], output: Path) -> list[str]:
-    """Build and write a fresh winner_odds.json. Returns list of match keys written."""
-    keys: list[str] = []
+    """
+    Build and write a fresh winner_odds.json.
+
+    Upcoming / live matches → full odds entry with 0.0 placeholders.
+    Already-finished matches → logged under _played_today (no odds needed).
+
+    Returns list of upcoming match keys written.
+    """
+    upcoming_keys: list[str] = []
+    played_keys:   list[str] = []
     data: dict = {
         "_note": (
             f"Reset by master_reset.py on {datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}. "
@@ -192,23 +201,31 @@ def reset_winner_odds(matches: list[dict], output: Path) -> list[str]:
     }
 
     for g in matches:
-        h_key  = g.get("home", "")
-        a_key  = g.get("away", "")
-        h_name = _team_name(g, h_key)
-        a_name = _team_name(g, a_key)
+        h_key     = g.get("home", "")
+        a_key     = g.get("away", "")
+        h_name    = _team_name(g, h_key)
+        a_name    = _team_name(g, a_key)
         match_key = f"{h_name} vs {a_name}"
-        data[match_key] = {
-            "winner":      {"home": 0.0, "draw": 0.0, "away": 0.0},
-            "sum_goals":   {"0-1": 0.0, "2-3": 0.0, "+4": 0.0},
-            "corners_range": {"0-8": 0.0, "9-11": 0.0, "12+": 0.0},
-        }
-        keys.append(match_key)
+
+        if g.get("status") == "final":
+            # Game already finished — log for traceability, skip odds entry
+            played_keys.append(match_key)
+        else:
+            data[match_key] = {
+                "winner":      {"home": 0.0, "draw": 0.0, "away": 0.0},
+                "sum_goals":   {"0-1": 0.0, "2-3": 0.0, "+4": 0.0},
+                "corners_range": {"0-8": 0.0, "9-11": 0.0, "12+": 0.0},
+            }
+            upcoming_keys.append(match_key)
+
+    if played_keys:
+        data["_played_today"] = played_keys   # visible in the file for traceability
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with open(output, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    return keys
+    return upcoming_keys
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -344,11 +361,20 @@ def main() -> int:
         print(f"  FAIL: {exc}")
         return 1
 
-    # ── PHASE 2: Filter today's matches ──────────────────────────────────────
-    _header("PHASE 2 — Today's unfinished matches (midnight UTC window)")
+    # ── PHASE 2: Filter today's matches (IDT window) ─────────────────────────
+    _header("PHASE 2 — IDT-day matches (prev day 21:00 UTC -> today 23:59 UTC)")
     today = todays_matches(raw_games)
     now_utc = datetime.now(timezone.utc)
-    print(f"  Clock  : {now_utc.strftime('%Y-%m-%d %H:%M UTC')}  (window: 00:00 – 23:59 UTC)")
+    today_start_utc = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+    window_start_utc = today_start_utc - timedelta(hours=3)
+    print(
+        f"  Clock  : {now_utc.strftime('%Y-%m-%d %H:%M UTC')}  "
+        f"(IDT window: {window_start_utc.strftime('%Y-%m-%d %H:%M')} UTC -> "
+        f"{(today_start_utc + timedelta(hours=24)).strftime('%Y-%m-%d %H:%M')} UTC)"
+    )
+
+    upcoming = [g for g in today if g.get("status") != "final"]
+    played   = [g for g in today if g.get("status") == "final"]
 
     if not today:
         print("  WARNING: No matches found for today.")
@@ -359,7 +385,10 @@ def main() -> int:
             h_key = g.get("home", ""); a_key = g.get("away", "")
             h = _team_name(g, h_key); a = _team_name(g, a_key)
             start = _parse_start(g.get("start_time", ""))
-            print(f"  [{g.get('status','?'):<10}]  {h} vs {a}  @ {start.strftime('%H:%M UTC')}")
+            status = g.get("status", "?")
+            suffix = " [ALREADY PLAYED — logged in _played_today, no odds needed]" \
+                if status == "final" else ""
+            print(f"  [{status:<10}]  {h} vs {a}  @ {start.strftime('%H:%M UTC')}{suffix}")
 
     # ── PHASE 3: Reset winner_odds.json ──────────────────────────────────────
     _header(f"PHASE 3 — Resetting {output}")
@@ -376,12 +405,19 @@ def main() -> int:
             print(f"  (could not read existing file)")
 
     new_keys = reset_winner_odds(today, output)
-    print(f"\n  Written {len(new_keys)} fresh entry/entries to '{output}':")
+
+    if played:
+        print(f"\n  Already played ({len(played)} game(s) — recorded in _played_today):")
+        for g in played:
+            h = _team_name(g, g.get("home", "")); a = _team_name(g, g.get("away", ""))
+            print(f"    ~ {h} vs {a}  [final — no odds entry created]")
+
+    print(f"\n  Written {len(new_keys)} upcoming entry/entries to '{output}':")
     for k in new_keys:
         print(f"    + {k}  (odds: 0.0 — fill in before pipeline runs)")
 
     if not new_keys:
-        print("  (no matches today — file written with only _note metadata)")
+        print("  (no upcoming matches today — file written with only _note metadata)")
 
     # ── PHASE 4: Audit main.py ────────────────────────────────────────────────
     _header(f"PHASE 4 — Auditing {_MAIN_PY.name}")

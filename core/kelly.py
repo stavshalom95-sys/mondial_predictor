@@ -20,17 +20,18 @@ Notes:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Optional
 
 from core.poisson_engine import PoissonMatchModel
 from core.odds_converter import MatchOdds1X2
 
 # ── Tunable constants ────────────────────────────────────────────────────────
 
-VALUE_BET_THRESHOLD  = 0.10   # minimum edge to flag as a value bet (10%)
+VALUE_BET_THRESHOLD  = 0.05   # minimum edge: Value > 1.05 (model_prob × decimal_odds > 1.05)
 MAX_KELLY_FRACTION   = 0.25   # cap Kelly at 25% of bankroll
 
-# ── Data model ───────────────────────────────────────────────────────────────
+# ── Data models ──────────────────────────────────────────────────────────────
 
 @dataclass
 class BetAnalysis:
@@ -42,7 +43,27 @@ class BetAnalysis:
     ev_per_unit:    float  # our_prob * decimal_odds - 1
     kelly_fraction: float  # full Kelly (capped at MAX_KELLY_FRACTION), 0 if no edge
     half_kelly:     float  # kelly_fraction / 2 (recommended bet size)
-    is_value:       bool   # True when edge_pct >= VALUE_BET_THRESHOLD * 100
+    is_value:       bool   # True when our_prob * decimal_odds > 1 + VALUE_BET_THRESHOLD
+    value:          float  = field(default=0.0)   # our_prob * decimal_odds (the "Value" score)
+
+
+@dataclass
+class TicketLeg:
+    match_label:  str    # "Portugal vs Uzbekistan"
+    outcome:      str    # "Home Win" | "Draw" | "Away Win"
+    decimal_odds: float
+    our_prob:     float
+    value:        float  # our_prob * decimal_odds
+
+
+@dataclass
+class Ticket:
+    legs:          list[TicketLeg]
+    combined_odds: float   # product of all leg decimal odds
+    combined_prob: float   # product of all leg model probs (independence assumption)
+    ev_combined:   float   # combined_prob * combined_odds - 1
+    kelly_frac:    float   # full Kelly for the parlay (capped)
+    stake_nis:     float   # half-Kelly × bankroll (caller supplies bankroll)
 
 
 # ── Internal helpers ─────────────────────────────────────────────────────────
@@ -68,8 +89,9 @@ def _analyse_outcome(
     threshold:    float,
 ) -> BetAnalysis:
     implied_prob   = 1.0 / decimal_odds if decimal_odds > 0 else 1.0
-    edge_pct       = (our_prob / implied_prob - 1.0) * 100.0 if implied_prob > 0 else 0.0
-    ev_per_unit    = our_prob * decimal_odds - 1.0
+    value_score    = our_prob * decimal_odds                          # the "Value" number
+    edge_pct       = (value_score - 1.0) * 100.0                     # same as EV%
+    ev_per_unit    = value_score - 1.0
     kelly_fraction = _single_kelly(our_prob, decimal_odds)
     return BetAnalysis(
         outcome        = outcome,
@@ -80,7 +102,65 @@ def _analyse_outcome(
         ev_per_unit    = ev_per_unit,
         kelly_fraction = kelly_fraction,
         half_kelly     = kelly_fraction / 2.0,
-        is_value       = edge_pct >= threshold * 100.0,
+        is_value       = value_score > 1.0 + threshold,
+        value          = round(value_score, 4),
+    )
+
+
+def build_ticket(
+    value_legs: list[tuple[str, "BetAnalysis"]],
+    bankroll:   float,
+    max_legs:   int = 3,
+) -> Optional["Ticket"]:
+    """
+    Construct a Double or Triple from the top value legs (sorted by EV).
+
+    Args:
+        value_legs: list of (match_label, BetAnalysis) where is_value=True
+        bankroll:   total bankroll in NIS for Kelly sizing
+        max_legs:   maximum legs in ticket (default 3 = Triple)
+
+    Returns:
+        Ticket, or None when fewer than 2 legs or combined EV is negative.
+    """
+    if len(value_legs) < 2:
+        return None
+
+    # Rank legs by ev_per_unit descending; cap at max_legs
+    top = sorted(value_legs, key=lambda x: x[1].ev_per_unit, reverse=True)[:max_legs]
+
+    legs = [
+        TicketLeg(
+            match_label  = label,
+            outcome      = ba.outcome,
+            decimal_odds = ba.decimal_odds,
+            our_prob     = ba.our_prob,
+            value        = ba.value,
+        )
+        for label, ba in top
+    ]
+
+    combined_odds = 1.0
+    combined_prob = 1.0
+    for leg in legs:
+        combined_odds *= leg.decimal_odds
+        combined_prob *= leg.our_prob
+
+    ev_combined = combined_prob * combined_odds - 1.0
+    if ev_combined <= 0:
+        return None
+
+    net_combined  = combined_odds - 1.0
+    kelly_frac    = min(ev_combined / net_combined, MAX_KELLY_FRACTION) if net_combined > 0 else 0.0
+    stake_nis     = (kelly_frac / 2.0) * bankroll   # half-Kelly
+
+    return Ticket(
+        legs          = legs,
+        combined_odds = round(combined_odds, 2),
+        combined_prob = round(combined_prob, 4),
+        ev_combined   = round(ev_combined,   4),
+        kelly_frac    = round(kelly_frac,    4),
+        stake_nis     = round(stake_nis,     1),
     )
 
 

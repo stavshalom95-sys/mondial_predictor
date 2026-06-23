@@ -14,7 +14,7 @@ from typing import Optional
 
 from core.poisson_engine import ScoreProb
 from core.strategy_advisor import StrategyRecommendation, Strategy, TournamentContext
-from core.kelly import BetAnalysis
+from core.kelly import BetAnalysis, Ticket
 
 try:
     from core.market_calculator import MarketResult as _MarketResult
@@ -197,7 +197,12 @@ class DailyPick:
     poisson_p_away: Optional[float] = None
 
 
-def format_daily_message(picks: list[DailyPick], context: TournamentContext, perf_report: Optional[dict] = None) -> str:
+def format_daily_message(
+    picks:       list[DailyPick],
+    context:     TournamentContext,
+    perf_report: Optional[dict]   = None,
+    ticket:      Optional[Ticket] = None,
+) -> str:
     """
     Pure function — build the WhatsApp message string.
     Safe to call in tests with assert, no network involved.
@@ -350,48 +355,67 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
 
         lines.append("")
 
-    # ── Value Bets section (only when at least one value bet exists) ─────────
+    # ── Value Bets section (Value = model_prob × odds > 1.05) ────────────────
     all_value_bets: list[tuple[str, str, BetAnalysis]] = [
         (pick.home_team, pick.away_team, vb)
         for pick in picks
         if pick.value_bets
         for vb in pick.value_bets
+        if vb.is_value
     ]
     if all_value_bets:
-        lines.append("💰 *הימורי ערך — יתרון מעל 10%*")
+        lines.append("💰 *VALUE BETS — ניתוח מתמטי (Value > 1.05)*")
         for home, away, vb in all_value_bets:
-            outcome_he = {"Home Win": f"ניצחון {home}", "Draw": "תיקו", "Away Win": f"ניצחון {away}"}.get(vb.outcome, vb.outcome)
+            outcome_he = {
+                "Home Win": f"ניצחון {home}",
+                "Draw":     "תיקו",
+                "Away Win": f"ניצחון {away}",
+            }.get(vb.outcome, vb.outcome)
+            lines.append(f"   ✨ {_with_flag(home)} נגד {_with_flag(away)} — {outcome_he}")
+
+            # Transparency math block
             lines.append(
-                f"   ✨ {_with_flag(home)} נגד {_with_flag(away)} — {outcome_he}"
+                f"      📐 Prob {vb.our_prob:.0%} × Odds {vb.decimal_odds:.2f}"
+                f" = Value {vb.value:.3f} | Edge {vb.edge_pct:+.1f}%"
             )
+
+            # Kelly stake
             _stake_raw = vb.half_kelly * TOTAL_BANKROLL
             if vb.our_prob >= 0.40:
-                # High confidence — half-Kelly, capped at daily budget
-                _capped    = _stake_raw > DAILY_BUDGET_CAP
-                _stake     = DAILY_BUDGET_CAP if _capped else _stake_raw
-                _stake_str = (
-                    f"{_stake:.0f} ₪ ⚠️ (מקסימום יומי)"
-                    if _capped
-                    else f"{_stake:.0f} ₪"
-                )
+                _capped = _stake_raw > DAILY_BUDGET_CAP
+                _stake  = DAILY_BUDGET_CAP if _capped else _stake_raw
+                _cap_tag = " ⚠️ (מקסימום יומי)" if _capped else ""
             else:
-                # Low confidence (< 40%) — quarter-Kelly, capped at low-prob budget
-                _reduced   = _stake_raw / 4
-                _stake     = min(_reduced, LOW_PROB_BUDGET_CAP)
-                _capped    = _reduced > LOW_PROB_BUDGET_CAP
-                _stake_str = (
-                    f"{_stake:.0f} ₪ ⚠️ (הגבלת סיכון — סיכוי נמוך)"
-                    if _capped
-                    else f"{_stake:.0f} ₪ (÷4 — סיכוי נמוך)"
-                )
-            lines.append(
-                f"      אודס: {vb.decimal_odds:.2f} | "
-                f"Edge: {vb.edge_pct:+.1f}% | "
-                f"EV: {vb.ev_per_unit:+.1%} | "
-                f"Half-Kelly: {vb.half_kelly:.1%} מהבנק"
-            )
-            lines.append(f"      💰 הימור מומלץ: {_stake_str}")
+                _stake_raw = _stake_raw / 4
+                _capped = _stake_raw > LOW_PROB_BUDGET_CAP
+                _stake  = LOW_PROB_BUDGET_CAP if _capped else _stake_raw
+                _cap_tag = " ⚠️ (הגבלת סיכון)" if _capped else " (÷4 — סיכוי נמוך)"
+            lines.append(f"      💰 הימור מומלץ: {_stake:.0f} ₪{_cap_tag}")
+
         lines.append("   ⚠️ _ניתוח מתמטי בלבד — הימרו באחריות_")
+        lines.append("")
+
+    # ── Ticket Builder (Double / Triple) ─────────────────────────────────────
+    if ticket and len(ticket.legs) >= 2:
+        ticket_type = {2: "Double 🎯", 3: "Triple 🔥"}.get(len(ticket.legs), "Parlay")
+        lines.append(f"🎟️ *TICKET — {ticket_type}*")
+        for i, leg in enumerate(ticket.legs, 1):
+            outcome_short = {"Home Win": "Win", "Draw": "Draw", "Away Win": "Win"}.get(leg.outcome, leg.outcome)
+            side = leg.match_label.split(" vs ")[0] if leg.outcome == "Home Win" else (
+                leg.match_label.split(" vs ")[1] if leg.outcome == "Away Win" else "Draw"
+            )
+            lines.append(
+                f"   {i}. {leg.match_label} — {side} ({outcome_short})"
+                f"  Odds {leg.decimal_odds:.2f}  [Value {leg.value:.3f}]"
+            )
+        lines.append(
+            f"   📐 Combined odds: {ticket.combined_odds:.2f} | "
+            f"Model prob: {ticket.combined_prob:.1%} | "
+            f"EV: {ticket.ev_combined:+.1%}"
+        )
+        lines.append(f"   💰 Recommended stake: {ticket.stake_nis:.0f} ₪")
+        pot_return = ticket.stake_nis * ticket.combined_odds
+        lines.append(f"   🏆 Potential return: {pot_return:.0f} ₪")
         lines.append("")
 
     lines.append('_נשלח אוטומטית ע"י Mondial Predictor_')

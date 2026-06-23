@@ -53,7 +53,7 @@ from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats
 from core.bias_corrector import build_bias_corrector
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
-from core.kelly import analyse_match as analyse_match_bets, BetAnalysis
+from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket
 from core.simulator import simulate
 from core.strength_model import build_strength_model, MIN_BLEND, BLEND_WEIGHT, _norm as _sm_norm
 from core.market_calculator import calculate_all_markets
@@ -883,8 +883,24 @@ def run_daily_pipeline(
     # ── EV enrichment from winner_odds.json (no-op if file absent) ──────────
     morning_data = enrich_picks(morning_data, odds_path=_WINNER_ODDS_PATH)
 
+    # ── Build optimal ticket from all value legs (Double or Triple) ───────────
+    _all_value_legs: list[tuple[str, BetAnalysis]] = [
+        (f"{pick.home_team} vs {pick.away_team}", vb)
+        for pick in picks
+        if pick.value_bets
+        for vb in pick.value_bets
+        if vb.is_value
+    ]
+    _ticket = build_ticket(_all_value_legs, bankroll=TOTAL_BANKROLL) if len(_all_value_legs) >= 2 else None
+    if _ticket:
+        print(
+            f"[ticket] {len(_ticket.legs)}-leg ticket built: "
+            f"odds={_ticket.combined_odds:.2f}  prob={_ticket.combined_prob:.1%}  "
+            f"EV={_ticket.ev_combined:+.1%}  stake={_ticket.stake_nis:.0f} NIS"
+        )
+
     # ── Step 5: Format + send ────────────────────────────────────────────────
-    message = format_daily_message(picks, context, perf_report=perf_report)
+    message = format_daily_message(picks, context, perf_report=perf_report, ticket=_ticket)
 
     # Append schedule matches that had no bookmaker odds yet
     if no_odds_matches:

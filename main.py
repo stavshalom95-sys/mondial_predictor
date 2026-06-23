@@ -53,7 +53,7 @@ from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats
 from core.bias_corrector import build_bias_corrector
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
-from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket
+from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket, build_probability_ticket
 from core.simulator import simulate
 from core.strength_model import build_strength_model, MIN_BLEND, BLEND_WEIGHT, _norm as _sm_norm
 from core.market_calculator import calculate_all_markets
@@ -883,7 +883,7 @@ def run_daily_pipeline(
     # ── EV enrichment from winner_odds.json (no-op if file absent) ──────────
     morning_data = enrich_picks(morning_data, odds_path=_WINNER_ODDS_PATH)
 
-    # ── Build optimal ticket from all value legs (Double or Triple) ───────────
+    # ── Build EV-based value ticket (Value > 1.05 across all markets) ────────
     _all_value_legs: list[tuple[str, BetAnalysis]] = [
         (f"{pick.home_team} vs {pick.away_team}", vb)
         for pick in picks
@@ -894,13 +894,42 @@ def run_daily_pipeline(
     _ticket = build_ticket(_all_value_legs, bankroll=TOTAL_BANKROLL) if len(_all_value_legs) >= 2 else None
     if _ticket:
         print(
-            f"[ticket] {len(_ticket.legs)}-leg ticket built: "
+            f"[ticket/value] {len(_ticket.legs)}-leg value ticket: "
             f"odds={_ticket.combined_odds:.2f}  prob={_ticket.combined_prob:.1%}  "
             f"EV={_ticket.ev_combined:+.1%}  stake={_ticket.stake_nis:.0f} NIS"
         )
 
+    # ── Build probability-maximizing straight-win ticket (Sim > 65%) ─────────
+    _prob_candidates: list[tuple[str, str, str, float, float]] = []
+    for _pk in picks:
+        if not _pk.value_bets:
+            continue
+        _sim_h = _pk.sim_p_home or 0.0
+        _sim_a = _pk.sim_p_away or 0.0
+        _label = f"{_pk.home_team} vs {_pk.away_team}"
+        # Choose whichever side (home or away) has the higher win probability
+        if _sim_h >= _sim_a:
+            _ba = next((b for b in _pk.value_bets if b.outcome == "Home Win"), None)
+            if _ba:
+                _prob_candidates.append((_label, "Home Win", _pk.home_team, _sim_h, _ba.decimal_odds))
+        else:
+            _ba = next((b for b in _pk.value_bets if b.outcome == "Away Win"), None)
+            if _ba:
+                _prob_candidates.append((_label, "Away Win", _pk.away_team, _sim_a, _ba.decimal_odds))
+
+    _prob_ticket = build_probability_ticket(_prob_candidates, bankroll=TOTAL_BANKROLL)
+    if _prob_ticket:
+        print(
+            f"[ticket/prob] {len(_prob_ticket.legs)}-leg probability ticket: "
+            f"odds={_prob_ticket.combined_odds:.2f}  prob={_prob_ticket.combined_prob:.1%}  "
+            f"stake={_prob_ticket.stake_nis:.0f} NIS"
+        )
+
     # ── Step 5: Format + send ────────────────────────────────────────────────
-    message = format_daily_message(picks, context, perf_report=perf_report, ticket=_ticket)
+    message = format_daily_message(
+        picks, context, perf_report=perf_report,
+        ticket=_ticket, prob_ticket=_prob_ticket,
+    )
 
     # Append schedule matches that had no bookmaker odds yet
     if no_odds_matches:

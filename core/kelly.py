@@ -164,6 +164,71 @@ def build_ticket(
     )
 
 
+def build_probability_ticket(
+    candidates: list[tuple[str, str, str, float, float]],
+    bankroll:   float,
+    min_prob:   float = 0.65,
+    max_legs:   int   = 3,
+) -> Optional["Ticket"]:
+    """
+    Build a high-probability straight-win ticket (Double or Triple).
+
+    Ignores Value/EV filter — goal is maximum combined win probability.
+    Only Home Win or Away Win outcomes are accepted (no Draws).
+
+    Args:
+        candidates: list of (match_label, outcome, winner_name, sim_prob, decimal_odds)
+                    outcome must be "Home Win" or "Away Win"
+        bankroll:   total bankroll NIS for Kelly sizing
+        min_prob:   minimum MC simulation win probability to qualify (default 65%)
+        max_legs:   cap ticket at this many legs (default 3)
+
+    Returns:
+        Ticket with legs sorted by sim_prob descending, or None if < 2 qualify.
+    """
+    qualified = [c for c in candidates if c[3] >= min_prob]
+    if len(qualified) < 2:
+        return None
+
+    # Sort by probability descending — maximize combined hit rate
+    qualified.sort(key=lambda x: x[3], reverse=True)
+    top = qualified[:max_legs]
+
+    legs = [
+        TicketLeg(
+            match_label  = label,
+            outcome      = outcome,
+            decimal_odds = decimal_odds,
+            our_prob     = sim_prob,
+            value        = round(sim_prob * decimal_odds, 4),
+        )
+        for label, outcome, _winner, sim_prob, decimal_odds in top
+    ]
+
+    combined_odds = 1.0
+    combined_prob = 1.0
+    for leg in legs:
+        combined_odds *= leg.decimal_odds
+        combined_prob *= leg.our_prob
+
+    ev_combined  = combined_prob * combined_odds - 1.0
+    net_combined = combined_odds - 1.0
+    kelly_frac   = (
+        min(ev_combined / net_combined, MAX_KELLY_FRACTION)
+        if ev_combined > 0 and net_combined > 0 else 0.0
+    )
+    stake_nis = (kelly_frac / 2.0) * bankroll
+
+    return Ticket(
+        legs          = legs,
+        combined_odds = round(combined_odds, 2),
+        combined_prob = round(combined_prob, 4),
+        ev_combined   = round(ev_combined,   4),
+        kelly_frac    = round(kelly_frac,    4),
+        stake_nis     = round(stake_nis,     1),
+    )
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def analyse_match(

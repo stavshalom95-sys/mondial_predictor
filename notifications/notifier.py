@@ -202,6 +202,7 @@ def format_daily_message(
     context:     TournamentContext,
     perf_report: Optional[dict]   = None,
     ticket:      Optional[Ticket] = None,
+    prob_ticket: Optional[Ticket] = None,
 ) -> str:
     """
     Pure function — build the WhatsApp message string.
@@ -395,10 +396,10 @@ def format_daily_message(
         lines.append("   ⚠️ _ניתוח מתמטי בלבד — הימרו באחריות_")
         lines.append("")
 
-    # ── Ticket Builder (Double / Triple) ─────────────────────────────────────
+    # ── Value Ticket (EV-based) ───────────────────────────────────────────────
     if ticket and len(ticket.legs) >= 2:
         ticket_type = {2: "Double 🎯", 3: "Triple 🔥"}.get(len(ticket.legs), "Parlay")
-        lines.append(f"🎟️ *TICKET — {ticket_type}*")
+        lines.append(f"🎟️ *VALUE TICKET — {ticket_type}*")
         for i, leg in enumerate(ticket.legs, 1):
             outcome_short = {"Home Win": "Win", "Draw": "Draw", "Away Win": "Win"}.get(leg.outcome, leg.outcome)
             side = leg.match_label.split(" vs ")[0] if leg.outcome == "Home Win" else (
@@ -414,8 +415,29 @@ def format_daily_message(
             f"EV: {ticket.ev_combined:+.1%}"
         )
         lines.append(f"   💰 Recommended stake: {ticket.stake_nis:.0f} ₪")
-        pot_return = ticket.stake_nis * ticket.combined_odds
-        lines.append(f"   🏆 Potential return: {pot_return:.0f} ₪")
+        lines.append(f"   🏆 Potential return: {ticket.stake_nis * ticket.combined_odds:.0f} ₪")
+        lines.append("")
+
+    # ── Probability Ticket (Straight Wins, Sim ≥ 65%) ────────────────────────
+    if prob_ticket and len(prob_ticket.legs) >= 2:
+        pt_type = {2: "Double 🎯", 3: "Triple 🔥"}.get(len(prob_ticket.legs), "Parlay")
+        lines.append(f"🏆 *HIGH-PROBABILITY TICKET — Straight Wins {pt_type}*")
+        lines.append(f"   _(מסוננים לפי הסתברות ניצחון Sim ≥ 65% בלבד)_")
+        for i, leg in enumerate(prob_ticket.legs, 1):
+            side = (
+                leg.match_label.split(" vs ")[0] if leg.outcome == "Home Win"
+                else leg.match_label.split(" vs ")[1]
+            )
+            lines.append(
+                f"   {i}. {leg.match_label} — {_with_flag(side.strip())} Win"
+                f"  Odds {leg.decimal_odds:.2f}  [Sim {leg.our_prob:.0%}]"
+            )
+        lines.append(
+            f"   📐 Combined probability: {prob_ticket.combined_prob:.1%} | "
+            f"Combined odds: {prob_ticket.combined_odds:.2f}"
+        )
+        lines.append(f"   💰 Recommended stake: {prob_ticket.stake_nis:.0f} ₪")
+        lines.append(f"   🏆 Potential return: {prob_ticket.stake_nis * prob_ticket.combined_odds:.0f} ₪")
         lines.append("")
 
     lines.append('_נשלח אוטומטית ע"י Mondial Predictor_')

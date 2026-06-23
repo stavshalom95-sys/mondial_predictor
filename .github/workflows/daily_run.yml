@@ -53,6 +53,7 @@ jobs:
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: |
+          # נשתמש בנתיב יחסי פשוט מהשורש של הפרויקט
           if [ -n "$FOOTBALL_DATA_API_KEY" ]; then
             python scripts/sync_tables.py --output data/group_tables.json
           else

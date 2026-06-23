@@ -181,20 +181,20 @@
     "stage": "group_stage",
     "start_time": "2026-06-14T17:00:00Z",
     "home": "GER",
-    "away": "CUR",
+    "away": "CUW",
     "teams": {
       "GER": {
         "name": "Germany",
         "abbreviation": "GER"
       },
-      "CUR": {
+      "CUW": {
         "name": "Curaçao",
-        "abbreviation": "CUR"
+        "abbreviation": "CUW"
       }
     },
     "score": {
       "GER": 7,
-      "CUR": 1
+      "CUW": 1
     }
   },
   {
@@ -753,20 +753,20 @@
     "stage": "group_stage",
     "start_time": "2026-06-21T00:00:00Z",
     "home": "ECU",
-    "away": "CUR",
+    "away": "CUW",
     "teams": {
       "ECU": {
         "name": "Ecuador",
         "abbreviation": "ECU"
       },
-      "CUR": {
+      "CUW": {
         "name": "Curaçao",
-        "abbreviation": "CUR"
+        "abbreviation": "CUW"
       }
     },
     "score": {
       "ECU": 0,
-      "CUR": 0
+      "CUW": 0
     }
   },
   {
@@ -985,7 +985,7 @@
       }
     },
     "score": {
-      "POR": 0,
+      "POR": 2,
       "UZB": 0
     }
   },
@@ -1214,12 +1214,12 @@
     "status": "scheduled",
     "stage": "group_stage",
     "start_time": "2026-06-25T20:00:00Z",
-    "home": "CUR",
+    "home": "CUW",
     "away": "CIV",
     "teams": {
-      "CUR": {
+      "CUW": {
         "name": "Curaçao",
-        "abbreviation": "CUR"
+        "abbreviation": "CUW"
       },
       "CIV": {
         "name": "Ivory Coast",
@@ -1227,7 +1227,7 @@
       }
     },
     "score": {
-      "CUR": null,
+      "CUW": null,
       "CIV": null
     }
   },

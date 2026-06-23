@@ -361,8 +361,8 @@ def audit_main(main_py: Path) -> tuple[list[str], list[tuple[str, str]]]:
     passed: list[str]              = []
     failed: list[tuple[str, str]]  = []
 
-    # Most checks look in main.py; the midnight-UTC fix lives in data_pipeline.py
-    _PIPELINE_ONLY = {"midnight-UTC lower bound fix"}
+    # Most checks look in main.py; the date-based window check lives in data_pipeline.py
+    _PIPELINE_ONLY = {"date-based match window"}
 
     for label, pattern, hint in _AUDIT_CHECKS:
         src = src_pipeline if label in _PIPELINE_ONLY else src_main

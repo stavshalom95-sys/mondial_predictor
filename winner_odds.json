@@ -1,5 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-23T11:42:55Z. Fill in decimal odds before the daily pipeline runs.",
+  "_note": "Reset by master_reset.py on 2026-06-23T11:59:31Z. Fill in decimal odds before the daily pipeline runs.",
   "Portugal vs Uzbekistan": {
     "winner": {
       "home": 1.1,
@@ -68,8 +68,75 @@
       "12+": 3.95
     }
   },
+  "Switzerland vs Canada": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Bosnia-Herzegovina vs Qatar": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Morocco vs Haiti": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Scotland vs Brazil": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
   "_played_today": [
-    "France vs Iraq",
     "Norway vs Senegal",
     "Jordan vs Algeria"
   ]

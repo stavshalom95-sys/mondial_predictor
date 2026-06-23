@@ -1,54 +1,54 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-23T08:17:59Z. Fill in decimal odds before the daily pipeline runs.",
+  "_note": "Reset by master_reset.py on 2026-06-23T08:47:18Z. Fill in decimal odds before the daily pipeline runs.",
   "Portugal vs Uzbekistan": {
     "winner": {
-      "home": 1.1,
-      "draw": 7.3,
-      "away": 15.0
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 5.20,
-      "2-3": 2.10,
-      "+4": 2.00
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
-      "0-8": 2.25,
-      "9-11": 2.60,
-      "12+": 2.95
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
     }
   },
   "England vs Ghana": {
     "winner": {
-      "home": 1.15,
-      "draw": 6.00,
-      "away": 13.50
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 4.60,
-      "2-3": 2.00,
-      "+4": 2.20
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
-      "0-8": 2.0,
-      "9-11": 2.65,
-      "12+": 3.50
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
     }
   },
   "Panama vs Croatia": {
     "winner": {
-      "home": 5.80,
-      "draw": 4.10,
-      "away": 1.45
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 3.85,
-      "2-3": 1.95,
-      "+4": 2.50
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
-      "0-8": 2.00,
-      "9-11": 2.65,
-      "12+": 3.5
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
     }
   }
 }

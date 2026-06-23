@@ -48,6 +48,7 @@ from notifications.notifier import DailyPick, format_daily_message, format_lineu
 from config.scoring_rules import TournamentStage
 from core.ai_ensemble import enhance
 from data.context_fetcher import fetch_match_context
+from data.backup_scraper import fetch_match_context_espn
 from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats
 from core.bias_corrector import build_bias_corrector
@@ -675,14 +676,35 @@ def run_daily_pipeline(
         rec = recommend(model, context, stage)
         print(f"[pipeline]   recommendation: {rec.recommended_pick} [{rec.strategy.value}]")
 
-        # ── AI Ensemble: context (injuries, form) + Claude calibration ──────────
+        # ── AI Ensemble — three-tier context chain ───────────────────────────────
+        #
+        #   P1 — RapidAPI (RAPIDAPI_KEY)    injuries + form + lineups
+        #   P2 — ESPN public feed (no key)  WC form string + record + top scorer
+        #   P3 — Internal (schedule JSON)   goal averages + bias notes   ← always
+        #
+        #  P1 is tried first; if empty, P2 is tried; P3 is always appended.
+        #  Source is labelled in [brackets] and prepended to ai_reasoning.
+
+        _context_sources: list[str] = []
+
+        # P1: RapidAPI — injuries, confirmed form, lineups
         rapidapi_key    = os.environ.get("RAPIDAPI_KEY", "")
         match_ctx       = fetch_match_context(match.home_team, match.away_team, api_key=rapidapi_key)
         context_section = match_ctx.to_prompt_section() if match_ctx else ""
+        if context_section.strip():
+            _context_sources.append("RapidAPI")
 
-        # ── WC form context (no API needed — built from schedule JSON) ──────────
-        # Ensures the AI always receives form data even without RAPIDAPI_KEY,
-        # replacing the generic "No live context available" fallback.
+        # P2: ESPN public feed — WC form string + W-D-L record + top scorer
+        _espn_ctx: object = None
+        if not context_section.strip():
+            _espn_ctx = fetch_match_context_espn(match.home_team, match.away_team)
+            if _espn_ctx is not None:
+                _espn_text = _espn_ctx.to_prompt_section()
+                if _espn_text.strip():
+                    context_section = _espn_text
+                    _context_sources.append("ESPN-public")
+
+        # P3: Internal stats (schedule-derived, always built) ─────────────────
         _t_avg_ctx  = (_form_cache.tournament_avg if _form_cache else None) or 1.52
         _form_lines = []
         for _team, _form in ((match.home_team, _h_form), (match.away_team, _a_form)):
@@ -696,22 +718,26 @@ def run_daily_pipeline(
                 )
             else:
                 _form_lines.append(f"{_team}: no WC matches played yet (tournament debut)")
-        # Bias correction note (helps AI understand λ adjustments applied)
         if _bias is not None:
             for _team in (match.home_team, match.away_team):
                 _off = _bias.get_offset(_team)
                 if _off != 0.0:
                     _dir = "under-predicted" if _off > 0 else "over-predicted"
                     _form_lines.append(
-                        f"[Model note] {_team} goals have been systematically {_dir} "
+                        f"[Model note] {_team} goals systematically {_dir} "
                         f"in past matches; λ adjusted {_off:+.2f} to compensate."
                     )
         _form_context_section = "\n".join(_form_lines)
+        if _form_context_section.strip():
+            _context_sources.append("Internal")
 
-        # Merge: RapidAPI (injuries/lineups) takes priority; form is always appended
+        # Merge all context — P1/P2 first, P3 always appended
         _merged_context = "\n\n".join(
             s for s in [context_section, _form_context_section] if s.strip()
         )
+
+        _src_label = "/".join(_context_sources) if _context_sources else "Internal"
+        print(f"[context] Data sources active for {match.home_team} vs {match.away_team}: {_src_label}")
 
         ai_pick_prob = None
         ai_reasoning = None
@@ -726,8 +752,9 @@ def run_daily_pipeline(
             tournament_context_section = _match_motivation.to_ai_section(),
         )
         if ensemble_pick:
-            ai_pick_prob = ensemble_pick.to_score_prob(model)
-            ai_reasoning = ensemble_pick.reasoning
+            ai_pick_prob  = ensemble_pick.to_score_prob(model)
+            # Prepend data source tag so WhatsApp shows provenance of AI analysis
+            ai_reasoning  = f"[{_src_label}] {ensemble_pick.reasoning}"
 
         # Tournament context only relevant from matchday 3 onwards or in knockout rounds.
         # Rounds 1 & 2: all teams are motivated — suppress to keep notification clean.

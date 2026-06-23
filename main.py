@@ -551,28 +551,22 @@ def run_daily_pipeline(
             traceback.print_exc()
         print(f"[markets] DEBUG: markets object is {'SET' if markets is not None else 'NONE (calc failed)'}")
 
-        # ── O/U 2.5 value bet detection (bookmaker odds vs model) ───────────
-        ou_value_bet: str | None = None
+        # ── Sum-goals value bet detection (bookmaker bracket odds vs model) ─
+        sg_value_bet: str | None = None
         _match_entry = find_match_odds(match.home_team, match.away_team, _winner_odds_cache)
         if _match_entry and markets:
-            _book_over  = _match_entry.get("ou25_over",  0.0) or 0.0
-            _book_under = _match_entry.get("ou25_under", 0.0) or 0.0
-            if _book_over > 1.0:
-                _model_over = markets.ou.get(2.5, {}).get("p_over", 0.0)
-                _ev_over    = _model_over * _book_over  - 1
-                _ev_under   = (1 - _model_over) * _book_under - 1
-                if _ev_over >= 0.05:
-                    ou_value_bet = "over"
-                    print(
-                        f"[ou_ev] \U0001f525 VALUE Over 2.5: "
-                        f"model={_model_over:.1%}  book={_book_over}  EV={_ev_over:+.1%}"
-                    )
-                elif _ev_under >= 0.05:
-                    ou_value_bet = "under"
-                    print(
-                        f"[ou_ev] \U0001f525 VALUE Under 2.5: "
-                        f"model={1-_model_over:.1%}  book={_book_under}  EV={_ev_under:+.1%}"
-                    )
+            _SG_KEY_MAP = {"0-1": "sg_01", "2-3": "sg_23", "+4": "sg_4plus"}
+            for _bracket, _model_p in markets.sum_goals.items():
+                _book_odds = _match_entry.get(_SG_KEY_MAP[_bracket], 0.0) or 0.0
+                if _book_odds > 1.0:
+                    _ev = _model_p * _book_odds - 1
+                    if _ev >= 0.05:
+                        sg_value_bet = _bracket
+                        print(
+                            f"[sg_ev] \U0001f525 VALUE {_bracket} goals: "
+                            f"model={_model_p:.1%}  book={_book_odds}  EV={_ev:+.1%}"
+                        )
+                        break
 
         # ── Kelly / Value Bet analysis ──────────────────────────────────────
         kelly_analyses = analyse_match_bets(model, odds_1x2)
@@ -619,7 +613,7 @@ def run_daily_pipeline(
             ai_reasoning   = ai_reasoning,
             value_bets              = value_bets if value_bets else None,
             market_data             = markets,
-            ou_value_bet            = ou_value_bet,
+            sg_value_bet            = sg_value_bet,
             tournament_context_lines = _match_motivation.to_whatsapp_lines() or None,
         ))
         morning_data.append({
@@ -637,8 +631,10 @@ def run_daily_pipeline(
             "market_p_home":    round(true_probs.home,  4),
             "market_p_draw":    round(true_probs.draw,  4),
             "market_p_away":    round(true_probs.away,  4),
-            "sim_value_bet":         sim_value_bet,
-            "model_p_over_2_5":      markets.ou.get(2.5, {}).get("p_over") if markets else None,
+            "sim_value_bet":  sim_value_bet,
+            "model_sg_01":    markets.sum_goals.get("0-1") if markets else None,
+            "model_sg_23":    markets.sum_goals.get("2-3") if markets else None,
+            "model_sg_4plus": markets.sum_goals.get("+4")  if markets else None,
             "home_motivation":        _match_motivation.home.qualification_status,
             "away_motivation":        _match_motivation.away.qualification_status,
             "home_lambda_multiplier": _match_motivation.home.lambda_multiplier,

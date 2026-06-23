@@ -176,7 +176,7 @@ class DailyPick:
     ai_reasoning:   Optional[str]               = None
     value_bets:     Optional[list[BetAnalysis]] = None
     market_data:            Optional[object]       = None   # MarketResult | None
-    ou_value_bet:           Optional[str]         = None   # "over" | "under" | None
+    sg_value_bet:           Optional[str]         = None   # "0-1" | "2-3" | "+4" | None
     tournament_context_lines: Optional[list[str]] = None   # pre-formatted WhatsApp lines
 
 
@@ -267,11 +267,8 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
             else:
                 winner_label, winner_pct = pick.away_team, p_a
 
-            # O/U 2.5 — most common line
-            ou25     = m.ou.get(2.5, {})
-            p_over   = ou25.get("p_over", 0.0)
-            ou_side  = "Over" if p_over >= 0.5 else "Under"
-            ou_prob  = p_over if ou_side == "Over" else ou25.get("p_under", 0.0)
+            # Sum-goals 3-way bracket
+            sg = m.sum_goals if hasattr(m, "sum_goals") else {}
 
             # Asian handicap -1.5 for home team
             ah = next((h for h in m.handicaps if h.get("handicap") == -1.5), None)
@@ -280,9 +277,13 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
 
             lines.append("   📊 *Markets:*")
             lines.append(f"      🏆 Winner: {winner_label} ({winner_pct:.1%})")
-            if ou25:
-                _ou_badge = " 🔥 VALUE" if pick.ou_value_bet in ("over", "under") else ""
-                lines.append(f"      📈 O/U 2.5: {ou_side} ({ou_prob:.1%}){_ou_badge}")
+            if sg:
+                _sg_badge = f" 🔥 VALUE ({pick.sg_value_bet})" if pick.sg_value_bet else ""
+                lines.append(
+                    f"      📈 Goals: 0-1 ({sg.get('0-1', 0):.0%})"
+                    f" | 2-3 ({sg.get('2-3', 0):.0%})"
+                    f" | 4+ ({sg.get('+4', 0):.0%}){_sg_badge}"
+                )
             if ah:
                 lines.append(
                     f"      ⚖️  AH (-1.5): {pick.home_team} covers "

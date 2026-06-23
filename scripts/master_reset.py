@@ -192,9 +192,9 @@ def reset_winner_odds(matches: list[dict], output: Path) -> list[str]:
         a_name = _team_name(g, a_key)
         match_key = f"{h_name} vs {a_name}"
         data[match_key] = {
-            "winner":         {"home": 0.0, "draw": 0.0, "away": 0.0},
-            "over_under_2_5": {"over": 0.0, "under": 0.0},
-            "corners_range":  {"0-8": 0.0, "9-11": 0.0, "12+": 0.0},
+            "winner":      {"home": 0.0, "draw": 0.0, "away": 0.0},
+            "sum_goals":   {"0-1": 0.0, "2-3": 0.0, "+4": 0.0},
+            "corners_range": {"0-8": 0.0, "9-11": 0.0, "12+": 0.0},
         }
         keys.append(match_key)
 
@@ -267,9 +267,9 @@ _AUDIT_CHECKS: list[tuple[str, str, str]] = [
         "Pass tournament_context_section= to enhance() call",
     ),
     (
-        "model_p_over_2_5 in morning_data",
-        r"['\"]model_p_over_2_5['\"]",
-        "Add model_p_over_2_5 key to morning_data.append({...})",
+        "model_sg_01 in morning_data",
+        r"['\"]model_sg_01['\"]",
+        "Add model_sg_01/sg_23/sg_4plus keys to morning_data.append({...})",
     ),
     (
         "enrich_picks() called after loop",

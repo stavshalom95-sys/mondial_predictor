@@ -89,7 +89,7 @@ def _blank_entry() -> dict:
     """Placeholder entry for a new match — user fills in odds."""
     return {
         "winner":          {"home": 0.0, "draw": 0.0, "away": 0.0},
-        "over_under_2_5":  {"over": 0.0, "under": 0.0},
+        "sum_goals":       {"0-1": 0.0, "2-3": 0.0, "+4": 0.0},
         "corners_range":   {"0-8": 0.0, "9-11": 0.0, "12+": 0.0},
     }
 

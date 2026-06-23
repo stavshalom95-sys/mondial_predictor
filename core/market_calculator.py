@@ -1,7 +1,7 @@
 """
 market_calculator.py — Sub-market probability calculators.
 
-Derives Over/Under goals, Goal Difference, Asian Handicap, and Both Teams
+Derives Sum-Goals distribution, Goal Difference, Asian Handicap, and Both Teams
 To Score (BTTS) probabilities from the Dixon-Coles corrected score matrix.
 
 All public functions accept (lam_h, lam_a) — the same λ values produced by
@@ -15,10 +15,9 @@ Typical usage in main.py (after model is built and lambdas are set):
     markets = calculate_all_markets(lam_h, lam_a, home_team, away_team)
     print(markets.summary())
 
-    # Individual markets:
-    for line in [2.5, 3.5]:
-        ou = markets.ou[line]
-        print(f"O/U {line}: over={ou['p_over']:.1%}  under={ou['p_under']:.1%}")
+    # Sum-goals distribution (3-way bracket):
+    sg = markets.sum_goals
+    print(f"Goals 0-1: {sg['0-1']:.1%}  2-3: {sg['2-3']:.1%}  4+: {sg['+4']:.1%}")
 """
 from __future__ import annotations
 
@@ -81,6 +80,39 @@ def ou_probabilities(
         }
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Sum-Goals Distribution (3-way bracket)
+# ---------------------------------------------------------------------------
+
+def sum_goals_distribution(lam_h: float, lam_a: float) -> dict[str, float]:
+    """
+    Three-bracket total-goals distribution derived from the DC-corrected matrix.
+
+    Brackets:
+        "0-1": P(total goals <= 1)
+        "2-3": P(total goals == 2 or 3)
+        "+4":  P(total goals >= 4)
+
+    Useful for betting markets that offer a 3-way total-goals line rather
+    than a binary Over/Under 2.5.
+
+    Example:
+        >>> sg = sum_goals_distribution(1.4, 0.9)
+        >>> sg
+        {'0-1': 0.2341, '2-3': 0.4512, '+4': 0.3147}
+    """
+    matrix = build_dc_matrix(lam_h, lam_a)
+    n      = len(matrix)
+    p_01 = sum(matrix[h][a] for h in range(n) for a in range(n) if h + a <= 1)
+    p_23 = sum(matrix[h][a] for h in range(n) for a in range(n) if 2 <= h + a <= 3)
+    p_4p = sum(matrix[h][a] for h in range(n) for a in range(n) if h + a >= 4)
+    return {
+        "0-1": round(p_01, 4),
+        "2-3": round(p_23, 4),
+        "+4":  round(p_4p, 4),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -255,6 +287,7 @@ class MarketResult:
     away_team:  str
     lam_h:      float
     lam_a:      float
+    sum_goals:  dict[str, float]          = field(default_factory=dict)
     ou:         dict[float, dict]         = field(default_factory=dict)
     goal_diff:  dict[int, float]          = field(default_factory=dict)
     handicaps:  list[dict]                = field(default_factory=list)
@@ -269,11 +302,13 @@ class MarketResult:
             f"  (λ: {self.lam_h:.2f} / {self.lam_a:.2f})",
         ]
 
-        # Over/Under
-        lines.append("  O/U Goals:")
-        for line, vals in sorted(self.ou.items()):
+        # Sum-goals distribution
+        if self.sum_goals:
+            sg = self.sum_goals
             lines.append(
-                f"    {line:<5}  over={vals['p_over']:.1%}  under={vals['p_under']:.1%}"
+                f"  Sum Goals:  0-1={sg.get('0-1',0):.1%}"
+                f"  2-3={sg.get('2-3',0):.1%}"
+                f"  4+={sg.get('+4',0):.1%}"
             )
 
         # BTTS
@@ -348,6 +383,7 @@ def calculate_all_markets(
         away_team  = away_team,
         lam_h      = lam_h,
         lam_a      = lam_a,
+        sum_goals  = sum_goals_distribution(lam_h, lam_a),
         ou         = ou_probabilities(lam_h, lam_a, ou_lines),
         goal_diff  = goal_diff_distribution(lam_h, lam_a),
         handicaps  = [asian_handicap(lam_h, lam_a, h) for h in handicap_lines],

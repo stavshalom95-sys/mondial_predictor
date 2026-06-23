@@ -8,12 +8,12 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: "Bypass last_run.json guard and re-process today"
+        description: "Bypass last_run.json guard"
         required: false
         default: "true"
         type: boolean
       dry_run:
-        description: "Dry run — skip all live API calls"
+        description: "Dry run — skip live calls"
         required: false
         default: "false"
         type: boolean

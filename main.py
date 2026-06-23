@@ -394,6 +394,14 @@ def run_daily_pipeline(
         matches_remaining = remaining,
     )
 
+    # ── Always print today's schedule (visible in dry-run AND live run) ───────
+    todays_matches = get_todays_matches(all_matches)
+    print(f"[pipeline] ── TODAY'S MATCHES FROM SCHEDULE ({len(todays_matches)} found) ──")
+    for _i, _m in enumerate(todays_matches, 1):
+        print(f"[pipeline]   {_i}. {_m.home_team} vs {_m.away_team}  "
+              f"[{_m.start_time_utc.strftime('%Y-%m-%d %H:%M UTC')}]  status={_m.status}")
+    print(f"[pipeline] ── END MATCH LIST ──────────────────────────────────────")
+
     # ── Step 3: Auto-fetch today's odds ──────────────────────────────────────
     if dry_run:
         msg = (
@@ -421,12 +429,7 @@ def run_daily_pipeline(
         return msg
 
     # ── Step 4: Match odds to today's schedule ────────────────────────────────
-    todays_matches = get_todays_matches(all_matches)
-    print(f"[pipeline] ── TODAY'S MATCHES FROM SCHEDULE ({len(todays_matches)} found) ──")
-    for _i, _m in enumerate(todays_matches, 1):
-        print(f"[pipeline]   {_i}. {_m.home_team} vs {_m.away_team}  "
-              f"[{_m.start_time_utc.strftime('%Y-%m-%d %H:%M UTC')}]  status={_m.status}")
-    print(f"[pipeline] ── END MATCH LIST ──────────────────────────────────────")
+    # todays_matches already computed above (before dry-run exit)
 
     # Pre-load bookmaker odds once (no-op if winner_odds.json absent)
     _winner_odds_cache = get_all_odds(_WINNER_ODDS_PATH)
@@ -448,14 +451,20 @@ def run_daily_pipeline(
         print(f"[bias] Warning: bias corrector failed: {_bc_exc} — no bias correction applied.")
         _bias = None
 
-    picks:        list[DailyPick] = []
-    morning_data: list[dict]      = []
+    picks:           list[DailyPick] = []
+    morning_data:    list[dict]      = []
+    no_odds_matches: list            = []   # schedule matches with no bookmaker odds yet
 
     for match in todays_matches:
         odds_key = _find_odds_for_match(match.home_team, match.away_team, odds_map)
 
         if odds_key is None:
-            print(f"[pipeline] No odds matched for '{match.home_team} vs {match.away_team}' — skipping.")
+            print(
+                f"[pipeline] ⚠️  NO ODDS: '{match.home_team} vs {match.away_team}' "
+                f"[{match.start_time_utc.strftime('%Y-%m-%d %H:%M UTC')}] — "
+                f"in schedule but not found in The Odds API. Adding to no-odds list."
+            )
+            no_odds_matches.append(match)
             continue
 
         cfg = odds_map[odds_key]
@@ -860,6 +869,14 @@ def run_daily_pipeline(
 
     # ── Step 5: Format + send ────────────────────────────────────────────────
     message = format_daily_message(picks, context, perf_report=perf_report)
+
+    # Append schedule matches that had no bookmaker odds yet
+    if no_odds_matches:
+        _no_odds_lines = ["\n\n📅 *מתוכנן — טרם התקבלו מאיסות:*"]
+        for _nm in no_odds_matches:
+            _ko_str = _nm.start_time_utc.strftime("%H:%M UTC")
+            _no_odds_lines.append(f"  ⏳ {_nm.home_team} vs {_nm.away_team}  [{_ko_str}]  — No odds yet")
+        message += "\n".join(_no_odds_lines)
 
     if send_notification:
         send_whatsapp_message(message)

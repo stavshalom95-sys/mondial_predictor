@@ -53,11 +53,10 @@ jobs:
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: |
-          # נשתמש בנתיב יחסי פשוט מהשורש של הפרויקט
           if [ -n "$FOOTBALL_DATA_API_KEY" ]; then
-            python scripts/sync_tables.py --output data/group_tables.json
+            python3 scripts/sync_tables.py --output data/group_tables.json
           else
-            python scripts/sync_tables.py --from-schedule tests/sample_games.json --output data/group_tables.json
+            python3 scripts/sync_tables.py --from-schedule tests/sample_games.json --output data/group_tables.json
           fi
 
       - name: Reset winner_odds.json to today's matches

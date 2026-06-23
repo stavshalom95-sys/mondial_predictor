@@ -131,14 +131,16 @@ def get_next_unplayed_matches(
 
 def get_todays_matches(
     all_matches: list[ScheduledMatch],
-    hours_ahead: int = 24,
+    hours_ahead: int = 30,
 ) -> list[ScheduledMatch]:
     """
     Return unfinished matches that fall within the IDT (Israel, UTC+3) calendar day.
 
-    Window: previous day 21:00 UTC (= 00:00 IDT) → today 23:59 UTC (= tomorrow 02:59 IDT).
-    The 3-hour lookback ensures that early morning kickoffs such as 02:00 UTC (05:00 IDT)
-    are never missed because of the UTC midnight boundary.
+    Window: previous day 21:00 UTC (= 00:00 IDT) → today+30h UTC (≈ 06:00 UTC next day).
+    The 3-hour lookback handles the UTC midnight boundary; the 30-hour forward window
+    captures late North America WC slots that kick off after UTC midnight
+    (e.g. Colombia vs Congo DR at 02:00 UTC).  master_reset.py uses the same 30-hour
+    window so the two stay in sync.
 
     Sorted by start time.
     """

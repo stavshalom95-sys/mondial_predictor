@@ -496,6 +496,8 @@ def run_daily_pipeline(
 
         # ── Strength-model λ blending ────────────────────────────────────────
         str_lh, str_la = calculate_lambda(match.home_team, match.away_team, strength_model)
+        _lam_h_market = model.lambda_home   # snapshot: pure market-calibrated λ (for logic chain)
+        _lam_a_market = model.lambda_away
 
         if str_lh and strength_model and strength_model.n_matches >= MIN_BLEND:
             lam_h = round((1 - BLEND_WEIGHT) * model.lambda_home + BLEND_WEIGHT * str_lh, 3)
@@ -506,6 +508,8 @@ def run_daily_pipeline(
             )
         else:
             lam_h, lam_a = model.lambda_home, model.lambda_away
+        _lam_h_post_strength = lam_h   # snapshot after strength blend
+        _lam_a_post_strength = lam_a
 
         # ── Team Form Adjustment (last-5 WC rolling average) ─────────────────
         # Formula: form_scale = team.goals_scored_avg / tournament_avg
@@ -533,6 +537,9 @@ def run_daily_pipeline(
                 f"lam_h={lam_h}  lam_a={lam_a}"
             )
 
+        _lam_h_post_form = lam_h   # snapshot after form adjustment
+        _lam_a_post_form = lam_a
+
         # ── Per-team Bias Correction (history-driven λ offset) ───────────────
         if _bias is not None:
             _h_off = _bias.get_offset(match.home_team)
@@ -543,6 +550,8 @@ def run_daily_pipeline(
             if _a_off != 0.0:
                 lam_a = round(max(0.1, lam_a + _a_off), 3)
                 print(f"[bias] {match.away_team} offset {_a_off:+.3f} → lam_a={lam_a}")
+        _lam_h_post_bias = lam_h   # snapshot after bias correction
+        _lam_a_post_bias = lam_a
 
         # ── Tournament Motivation (rotation-trap λ adjustment) ──────────────
         _match_motivation = build_match_motivation(
@@ -578,6 +587,36 @@ def run_daily_pipeline(
                 f"[motivation] Knockout stage ({stage.value}) intensity ×{_ko_boost:.2f}: "
                 f"lam_h={lam_h}  lam_a={lam_a}"
             )
+
+        # ── Logic chain (visible in WhatsApp — shows which factors moved λ) ──
+        # Format: each adjustment that moved λH by ≥ 1% or any absolute change is shown.
+        # Percentages are relative to the market-calibrated baseline.
+        def _pct(before: float, after: float) -> str:
+            if before == 0:
+                return ""
+            delta = (after - before) / before * 100
+            return f"{delta:+.0f}%" if abs(delta) >= 0.5 else ""
+
+        _chain_steps: list[str] = [f"Mkt {_lam_h_market:.2f}/{_lam_a_market:.2f}"]
+        _str_tag = _pct(_lam_h_market, _lam_h_post_strength)
+        if _str_tag:
+            _chain_steps.append(f"Str{_str_tag}")
+        _form_tag = _pct(_lam_h_post_strength, _lam_h_post_form)
+        if _form_tag:
+            _chain_steps.append(f"Form{_form_tag}")
+        _bias_tag = _pct(_lam_h_post_form, _lam_h_post_bias)
+        if _bias_tag:
+            _chain_steps.append(f"Bias{_bias_tag}")
+        _motiv_mult = _match_motivation.home.lambda_multiplier
+        if abs(_motiv_mult - 1.0) >= 0.01:
+            _chain_steps.append(f"Motiv×{_motiv_mult:.2f}")
+        if stage != TournamentStage.GROUP_STAGE:
+            _chain_steps.append("KO×1.20")
+        _chain_steps.append(f"→ {lam_h:.2f}/{lam_a:.2f}")
+
+        _total_h_pct = (_pct(_lam_h_market, lam_h) or "+0%")
+        _logic_chain = " | ".join(_chain_steps) + f"  [{_total_h_pct} total vs market]"
+        print(f"[chain] {match.home_team} vs {match.away_team}: {_logic_chain}")
 
         # ── Monte Carlo Simulation ──────────────────────────────────────────
         sim = simulate(lam_h, lam_a)
@@ -775,6 +814,7 @@ def run_daily_pipeline(
             market_data             = markets,
             sg_value_bet            = sg_value_bet,
             tournament_context_lines = (_match_motivation.to_whatsapp_lines() or None) if _show_context else None,
+            logic_chain    = _logic_chain,
         ))
         morning_data.append({
             "date":             date.today().isoformat(),

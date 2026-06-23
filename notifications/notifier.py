@@ -185,6 +185,7 @@ class DailyPick:
     market_data:            Optional[object]       = None   # MarketResult | None
     sg_value_bet:           Optional[str]         = None   # "0-1" | "2-3" | "+4" | None
     tournament_context_lines: Optional[list[str]] = None   # pre-formatted WhatsApp lines
+    logic_chain:    Optional[str]               = None   # λ adjustment chain for transparency
 
 
 def format_daily_message(picks: list[DailyPick], context: TournamentContext, perf_report: Optional[dict] = None) -> str:
@@ -262,6 +263,8 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
 
         if pick.ai_reasoning:
             lines.append(f"   🤖 AI: {pick.ai_reasoning}")
+        if pick.logic_chain:
+            lines.append(f"   📐 Chain: {pick.logic_chain}")
 
         if rec.strategy == Strategy.CONTRARIAN:
             safe = rec.alternative_safe_pick

@@ -57,6 +57,7 @@ from core.strength_model import build_strength_model, MIN_BLEND, BLEND_WEIGHT, _
 from core.market_calculator import calculate_all_markets
 from data.winner_odds_loader import enrich_picks, get_all_odds, find_match_odds
 from data.motivation import load_group_tables, build_match_motivation
+from data.stats_collector import build_form_cache, FORM_BLEND_WEIGHT
 
 _DATA_DIR            = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _MORNING_PICKS_PATH  = os.path.join(_DATA_DIR, "morning_picks.json")
@@ -415,6 +416,13 @@ def run_daily_pipeline(
     # Pre-load group tables for motivation scoring (no-op if absent)
     _group_tables = load_group_tables(_GROUP_TABLES_PATH)
 
+    # Build rolling team-form cache (last-5 WC games per team, zero extra API calls)
+    try:
+        _form_cache = build_form_cache(raw_games_from_api)
+    except Exception as _fc_exc:
+        print(f"[form] Warning: form cache failed: {_fc_exc} — form adjustment skipped.")
+        _form_cache = None
+
     picks:        list[DailyPick] = []
     morning_data: list[dict]      = []
 
@@ -478,6 +486,31 @@ def run_daily_pipeline(
         else:
             lam_h, lam_a = model.lambda_home, model.lambda_away
 
+        # ── Team Form Adjustment (last-5 WC rolling average) ─────────────────
+        # Formula: form_scale = team.goals_scored_avg / tournament_avg
+        #          lam_final  = (1 - w) × lam  +  w × lam × form_scale
+        # where w = FORM_BLEND_WEIGHT (15 %). Falls back gracefully when a
+        # team has no WC data yet (n_games == 0 → no adjustment applied).
+        if _form_cache is not None:
+            _t_avg  = _form_cache.tournament_avg or 1.32
+            _h_form = _form_cache.get(match.home_team)
+            _a_form = _form_cache.get(match.away_team)
+            if _h_form and _h_form.n_games > 0:
+                _h_scale = _h_form.goals_scored_avg / _t_avg
+                lam_h = round((1 - FORM_BLEND_WEIGHT) * lam_h + FORM_BLEND_WEIGHT * lam_h * _h_scale, 3)
+            if _a_form and _a_form.n_games > 0:
+                _a_scale = _a_form.goals_scored_avg / _t_avg
+                lam_a = round((1 - FORM_BLEND_WEIGHT) * lam_a + FORM_BLEND_WEIGHT * lam_a * _a_scale, 3)
+            _h_g = f"{_h_form.goals_scored_avg:.2f}" if (_h_form and _h_form.n_games > 0) else "N/A"
+            _a_g = f"{_a_form.goals_scored_avg:.2f}" if (_a_form and _a_form.n_games > 0) else "N/A"
+            _h_n = _h_form.n_games if _h_form else 0
+            _a_n = _a_form.n_games if _a_form else 0
+            print(
+                f"[form] {match.home_team}: {_h_g}g/game (last {_h_n})  |  "
+                f"{match.away_team}: {_a_g}g/game (last {_a_n})  →  "
+                f"lam_h={lam_h}  lam_a={lam_a}"
+            )
+
         # ── Tournament Motivation (rotation-trap λ adjustment) ──────────────
         _match_motivation = build_match_motivation(
             match.home_team, match.away_team, _group_tables
@@ -497,6 +530,20 @@ def run_daily_pipeline(
                 f"[motivation] No adjustment for {match.home_team} vs {match.away_team} "
                 f"(status: {_match_motivation.home.qualification_status} / "
                 f"{_match_motivation.away.qualification_status})"
+            )
+
+        # ── Knockout stage intensity boost ───────────────────────────────────
+        # Knockout matches tend toward higher-intensity, end-to-end play.
+        # Group motivation system returns 'unknown' (×1.0) for knockout teams
+        # since they are no longer tracked in group_tables.json — apply a fixed
+        # 1.20× boost to both λ values to compensate for that gap.
+        if stage != TournamentStage.GROUP_STAGE:
+            _ko_boost = 1.20
+            lam_h = round(lam_h * _ko_boost, 3)
+            lam_a = round(lam_a * _ko_boost, 3)
+            print(
+                f"[motivation] Knockout stage ({stage.value}) intensity ×{_ko_boost:.2f}: "
+                f"lam_h={lam_h}  lam_a={lam_a}"
             )
 
         # ── Monte Carlo Simulation ──────────────────────────────────────────

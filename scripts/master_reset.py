@@ -152,30 +152,24 @@ def _parse_start(raw: str) -> datetime:
 
 def todays_matches(raw_games: list[dict]) -> list[dict]:
     """
-    Return all matches in a 30-hour forward window rooted at the IDT calendar day.
+    Return all matches scheduled for today's UTC date or tomorrow's UTC date.
 
-    Window: previous day 21:00 UTC (= 00:00 IDT) → today+30h UTC.
-
-    Why 30 hours?
-      WC 2026 is in North America. Late-night local kickoffs land in UTC early the
-      next morning (e.g. 22:00 PDT = 05:00 UTC, 23:00 EDT = 03:00 UTC).
-      Colombia vs Congo starts at 2026-06-24T02:00Z (05:00 IDT) — 2 hours past the
-      previous 24h cutoff. 30h covers all realistic WC slots (up to ~06:00 UTC the
-      next calendar day) so upcoming matches are pre-seeded for odds input in advance.
+    Captures all WC 2026 slots regardless of time zone: a match at 02:00 UTC on the
+    next calendar day (e.g. Colombia vs Congo DR) is included because its UTC date
+    equals tomorrow.  get_todays_matches() in data_pipeline.py uses the same logic.
 
     Finished matches are passed through; reset_winner_odds() routes them to
     _played_today rather than the main entries section.
     """
-    now          = datetime.now(timezone.utc)
-    today_start  = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    window_start = today_start - timedelta(hours=3)    # 21:00 UTC prev day = 00:00 IDT
-    today_end    = today_start + timedelta(hours=30)   # covers UTC early-morning next day
+    now_utc       = datetime.now(timezone.utc)
+    today_date    = now_utc.date()
+    tomorrow_date = today_date + timedelta(days=1)
 
     result: list[dict] = []
     for g in raw_games:
         start = _parse_start(g.get("start_time", ""))
-        if window_start <= start < today_end:
-            # Include ALL matches in the IDT window — finished early-morning games
+        if start.date() in (today_date, tomorrow_date):
+            # Include ALL matches (incl. finished) — finished early-morning games
             # are recorded in winner_odds.json under _played_today for traceability.
             # The main pipeline (get_todays_matches) still skips status="final" games.
             result.append(g)
@@ -306,9 +300,9 @@ _AUDIT_CHECKS: list[tuple[str, str, str]] = [
         "Import and call get_todays_matches from data.data_pipeline",
     ),
     (
-        "midnight-UTC lower bound fix",
-        r"today_start\s*=\s*now\.replace\(",
-        "data_pipeline.get_todays_matches() must use today_start=now.replace(hour=0,...)",
+        "date-based match window",
+        r"today_date\s*=\s*\w+\.date\(\)",
+        "data_pipeline.get_todays_matches() must use today_date=now_utc.date() (date-based window)",
     ),
     (
         "motivation import",

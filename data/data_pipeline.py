@@ -131,26 +131,23 @@ def get_next_unplayed_matches(
 
 def get_todays_matches(
     all_matches: list[ScheduledMatch],
-    hours_ahead: int = 30,
 ) -> list[ScheduledMatch]:
     """
-    Return unfinished matches that fall within the IDT (Israel, UTC+3) calendar day.
+    Return unfinished matches scheduled for today's UTC date or tomorrow's UTC date.
 
-    Window: previous day 21:00 UTC (= 00:00 IDT) → today+30h UTC (≈ 06:00 UTC next day).
-    The 3-hour lookback handles the UTC midnight boundary; the 30-hour forward window
-    captures late North America WC slots that kick off after UTC midnight
-    (e.g. Colombia vs Congo DR at 02:00 UTC).  master_reset.py uses the same 30-hour
-    window so the two stay in sync.
+    Captures all WC 2026 slots regardless of time zone: a match at 02:00 UTC on the
+    next calendar day (e.g. Colombia vs Congo DR) is included because its UTC date
+    equals tomorrow.  master_reset.py uses the same date-based logic.
 
     Sorted by start time.
     """
-    now          = datetime.now(timezone.utc)
-    today_start  = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    window_start = today_start - timedelta(hours=3)   # 21:00 UTC prev day = 00:00 IDT
-    cutoff       = today_start + timedelta(hours=hours_ahead)
-    today        = [
+    now_utc       = datetime.now(timezone.utc)
+    today_date    = now_utc.date()
+    tomorrow_date = today_date + timedelta(days=1)
+    today         = [
         m for m in all_matches
-        if m.status != "final" and window_start <= m.start_time_utc <= cutoff
+        if m.status != "final"
+        and m.start_time_utc.date() in (today_date, tomorrow_date)
     ]
     today.sort(key=lambda m: m.start_time_utc)
     return today

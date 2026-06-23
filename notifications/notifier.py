@@ -218,9 +218,27 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
         exact        = perf_report.get("exact", 0)
         pts_earned   = perf_report.get("pts_earned", 0)
         pts_possible = perf_report.get("pts_possible", 0)
-        lines.append(f"📈 *ביצועי אתמול ({date_label})*")
-        lines.append(f"   ✅ תוצאה נכונה: {correct}/{total}")
-        lines.append(f"   🎯 ניחוש מדויק: {exact}/{total} | {pts_earned}/{pts_possible} נק'")
+        pnl_nis      = perf_report.get("pnl_nis")
+        bets_placed  = perf_report.get("bets_placed", 0)
+        at_correct   = perf_report.get("all_time_correct")
+        at_total     = perf_report.get("all_time_total", 0)
+        at_hit_rate  = perf_report.get("all_time_hit_rate")
+        at_pnl       = perf_report.get("all_time_pnl")
+
+        if total > 0:
+            lines.append(f"📈 *ביצועי אתמול ({date_label})*")
+            lines.append(f"   ✅ תוצאה נכונה: {correct}/{total}")
+            lines.append(f"   🎯 ניחוש מדויק: {exact}/{total} | {pts_earned}/{pts_possible} נק'")
+            if pnl_nis is not None and bets_placed:
+                _sign = "+" if pnl_nis >= 0 else ""
+                _plural = "ים" if bets_placed > 1 else ""
+                lines.append(f"   💰 P&L הימורים: {_sign}{pnl_nis:.0f} ₪ ({bets_placed} הימור{_plural})")
+        if at_total and at_total > 0:
+            _hr_pct = round(at_hit_rate * 100) if at_hit_rate else 0
+            lines.append(f"   📊 Hit Rate כללי: {_hr_pct}% ({at_correct}/{at_total})")
+            if at_pnl is not None:
+                _sign2 = "+" if at_pnl >= 0 else ""
+                lines.append(f"   💹 P&L מצטבר: {_sign2}{at_pnl:.0f} ₪")
         lines.append("")
 
     for pick in picks:

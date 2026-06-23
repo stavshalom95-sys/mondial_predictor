@@ -43,13 +43,14 @@ from data.data_pipeline import (
 from data.odds_fetcher import fetch_todays_match_odds, _normalize as normalize_team
 from data.scores365_sync import fetch_standings
 from data.tournament_state import MY_CURRENT_STATE
-from notifications.notifier import DailyPick, format_daily_message, format_lineup_alert, send_whatsapp_message
+from notifications.notifier import DailyPick, format_daily_message, format_lineup_alert, send_whatsapp_message, TOTAL_BANKROLL, DAILY_BUDGET_CAP, LOW_PROB_BUDGET_CAP
 
 from config.scoring_rules import TournamentStage
 from core.ai_ensemble import enhance
 from data.context_fetcher import fetch_match_context
 from data.results_fetcher import fetch_yesterday_results
-from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats
+from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats
+from core.bias_corrector import build_bias_corrector
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis
 from core.simulator import simulate
@@ -355,6 +356,18 @@ def run_daily_pipeline(
             print(f"[pipeline] Warning: result ingestion failed: {exc}")
             perf_report = yesterday_stats(history)
 
+    # ── Augment perf_report with all-time tournament stats ───────────────────
+    if history:
+        _all_time = compute_stats(history)
+        if _all_time["total"] > 0:
+            if perf_report is None:
+                perf_report = {}
+            perf_report["all_time_correct"]  = _all_time["correct"]
+            perf_report["all_time_total"]    = _all_time["total"]
+            perf_report["all_time_hit_rate"] = round(_all_time["correct"] / _all_time["total"], 3)
+            if _all_time.get("pnl_nis") is not None:
+                perf_report["all_time_pnl"] = _all_time["pnl_nis"]
+
     # ── Step 1: Live standings sync ──────────────────────────────────────────
     if dry_run:
         print("[pipeline] Dry run — skipping standings sync (using hardcoded state).")
@@ -422,6 +435,13 @@ def run_daily_pipeline(
     except Exception as _fc_exc:
         print(f"[form] Warning: form cache failed: {_fc_exc} — form adjustment skipped.")
         _form_cache = None
+
+    # Build per-team bias corrector from WC prediction history
+    try:
+        _bias = build_bias_corrector(history)
+    except Exception as _bc_exc:
+        print(f"[bias] Warning: bias corrector failed: {_bc_exc} — no bias correction applied.")
+        _bias = None
 
     picks:        list[DailyPick] = []
     morning_data: list[dict]      = []
@@ -510,6 +530,17 @@ def run_daily_pipeline(
                 f"{match.away_team}: {_a_g}g/game (last {_a_n})  →  "
                 f"lam_h={lam_h}  lam_a={lam_a}"
             )
+
+        # ── Per-team Bias Correction (history-driven λ offset) ───────────────
+        if _bias is not None:
+            _h_off = _bias.get_offset(match.home_team)
+            _a_off = _bias.get_offset(match.away_team)
+            if _h_off != 0.0:
+                lam_h = round(max(0.1, lam_h + _h_off), 3)
+                print(f"[bias] {match.home_team} offset {_h_off:+.3f} → lam_h={lam_h}")
+            if _a_off != 0.0:
+                lam_a = round(max(0.1, lam_a + _a_off), 3)
+                print(f"[bias] {match.away_team} offset {_a_off:+.3f} → lam_a={lam_a}")
 
         # ── Tournament Motivation (rotation-trap λ adjustment) ──────────────
         _match_motivation = build_match_motivation(
@@ -627,6 +658,18 @@ def run_daily_pipeline(
                     f"| half-Kelly={vb.half_kelly:.1%}"
                 )
 
+        # Compute recommended NIS stake (mirrors notifier.py logic) for P&L tracking
+        _kvb = value_bets[0] if value_bets else None
+        if _kvb:
+            _kvb_stake_raw = _kvb.half_kelly * TOTAL_BANKROLL
+            _kvb_stake = (
+                min(_kvb_stake_raw, DAILY_BUDGET_CAP)
+                if _kvb.our_prob >= 0.40
+                else min(_kvb_stake_raw / 4, LOW_PROB_BUDGET_CAP)
+            )
+        else:
+            _kvb_stake = None
+
         # Poisson model → strategy recommendation
         rec = recommend(model, context, stage)
         print(f"[pipeline]   recommendation: {rec.recommended_pick} [{rec.strategy.value}]")
@@ -695,6 +738,9 @@ def run_daily_pipeline(
             "away_motivation":        _match_motivation.away.qualification_status,
             "home_lambda_multiplier": _match_motivation.home.lambda_multiplier,
             "away_lambda_multiplier": _match_motivation.away.lambda_multiplier,
+            "kelly_value_bet":        _kvb.outcome      if _kvb else None,
+            "kelly_value_bet_odds":   round(_kvb.decimal_odds, 3) if _kvb else None,
+            "kelly_value_bet_stake":  round(_kvb_stake, 2) if _kvb_stake else None,
         })
 
     if not picks:

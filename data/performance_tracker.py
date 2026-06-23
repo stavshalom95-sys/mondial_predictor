@@ -129,6 +129,23 @@ def ingest_results(
             pred_home, pred_away, actual_home, actual_away, stage
         )
 
+        # ── Bet P&L (populated when kelly_value_bet info present in pick) ────
+        kvb_outcome = pick.get("kelly_value_bet")       # "Home Win" | "Draw" | "Away Win"
+        kvb_odds    = pick.get("kelly_value_bet_odds")
+        kvb_stake   = pick.get("kelly_value_bet_stake")
+        bet_won     = None
+        pnl_nis     = None
+        if kvb_outcome and kvb_odds and kvb_stake:
+            _outcome_dir = {"Home Win": "1", "Draw": "X", "Away Win": "2"}
+            actual_dir   = _direction(actual_home, actual_away)
+            if kvb_outcome in _outcome_dir:
+                bet_won = (actual_dir == _outcome_dir[kvb_outcome])
+                pnl_nis = round(
+                    (float(kvb_odds) - 1) * float(kvb_stake)
+                    if bet_won else -float(kvb_stake),
+                    2,
+                )
+
         record = {
             "date":            pick_date,
             "home_team":       home_team,
@@ -142,6 +159,8 @@ def ingest_results(
             "correct_result":  correct,
             "points_earned":   pts_earned,
             "points_possible": pts_possible,
+            "bet_won":         bet_won,
+            "pnl_nis":         pnl_nis,
         }
         new_records.append(record)
         seen.add(dedup_key)
@@ -191,12 +210,17 @@ def compute_stats(records: list[dict]) -> dict:
     exact        = sum(1 for r in records if r.get("exact_match"))
     pts_earned   = sum(r.get("points_earned", 0)   for r in records)
     pts_possible = sum(r.get("points_possible", 0) for r in records)
+    # P&L: aggregate only records where a value bet was placed and result known
+    bet_records  = [r for r in records if r.get("pnl_nis") is not None]
+    pnl_total    = round(sum(r["pnl_nis"] for r in bet_records), 2) if bet_records else None
     return {
         "total":        total,
         "correct":      correct,
         "exact":        exact,
         "pts_earned":   pts_earned,
         "pts_possible": pts_possible,
+        "pnl_nis":      pnl_total,
+        "bets_placed":  len(bet_records),
     }
 
 

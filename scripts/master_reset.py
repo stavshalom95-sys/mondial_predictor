@@ -148,19 +148,25 @@ def _parse_start(raw: str) -> datetime:
 
 def todays_matches(raw_games: list[dict]) -> list[dict]:
     """
-    Return unfinished matches that start within today's UTC calendar day (00:00 – 23:59).
-    Mirrors data_pipeline.get_todays_matches() with the midnight-UTC lower-bound fix.
+    Return unfinished matches within the IDT (Israel, UTC+3) calendar day.
+
+    Window: previous day 21:00 UTC (= 00:00 IDT) → today 23:59 UTC.
+    The 3-hour lookback ensures early morning IDT kickoffs (e.g. 02:00 UTC = 05:00 IDT)
+    are captured even though they fall in the 'previous' UTC calendar day.
+
+    Mirrors data_pipeline.get_todays_matches().
     """
-    now         = datetime.now(timezone.utc)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_end   = today_start + timedelta(hours=24)
+    now          = datetime.now(timezone.utc)
+    today_start  = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    window_start = today_start - timedelta(hours=3)   # 21:00 UTC prev day = 00:00 IDT
+    today_end    = today_start + timedelta(hours=24)
 
     result: list[dict] = []
     for g in raw_games:
         if g.get("status") == "final":
             continue
         start = _parse_start(g.get("start_time", ""))
-        if today_start <= start < today_end:
+        if window_start <= start < today_end:
             result.append(g)
 
     result.sort(key=lambda g: _parse_start(g.get("start_time", "")))
@@ -278,7 +284,7 @@ _AUDIT_CHECKS: list[tuple[str, str, str]] = [
     ),
     (
         "tournament_context_lines in DailyPick",
-        r"tournament_context_lines\s*=\s*_match_motivation\.to_whatsapp_lines\(",
+        r"tournament_context_lines.*_match_motivation\.to_whatsapp_lines\(",
         "Add tournament_context_lines= to DailyPick(...) call",
     ),
 ]

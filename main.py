@@ -605,6 +605,15 @@ def run_daily_pipeline(
             ai_pick_prob = ensemble_pick.to_score_prob(model)
             ai_reasoning = ensemble_pick.reasoning
 
+        # Tournament context only relevant from matchday 3 onwards or in knockout rounds.
+        # Rounds 1 & 2: all teams are motivated — suppress to keep notification clean.
+        _is_knockout      = (stage != TournamentStage.GROUP_STAGE)
+        _is_final_matchday = (
+            _match_motivation.home.played >= 2 or
+            _match_motivation.away.played >= 2
+        )
+        _show_context = _is_knockout or _is_final_matchday
+
         picks.append(DailyPick(
             home_team      = match.home_team,
             away_team      = match.away_team,
@@ -614,7 +623,7 @@ def run_daily_pipeline(
             value_bets              = value_bets if value_bets else None,
             market_data             = markets,
             sg_value_bet            = sg_value_bet,
-            tournament_context_lines = _match_motivation.to_whatsapp_lines() or None,
+            tournament_context_lines = (_match_motivation.to_whatsapp_lines() or None) if _show_context else None,
         ))
         morning_data.append({
             "date":             date.today().isoformat(),

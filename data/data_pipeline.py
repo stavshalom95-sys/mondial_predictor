@@ -134,15 +134,21 @@ def get_todays_matches(
     hours_ahead: int = 24,
 ) -> list[ScheduledMatch]:
     """
-    Return matches that start within the next `hours_ahead` hours and are not finished.
-    Sorted by start time. Used by the auto-odds pipeline to know which matches need odds today.
+    Return unfinished matches that fall within the IDT (Israel, UTC+3) calendar day.
+
+    Window: previous day 21:00 UTC (= 00:00 IDT) → today 23:59 UTC (= tomorrow 02:59 IDT).
+    The 3-hour lookback ensures that early morning kickoffs such as 02:00 UTC (05:00 IDT)
+    are never missed because of the UTC midnight boundary.
+
+    Sorted by start time.
     """
-    now         = datetime.now(timezone.utc)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    cutoff      = today_start + timedelta(hours=hours_ahead)
-    today       = [
+    now          = datetime.now(timezone.utc)
+    today_start  = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    window_start = today_start - timedelta(hours=3)   # 21:00 UTC prev day = 00:00 IDT
+    cutoff       = today_start + timedelta(hours=hours_ahead)
+    today        = [
         m for m in all_matches
-        if m.status != "final" and today_start <= m.start_time_utc <= cutoff
+        if m.status != "final" and window_start <= m.start_time_utc <= cutoff
     ]
     today.sort(key=lambda m: m.start_time_utc)
     return today

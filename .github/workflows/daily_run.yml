@@ -1,5 +1,5 @@
 name: Mondial Predictor — Daily Run                                                                                                                                                                                                        
-  on:                                                                                                                                                                                                                                            schedule:
+on:                                                                                                                                                                                                                                            schedule:
       # Primary: 06:00 UTC = 09:00 IDT (summer, UTC+3).
       # WC 2026 latest games (21:00 PDT = 00:00 UTC) finish by ~02:00 UTC,
       # giving a 4-hour safety margin before this run fetches results.

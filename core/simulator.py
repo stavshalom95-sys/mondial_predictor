@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from core.poisson_engine import _build_matrix, MAX_GOALS
+from core.poisson_engine import _build_matrix, build_dc_matrix, MAX_GOALS
 
 _RNG      = np.random.default_rng()   # module-level, thread-safe seeded generator
 _MAX_DISP = 4                          # score grid shows 0–4 goals per team (5 × 5)
@@ -111,8 +111,11 @@ def simulate(home_xg: float, away_xg: float, n_sims: int = 10_000) -> SimResult:
     mc_draw = float(np.mean(home_g == away_g))
     mc_away = float(np.mean(home_g < away_g))
 
-    # ── Analytical Poisson — reuse _build_matrix from poisson_engine ─────────
-    full = _build_matrix(home_xg, away_xg)   # (MAX_GOALS+1) × (MAX_GOALS+1)
+    # ── Analytical Poisson — DC-corrected matrix ─────────────────────────────
+    # build_dc_matrix applies Dixon-Coles τ correction to the four low-scoring
+    # cells (0-0 ↑, 1-0 ↓, 0-1 ↓, 1-1 ↑) then normalises.  This prevents
+    # the raw Poisson artefact of 1-0 ranking above 1-1 at typical WC λ values.
+    full = build_dc_matrix(home_xg, away_xg)   # (MAX_GOALS+1) × (MAX_GOALS+1)
 
     p_h = sum(
         full[h][a]

@@ -1,30 +1,35 @@
-[
-  {
-    "home_team": "Argentina",
-    "away_team": "Austria",
-    "odds_home": 1.40,
-    "odds_draw": 4.00,
-    "odds_away": 6.80
+{
+  "_note": "Reset by master_reset.py on 2026-06-23T07:32:29Z. Fill in decimal odds before the daily pipeline runs.",
+  "France vs Argentina": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "over_under_2_5": {
+      "over": 0.0,
+      "under": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
   },
-  {
-    "home_team": "France",
-    "away_team": "Iraq",
-    "odds_home": 1.05,
-    "odds_draw": 8.40,
-    "odds_away": 22.00
-  },
-  {
-    "home_team": "Norway",
-    "away_team": "Senegal",
-    "odds_home": 2.10,
-    "odds_draw": 3.25,
-    "odds_away": 3.10
-  },
-  {
-    "home_team": "Jordan",
-    "away_team": "Algeria",
-    "odds_home": 5.40,
-    "odds_draw": 3.90,
-    "odds_away": 1.50
+  "England vs United States": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "over_under_2_5": {
+      "over": 0.0,
+      "under": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
   }
-]
+}

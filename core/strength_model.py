@@ -7,27 +7,109 @@ Formula (neutral-venue variant, appropriate for World Cup):
     λ_away = (A_attack × H_defence) / tournament_average
 
 Where:
-    H_attack  = home team's goals scored  per game
-    A_defence = away team's goals conceded per game
+    H_attack  = home team's Bayesian-smoothed goals scored per game  (v2)
+    A_defence = away team's raw goals conceded per game
     tournament_average = total goals / (2 × total matches)
 
 Blending with market-calibrated λ (see main.py) prevents the model from
 over-reacting to small samples early in the tournament:
     λ_blended = (1 - w) × λ_market  +  w × λ_strength
 
+Bayesian Prior (v2):
+    Attack rates are smoothed toward FIFA-ranking-derived priors to prevent
+    extreme λ estimates from a single match result.
+
+    posterior = (n_games × observed + PRIOR_WEIGHT × prior) / (n_games + PRIOR_WEIGHT)
+
+    With PRIOR_WEIGHT=3, Norway's 4-goal game against Iraq:
+        posterior_attack = (1×4.0 + 3×1.55) / 4 = 2.16
+    vs the naive raw estimate of 4.0 goals/game.  The strength model then
+    quality-adjusts this through the division by tournament_average.
+
 Usage:
     from core.strength_model import build_strength_model
     model = build_strength_model(completed_matches)   # list of dicts
     if model:
-        lam_h, lam_a = model.lambdas("France", "Morocco")
+        lam_h, lam_a = model.lambdas("Norway", "Senegal")
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-MIN_MATCHES = 3         # fewer than this → return None (not enough data)
-MIN_BLEND   = 8         # fewer than this → skip blending, print info only
-BLEND_WEIGHT = 0.20     # 80 % market odds  +  20 % historical strength
+MIN_MATCHES  = 3     # fewer than this → return None (not enough data)
+MIN_BLEND    = 8     # fewer than this → skip blending in main.py, log info only
+BLEND_WEIGHT = 0.20  # 80% market odds  +  20% historical strength
+
+
+# ---------------------------------------------------------------------------
+# Bayesian prior: FIFA-ranking-derived baseline attack rate per team
+# ---------------------------------------------------------------------------
+# Calibrated to the long-run WC average of 1.32 goals/team/game (2.64/game).
+# Keys are _norm()-ised team names (lowercase, emoji-flag stripped).
+# Source: FIFA world rankings mapped to historical WC scoring rates.
+
+_FIFA_PRIOR: dict[str, float] = {
+    # ── Elite: FIFA top 10  (>1.50 g/game) ───────────────────────────────
+    "france":                   1.65,
+    "argentina":                1.60,
+    "brazil":                   1.60,
+    "england":                  1.55,
+    "germany":                  1.55,
+    "spain":                    1.55,
+    "norway":                   1.55,   # Haaland elevates attack ceiling
+    "netherlands":              1.50,
+    "portugal":                 1.50,
+    "belgium":                  1.45,
+
+    # ── Strong: FIFA 11–30  (1.25–1.44 g/game) ───────────────────────────
+    "croatia":                  1.40,
+    "uruguay":                  1.35,
+    "colombia":                 1.35,
+    "usa":                      1.35,
+    "mexico":                   1.35,
+    "japan":                    1.35,
+    "canada":                   1.30,
+    "korea republic":           1.30,
+    "switzerland":              1.30,
+    "austria":                  1.25,
+    "sweden":                   1.25,
+    "morocco":                  1.25,
+
+    # ── Mid-tier: FIFA 31–55  (1.05–1.24 g/game) ─────────────────────────
+    "ecuador":                  1.20,
+    "scotland":                 1.15,
+    "senegal":                  1.15,
+    "egypt":                    1.15,
+    "côte d'ivoire":            1.15,
+    "australia":                1.15,
+    "ir iran":                  1.10,
+    "türkiye":                  1.10,
+    "czechia":                  1.10,
+    "ghana":                    1.05,
+    "south africa":             1.05,
+    "algeria":                  1.05,
+    "congo dr":                 1.05,
+
+    # ── Lower-mid: FIFA 56–90  (0.90–1.04 g/game) ────────────────────────
+    "paraguay":                 1.00,
+    "jordan":                   1.00,
+    "bosnia and herzegovina":   1.00,
+    "new zealand":              0.95,
+    "saudi arabia":             0.95,
+    "tunisia":                  0.95,
+    "panama":                   0.92,
+    "cabo verde":               0.90,
+    "uzbekistan":               0.90,
+    "qatar":                    0.90,
+
+    # ── Weak: FIFA 91+  (<0.90 g/game) ───────────────────────────────────
+    "iraq":                     0.88,
+    "curaçao":                  0.85,
+    "haiti":                    0.85,
+}
+
+_DEFAULT_PRIOR: float = 1.05   # fallback for unlisted teams
+_PRIOR_WEIGHT:  float = 3.0    # equivalent to 3 "virtual" prior games
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +139,33 @@ def _extract(match: dict) -> tuple[int | None, int | None]:
         return None, None
 
 
+def _bayesian_attack(observed_avg: float, team_key: str, n_games: int) -> float:
+    """
+    Bayesian posterior for a team's attack rate.
+
+    Smooths the observed goals/game toward a FIFA-ranking prior to prevent
+    extreme λ estimates from small match samples.
+
+    Formula:
+        posterior = (n_games × observed + PRIOR_WEIGHT × prior) / (n_games + PRIOR_WEIGHT)
+
+    Effect examples (PRIOR_WEIGHT = 3):
+        Norway  1 game, 4.0 g/game  → (1×4.0 + 3×1.55) / 4 = 2.16  (pulled back)
+        Senegal 1 game, 1.0 g/game  → (1×1.0 + 3×1.15) / 4 = 1.11  (pulled up)
+        Germany 2 games, 4.5 g/game → (2×4.5 + 3×1.55) / 5 = 2.73  (less extreme)
+
+    Args:
+        observed_avg: Raw goals/game from WC matches played so far.
+        team_key:     Normalised team name (output of _norm()).
+        n_games:      Number of WC games this team has played.
+
+    Returns:
+        Bayesian-smoothed attack rate (goals/game).
+    """
+    prior = _FIFA_PRIOR.get(team_key, _DEFAULT_PRIOR)
+    return (n_games * observed_avg + _PRIOR_WEIGHT * prior) / (n_games + _PRIOR_WEIGHT)
+
+
 # ---------------------------------------------------------------------------
 # Internal stats bucket (one per team)
 # ---------------------------------------------------------------------------
@@ -83,7 +192,7 @@ class _TeamStats:
 @dataclass
 class StrengthModel:
     """
-    Holds per-team stats and computes expected goals for any fixture.
+    Holds per-team WC stats and computes expected goals for any fixture.
 
     Attributes
     ----------
@@ -91,33 +200,40 @@ class StrengthModel:
     avg_goals   : tournament average goals per team per game (= λ baseline)
     """
     _stats:    dict[str, _TeamStats] = field(repr=False)
-    avg_goals: float                  # tournament avg goals per team per game
+    avg_goals: float
     n_matches: int
 
-    # ------------------------------------------------------------------
     def lambdas(self, home_team: str, away_team: str) -> tuple[float, float]:
         """
-        Return (λ_home, λ_away) from strength ratings.
+        Return (λ_home, λ_away) using Bayesian-smoothed attack rates.
 
-        Falls back to avg_goals for teams with no prior WC appearances.
+        Attack rates use _bayesian_attack() to prevent over-reaction to
+        single-game samples.  Defence uses raw observed values (defensive
+        shape is more stable than attacking output early in a tournament).
+
+        Falls back to avg_goals for teams with no WC matches recorded.
         """
-        avg = self.avg_goals or 1.3
-        h   = self._stats.get(_norm(home_team), _TeamStats())
-        a   = self._stats.get(_norm(away_team), _TeamStats())
+        avg   = self.avg_goals or 1.3
+        h_key = _norm(home_team)
+        a_key = _norm(away_team)
+        h     = self._stats.get(h_key, _TeamStats())
+        a     = self._stats.get(a_key, _TeamStats())
 
-        h_atk = h.attack  if h.games else avg
+        # Bayesian-smoothed attack rate
+        h_atk = _bayesian_attack(h.attack if h.games else avg, h_key, h.games)
+        a_atk = _bayesian_attack(a.attack if a.games else avg, a_key, a.games)
+
+        # Raw observed defence (concede rate is more stable from game 1)
         h_def = h.defence if h.games else avg
-        a_atk = a.attack  if a.games else avg
         a_def = a.defence if a.games else avg
 
-        # λ = (scorer_attack × conceder_defence) / avg
+        # Dixon-Coles neutral-venue formula
+        # λ = (scorer_attack × conceder_defence) / tournament_average
         lam_h = h_atk * a_def / avg
         lam_a = a_atk * h_def / avg
 
-        # safety floor: always ≥ 0.1 goals expected
         return round(max(lam_h, 0.10), 3), round(max(lam_a, 0.10), 3)
 
-    # ------------------------------------------------------------------
     def summary(self) -> str:
         """One-line diagnostic string for pipeline logs."""
         top = sorted(
@@ -146,9 +262,9 @@ def build_strength_model(
 
     Parameters
     ----------
-    matches : list of dicts containing home_team, away_team, and goal counts
-              (accepts both 'home_goals'/'away_goals' and 'actual_home'/'actual_away')
-    last_n  : if > 0, use only the most recent n matches (rolling window)
+    matches : list of dicts with home_team, away_team, and goal counts.
+              Accepts both 'home_goals'/'away_goals' and 'actual_home'/'actual_away'.
+    last_n  : if > 0, use only the most recent n matches (rolling window).
 
     Returns None when fewer than MIN_MATCHES valid results are found.
     """
@@ -181,7 +297,7 @@ def build_strength_model(
         total_goals        += hg + ag
 
     n   = len(valid)
-    avg = total_goals / (2 * n) if n else 1.3  # goals per team per game
-    avg = max(avg, 0.3)                          # safety floor
+    avg = total_goals / (2 * n) if n else 1.3
+    avg = max(avg, 0.3)
 
     return StrengthModel(_stats=stats, avg_goals=round(avg, 3), n_matches=n)

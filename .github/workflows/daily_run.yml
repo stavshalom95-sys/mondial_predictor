@@ -2,22 +2,32 @@ name: Mondial Predictor — Daily Run
 
 on:
   schedule:
+    # Primary: 06:00 UTC = 09:00 IDT (summer, UTC+3).
+    # WC 2026 latest games (21:00 PDT = 00:00 UTC) finish by ~02:00 UTC,
+    # giving a 4-hour safety margin before this run fetches results.
     - cron: "0 6 * * *"
+    # Safety net 1: 06:30 UTC — catches GitHub scheduler lag (common 15–30 min delay).
     - cron: "30 6 * * *"
+    # Safety net 2: 07:00 UTC — catches a complete 06:00 slot miss.
+    # last_run.json guard ensures the pipeline runs only once per day regardless
+    # of how many of these three slots actually fire.
     - cron: "0 7 * * *"
+
   workflow_dispatch:
     inputs:
       force:
-        description: "Bypass last_run.json guard"
+        description: "Bypass last_run.json guard and re-process today"
         required: false
         default: "true"
         type: boolean
       dry_run:
-        description: "Dry run — skip live calls"
+        description: "Dry run — skip all live API calls; test history ingestion only (no notification, no state changes)"
         required: false
         default: "false"
         type: boolean
 
+# Prevent two scheduled runs from executing simultaneously.
+# last_run.json ensures idempotency if multiple cron slots fire on the same day.
 concurrency:
   group: mondial-daily-run
   cancel-in-progress: false
@@ -26,14 +36,39 @@ jobs:
   run-predictor:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write   # required for git push via built-in GITHUB_TOKEN
 
     steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      # token: explicitly passes the built-in GITHUB_TOKEN so that git push
+      # works without any extra secret setup.  No PAT needed for self-commits.
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # ── 2. Diagnostics — print full repo tree to confirm file paths ─────────
+      - name: Diagnose repository structure
+        run: |
+          echo "=== Working directory ==="
+          pwd
+          echo ""
+          echo "=== Full repository tree ==="
+          ls -R .
+          echo ""
+          echo "=== Locating sync_tables.py ==="
+          find . -name "sync_tables.py" 2>/dev/null || echo "NOT FOUND"
+          echo ""
+          echo "=== Locating master_reset.py ==="
+          find . -name "master_reset.py" 2>/dev/null || echo "NOT FOUND"
+          echo ""
+          echo "=== Locating fetch_schedule.py ==="
+          find . -name "fetch_schedule.py" 2>/dev/null || echo "NOT FOUND"
+          echo ""
+          echo "=== Locating main.py ==="
+          find . -name "main.py" -maxdepth 2 2>/dev/null || echo "NOT FOUND"
+
+      # ── 3. Python runtime ────────────────────────────────────────────────────
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -42,35 +77,53 @@ jobs:
       - name: Install dependencies
         run: pip install requests anthropic numpy
 
+      # ── 4. Fetch live schedule ───────────────────────────────────────────────
+      # Writes tests/sample_games.json with today's WC fixture list.
+      # Skipped in dry-run — existing sample_games.json is used as-is.
       - name: Fetch World Cup schedule
         if: github.event.inputs.dry_run != 'true'
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: python scripts/fetch_schedule.py --output tests/sample_games.json
 
+      # ── 5. Sync group tables (rotation / motivation scores) ──────────────────
+      # Writes data/group_tables.json with live standings + qualification_status.
+      # Primary: football-data.org standings API.
+      # Fallback: compute from schedule JSON when API key is absent.
       - name: Sync group tables
         if: github.event.inputs.dry_run != 'true'
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: |
           if [ -n "$FOOTBALL_DATA_API_KEY" ]; then
-            python3 scripts/sync_tables.py --output data/group_tables.json
+            python scripts/sync_tables.py --output data/group_tables.json
           else
-            python3 scripts/sync_tables.py --from-schedule tests/sample_games.json --output data/group_tables.json
+            python scripts/sync_tables.py \
+              --from-schedule tests/sample_games.json \
+              --output data/group_tables.json
           fi
 
+      # ── 6. Reset winner_odds.json to today's fixtures ────────────────────────
+      # master_reset.py clears stale match keys and writes today's matches
+      # with 0.0 placeholder odds.  The pipeline works with 0.0 (O/U EV
+      # detection is simply skipped); fill in real odds in the GitHub editor
+      # before the scheduled run if you want value-bet flagging.
+      # Also audits main.py integration points — exits non-zero on failure.
       - name: Reset winner_odds.json to today's matches
         if: github.event.inputs.dry_run != 'true'
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: python scripts/master_reset.py
 
+      # ── 7. Run predictor + send WhatsApp notification ────────────────────────
       - name: Run predictor and send notification
         env:
-          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
-          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          SCORE365_AUTH_COOKIE: ${{ secrets.SCORE365_AUTH_COOKIE }}
-          GREEN_API_INSTANCE_ID: ${{ secrets.GREEN_API_INSTANCE_ID }}
-          GREEN_API_TOKEN: ${{ secrets.GREEN_API_TOKEN }}
+          THE_ODDS_API_KEY:         ${{ secrets.THE_ODDS_API_KEY }}
+          RAPIDAPI_KEY:             ${{ secrets.RAPIDAPI_KEY }}
+          ANTHROPIC_API_KEY:        ${{ secrets.ANTHROPIC_API_KEY }}
+          SCORE365_AUTH_COOKIE:     ${{ secrets.SCORE365_AUTH_COOKIE }}
+          GREEN_API_INSTANCE_ID:    ${{ secrets.GREEN_API_INSTANCE_ID }}
+          GREEN_API_TOKEN:          ${{ secrets.GREEN_API_TOKEN }}
           WHATSAPP_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_RECIPIENT_PHONE }}
         run: |
           FORCE_FLAG=""
@@ -79,26 +132,48 @@ jobs:
           [ "${{ github.event.inputs.dry_run || 'false' }}" = "true" ] && DRY_FLAG="--dry-run"
           python main.py tests/sample_games.json $FORCE_FLAG $DRY_FLAG
 
+      # ── 8. Auto-commit all updated data back to the repository ───────────────
+      # Commits every file the pipeline may have touched in one atomic push:
+      #   data/               — morning_picks.json, history.json, group_tables.json,
+      #                         last_run.json, ev_log.json
+      #   winner_odds.json    — reset by master_reset.py to today's match keys
+      #   tests/sample_games.json — refreshed by fetch_schedule.py
+      #
+      # git diff --staged --quiet: no-op when nothing changed (idempotent).
+      # [skip ci] prevents this commit from triggering a new workflow run.
       - name: Auto-commit all updated data files
         if: github.event.inputs.dry_run != 'true'
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Stage everything the pipeline wrote (winner_odds.json, data/, sample_games.json, etc.)
           git add .
+
+          # Only create a commit if something actually changed.
           if git diff --staged --quiet; then
             echo "Nothing changed — skipping commit."
           else
             git commit -m "chore: update picks and history [skip ci]"
             git push
+            echo "Pushed updated data to repository."
           fi
 
+      # ── 9. Keepalive — prevent GitHub from disabling the cron schedule ───────
+      # GitHub auto-disables scheduled workflows after 60 days of repository
+      # inactivity.  Bot commits tagged [skip ci] do NOT reset the inactivity
+      # timer, but a push event (even of a tiny file) does.
+      # This step runs on EVERY execution (if: always()) — including failures,
+      # dry-runs, and early exits — so the 60-day clock is always reset.
       - name: Keepalive
         if: always()
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           mkdir -p .github
-          echo "Last keepalive: $(date -u '+%Y-%m-%dT%H:%M:%SZ') run=${{ github.run_id }}" > .github/keepalive.txt
+          echo "Last keepalive: $(date -u '+%Y-%m-%dT%H:%M:%SZ')  run=${{ github.run_id }}" \
+            > .github/keepalive.txt
           git add .github/keepalive.txt
-          git diff --staged --quiet || git commit -m "chore: keepalive $(date -u '+%Y-%m-%d') [skip ci]"
+          git diff --staged --quiet || \
+            git commit -m "chore: keepalive $(date -u '+%Y-%m-%d') [skip ci]"
           git push

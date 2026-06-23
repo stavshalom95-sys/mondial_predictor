@@ -33,7 +33,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from core.odds_converter import MatchOdds1X2, remove_overround, remove_overround_ou
-from core.poisson_engine import PoissonMatchModel, _build_matrix, calibrate
+from core.poisson_engine import PoissonMatchModel, _build_matrix, build_dc_matrix, calibrate, calibrate_dc
 from core.strategy_advisor import TournamentContext, recommend
 from data.data_pipeline import (
     parse_world_cup_schedule,
@@ -54,13 +54,16 @@ from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis
 from core.simulator import simulate
 from core.strength_model import build_strength_model, MIN_BLEND, BLEND_WEIGHT, _norm as _sm_norm
-from data.winner_odds_loader import enrich_picks
+from core.market_calculator import calculate_all_markets
+from data.winner_odds_loader import enrich_picks, get_all_odds, find_match_odds
+from data.motivation import load_group_tables, build_match_motivation
 
-_DATA_DIR           = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-_MORNING_PICKS_PATH = os.path.join(_DATA_DIR, "morning_picks.json")
-_LAST_RUN_PATH      = os.path.join(_DATA_DIR, "last_run.json")
-_EV_LOG_PATH        = os.path.join(_DATA_DIR, "ev_log.json")
-_WINNER_ODDS_PATH   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "winner_odds.json")
+_DATA_DIR            = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_MORNING_PICKS_PATH  = os.path.join(_DATA_DIR, "morning_picks.json")
+_LAST_RUN_PATH       = os.path.join(_DATA_DIR, "last_run.json")
+_EV_LOG_PATH         = os.path.join(_DATA_DIR, "ev_log.json")
+_WINNER_ODDS_PATH    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "winner_odds.json")
+_GROUP_TABLES_PATH   = os.path.join(_DATA_DIR, "group_tables.json")
 
 
 # ---------------------------------------------------------------------------
@@ -406,6 +409,12 @@ def run_daily_pipeline(
     todays_matches = get_todays_matches(all_matches)
     print(f"[pipeline] Today's matches in schedule: {len(todays_matches)}")
 
+    # Pre-load bookmaker odds once (no-op if winner_odds.json absent)
+    _winner_odds_cache = get_all_odds(_WINNER_ODDS_PATH)
+
+    # Pre-load group tables for motivation scoring (no-op if absent)
+    _group_tables = load_group_tables(_GROUP_TABLES_PATH)
+
     picks:        list[DailyPick] = []
     morning_data: list[dict]      = []
 
@@ -445,8 +454,8 @@ def run_daily_pipeline(
             f"H={true_probs.home:.1%} D={true_probs.draw:.1%} A={true_probs.away:.1%}"
         )
 
-        # true probabilities → Poisson model
-        model = calibrate(true_probs, ou_probs)
+        # true probabilities → Poisson model (DC-corrected matrix)
+        model = calibrate_dc(true_probs, ou_probs)
         print(f"[pipeline]   lam_home={model.lambda_home:.2f}  lam_away={model.lambda_away:.2f}")
 
         # FDR Strength Modifier: blend calibrated lambdas with vice-captain.com mu values
@@ -468,6 +477,27 @@ def run_daily_pipeline(
             )
         else:
             lam_h, lam_a = model.lambda_home, model.lambda_away
+
+        # ── Tournament Motivation (rotation-trap λ adjustment) ──────────────
+        _match_motivation = build_match_motivation(
+            match.home_team, match.away_team, _group_tables
+        )
+        if not _match_motivation.is_trivial():
+            _old_h, _old_a = lam_h, lam_a
+            lam_h = round(lam_h * _match_motivation.home.lambda_multiplier, 3)
+            lam_a = round(lam_a * _match_motivation.away.lambda_multiplier, 3)
+            print(
+                f"[motivation] {match.home_team} ({_match_motivation.home.qualification_status}) "
+                f"×{_match_motivation.home.lambda_multiplier:.2f}: {_old_h}→{lam_h}  |  "
+                f"{match.away_team} ({_match_motivation.away.qualification_status}) "
+                f"×{_match_motivation.away.lambda_multiplier:.2f}: {_old_a}→{lam_a}"
+            )
+        else:
+            print(
+                f"[motivation] No adjustment for {match.home_team} vs {match.away_team} "
+                f"(status: {_match_motivation.home.qualification_status} / "
+                f"{_match_motivation.away.qualification_status})"
+            )
 
         # ── Monte Carlo Simulation ──────────────────────────────────────────
         sim = simulate(lam_h, lam_a)
@@ -499,6 +529,51 @@ def run_daily_pipeline(
         _edge_map = {"home": edge_h, "draw": edge_d, "away": edge_a}
         _active_edge = _edge_map.get(sim_value_bet or "", 0.0)
 
+        # ── Sub-market probabilities (O/U, AH, BTTS) ───────────────────────
+        # Wrapped in try/except: a market calc failure must never abort the
+        # pipeline or suppress the WhatsApp notification for this match.
+        _match_label = f"{match.home_team} vs {match.away_team}"
+        markets = None
+        print(f"[markets] DEBUG: entering market calc for {_match_label} (λ={lam_h:.3f}/{lam_a:.3f})")
+        try:
+            markets = calculate_all_markets(
+                lam_h, lam_a,
+                home_team=match.home_team,
+                away_team=match.away_team,
+            )
+            print(markets.summary())
+        except Exception as _mkt_exc:
+            import traceback
+            print(
+                f"[markets] WARNING: calculation failed for "
+                f"{_match_label} — {type(_mkt_exc).__name__}: {_mkt_exc}"
+            )
+            traceback.print_exc()
+        print(f"[markets] DEBUG: markets object is {'SET' if markets is not None else 'NONE (calc failed)'}")
+
+        # ── O/U 2.5 value bet detection (bookmaker odds vs model) ───────────
+        ou_value_bet: str | None = None
+        _match_entry = find_match_odds(match.home_team, match.away_team, _winner_odds_cache)
+        if _match_entry and markets:
+            _book_over  = _match_entry.get("ou25_over",  0.0) or 0.0
+            _book_under = _match_entry.get("ou25_under", 0.0) or 0.0
+            if _book_over > 1.0:
+                _model_over = markets.ou.get(2.5, {}).get("p_over", 0.0)
+                _ev_over    = _model_over * _book_over  - 1
+                _ev_under   = (1 - _model_over) * _book_under - 1
+                if _ev_over >= 0.05:
+                    ou_value_bet = "over"
+                    print(
+                        f"[ou_ev] \U0001f525 VALUE Over 2.5: "
+                        f"model={_model_over:.1%}  book={_book_over}  EV={_ev_over:+.1%}"
+                    )
+                elif _ev_under >= 0.05:
+                    ou_value_bet = "under"
+                    print(
+                        f"[ou_ev] \U0001f525 VALUE Under 2.5: "
+                        f"model={1-_model_over:.1%}  book={_book_under}  EV={_ev_under:+.1%}"
+                    )
+
         # ── Kelly / Value Bet analysis ──────────────────────────────────────
         kelly_analyses = analyse_match_bets(model, odds_1x2)
         _append_ev_log(match.home_team, match.away_team, kelly_analyses)
@@ -523,13 +598,14 @@ def run_daily_pipeline(
         ai_pick_prob = None
         ai_reasoning = None
         ensemble_pick = enhance(
-            home_team          = match.home_team,
-            away_team          = match.away_team,
-            stage              = stage,
-            model              = model,
-            context_section    = context_section,
-            value_bet_edge     = _active_edge,
-            value_bet_outcome  = sim_value_bet or "",
+            home_team                  = match.home_team,
+            away_team                  = match.away_team,
+            stage                      = stage,
+            model                      = model,
+            context_section            = context_section,
+            value_bet_edge             = _active_edge,
+            value_bet_outcome          = sim_value_bet or "",
+            tournament_context_section = _match_motivation.to_ai_section(),
         )
         if ensemble_pick:
             ai_pick_prob = ensemble_pick.to_score_prob(model)
@@ -541,7 +617,10 @@ def run_daily_pipeline(
             recommendation = rec,
             ai_pick        = ai_pick_prob,
             ai_reasoning   = ai_reasoning,
-            value_bets     = value_bets if value_bets else None,
+            value_bets              = value_bets if value_bets else None,
+            market_data             = markets,
+            ou_value_bet            = ou_value_bet,
+            tournament_context_lines = _match_motivation.to_whatsapp_lines() or None,
         ))
         morning_data.append({
             "date":             date.today().isoformat(),
@@ -558,7 +637,12 @@ def run_daily_pipeline(
             "market_p_home":    round(true_probs.home,  4),
             "market_p_draw":    round(true_probs.draw,  4),
             "market_p_away":    round(true_probs.away,  4),
-            "sim_value_bet":    sim_value_bet,
+            "sim_value_bet":         sim_value_bet,
+            "model_p_over_2_5":      markets.ou.get(2.5, {}).get("p_over") if markets else None,
+            "home_motivation":        _match_motivation.home.qualification_status,
+            "away_motivation":        _match_motivation.away.qualification_status,
+            "home_lambda_multiplier": _match_motivation.home.lambda_multiplier,
+            "away_lambda_multiplier": _match_motivation.away.lambda_multiplier,
         })
 
     if not picks:
@@ -633,12 +717,12 @@ def run_lineup_check_pipeline(send_notification: bool = True) -> None:
 
         print(f"\n[lineup] Checking {home_team} vs {away_team}...")
 
-        # Rebuild Poisson model from saved lambda values
+        # Rebuild Poisson model from saved lambda values (DC-corrected matrix)
         lh, la = record["lambda_home"], record["lambda_away"]
         model = PoissonMatchModel(
             lambda_home = lh,
             lambda_away = la,
-            _matrix     = _build_matrix(lh, la),
+            _matrix     = build_dc_matrix(lh, la),
         )
 
         # Fetch confirmed starting XIs via API-Football

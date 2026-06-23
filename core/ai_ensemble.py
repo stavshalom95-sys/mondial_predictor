@@ -112,20 +112,28 @@ _HIGH_VALUE_THRESHOLD = 0.20   # edge at which simulation outweighs Poisson exac
 
 
 def _build_user_prompt(
-    home_team:          str,
-    away_team:          str,
-    stage:              TournamentStage,
-    model:              PoissonMatchModel,
-    context_section:    str,
-    value_bet_edge:     float = 0.0,
-    value_bet_outcome:  str   = "",
+    home_team:                  str,
+    away_team:                  str,
+    stage:                      TournamentStage,
+    model:                      PoissonMatchModel,
+    context_section:            str,
+    value_bet_edge:             float = 0.0,
+    value_bet_outcome:          str   = "",
+    tournament_context_section: str   = "",
 ) -> str:
     top3 = model.top_n(3)
     candidates = "\n".join(
         f"  {i + 1}. {c.home_goals}-{c.away_goals} ({c.probability * 100:.1f}%)"
         for i, c in enumerate(top3)
     )
-    context_block = context_section.strip() if context_section.strip() else (
+
+    # Tournament context (rotation / motivation) is injected FIRST — highest priority
+    parts: list[str] = []
+    if tournament_context_section.strip():
+        parts.append(tournament_context_section.strip())
+    if context_section.strip():
+        parts.append(context_section.strip())
+    context_block = "\n\n".join(parts) if parts else (
         "No live context available — base your decision on statistics only."
     )
 
@@ -161,14 +169,15 @@ def _build_user_prompt(
 # ---------------------------------------------------------------------------
 
 def enhance(
-    home_team:          str,
-    away_team:          str,
-    stage:              TournamentStage,
-    model:              PoissonMatchModel,
-    context_section:    str   = "",
-    api_key:            Optional[str] = None,
-    value_bet_edge:     float = 0.0,
-    value_bet_outcome:  str   = "",
+    home_team:                  str,
+    away_team:                  str,
+    stage:                      TournamentStage,
+    model:                      PoissonMatchModel,
+    context_section:            str          = "",
+    api_key:                    Optional[str] = None,
+    value_bet_edge:             float        = 0.0,
+    value_bet_outcome:          str          = "",
+    tournament_context_section: str          = "",
 ) -> Optional[EnsemblePick]:
     """
     Call Claude to select the best exact score given Poisson stats + live context.
@@ -203,7 +212,7 @@ def enhance(
     client = _anthropic.Anthropic(api_key=api_key)
     prompt = _build_user_prompt(
         home_team, away_team, stage, model, context_section,
-        value_bet_edge, value_bet_outcome,
+        value_bet_edge, value_bet_outcome, tournament_context_section,
     )
 
     print(f"[ensemble] Calling {_MODEL} for {home_team} vs {away_team}...")

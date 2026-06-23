@@ -16,6 +16,11 @@ from core.poisson_engine import ScoreProb
 from core.strategy_advisor import StrategyRecommendation, Strategy, TournamentContext
 from core.kelly import BetAnalysis
 
+try:
+    from core.market_calculator import MarketResult as _MarketResult
+except ImportError:
+    _MarketResult = None   # type: ignore[assignment,misc]
+
 
 # ---------------------------------------------------------------------------
 # Country flag emoji lookup (keyed by lowercase team name)
@@ -167,9 +172,12 @@ class DailyPick:
     home_team:      str
     away_team:      str
     recommendation: StrategyRecommendation
-    ai_pick:        Optional[ScoreProb]       = None
-    ai_reasoning:   Optional[str]             = None
+    ai_pick:        Optional[ScoreProb]         = None
+    ai_reasoning:   Optional[str]               = None
     value_bets:     Optional[list[BetAnalysis]] = None
+    market_data:            Optional[object]       = None   # MarketResult | None
+    ou_value_bet:           Optional[str]         = None   # "over" | "under" | None
+    tournament_context_lines: Optional[list[str]] = None   # pre-formatted WhatsApp lines
 
 
 def format_daily_message(picks: list[DailyPick], context: TournamentContext, perf_report: Optional[dict] = None) -> str:
@@ -237,6 +245,51 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
                 safe.home_goals, safe.away_goals,
             )
             lines.append(f"   (קונצנזוס היה: {consensus_desc})")
+
+        # ── Tournament context (rotation / motivation) ────────────────────
+        if pick.tournament_context_lines:
+            for _tcl in pick.tournament_context_lines:
+                lines.append(_tcl)
+
+        # ── Sub-markets block ─────────────────────────────────────────────
+        if pick.market_data is not None:
+            m = pick.market_data
+
+            # Outcome probabilities from goal_diff distribution
+            gd    = m.goal_diff
+            p_h   = round(sum(v for k, v in gd.items() if k > 0), 3)
+            p_d   = round(gd.get(0, 0.0), 3)
+            p_a   = round(sum(v for k, v in gd.items() if k < 0), 3)
+            if p_h >= p_d and p_h >= p_a:
+                winner_label, winner_pct = pick.home_team, p_h
+            elif p_d >= p_h and p_d >= p_a:
+                winner_label, winner_pct = "Draw", p_d
+            else:
+                winner_label, winner_pct = pick.away_team, p_a
+
+            # O/U 2.5 — most common line
+            ou25     = m.ou.get(2.5, {})
+            p_over   = ou25.get("p_over", 0.0)
+            ou_side  = "Over" if p_over >= 0.5 else "Under"
+            ou_prob  = p_over if ou_side == "Over" else ou25.get("p_under", 0.0)
+
+            # Asian handicap -1.5 for home team
+            ah = next((h for h in m.handicaps if h.get("handicap") == -1.5), None)
+
+            btts = m.btts
+
+            lines.append("   📊 *Markets:*")
+            lines.append(f"      🏆 Winner: {winner_label} ({winner_pct:.1%})")
+            if ou25:
+                _ou_badge = " 🔥 VALUE" if pick.ou_value_bet in ("over", "under") else ""
+                lines.append(f"      📈 O/U 2.5: {ou_side} ({ou_prob:.1%}){_ou_badge}")
+            if ah:
+                lines.append(
+                    f"      ⚖️  AH (-1.5): {pick.home_team} covers "
+                    f"({ah['p_home_covers']:.1%})"
+                )
+            if btts:
+                lines.append(f"      ⚽ BTTS: Yes ({btts['p_yes']:.1%})")
 
         lines.append("")
 

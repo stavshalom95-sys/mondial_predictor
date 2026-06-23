@@ -137,11 +137,12 @@ def get_todays_matches(
     Return matches that start within the next `hours_ahead` hours and are not finished.
     Sorted by start time. Used by the auto-odds pipeline to know which matches need odds today.
     """
-    now    = datetime.now(timezone.utc)
-    cutoff = now + timedelta(hours=hours_ahead)
-    today  = [
+    now         = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff      = today_start + timedelta(hours=hours_ahead)
+    today       = [
         m for m in all_matches
-        if m.status != "final" and now <= m.start_time_utc <= cutoff
+        if m.status != "final" and today_start <= m.start_time_utc <= cutoff
     ]
     today.sort(key=lambda m: m.start_time_utc)
     return today

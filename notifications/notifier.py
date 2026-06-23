@@ -186,6 +186,15 @@ class DailyPick:
     sg_value_bet:           Optional[str]         = None   # "0-1" | "2-3" | "+4" | None
     tournament_context_lines: Optional[list[str]] = None   # pre-formatted WhatsApp lines
     logic_chain:    Optional[str]               = None   # λ adjustment chain for transparency
+    # ── Simulation output (drives final prediction) ──────────────────────────
+    sim_score_home: Optional[int]   = None   # most likely score from Poisson score matrix
+    sim_score_away: Optional[int]   = None
+    sim_p_home:     Optional[float] = None   # MC win-rate (10k draws)
+    sim_p_draw:     Optional[float] = None
+    sim_p_away:     Optional[float] = None
+    poisson_p_home: Optional[float] = None   # analytical Poisson probability
+    poisson_p_draw: Optional[float] = None
+    poisson_p_away: Optional[float] = None
 
 
 def format_daily_message(picks: list[DailyPick], context: TournamentContext, perf_report: Optional[dict] = None) -> str:
@@ -245,24 +254,43 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
     for pick in picks:
         rec  = pick.recommendation
         icon = "🛡️" if rec.strategy == Strategy.SAFE else "🎲"
-
-        # Use AI ensemble pick when available; fall back to strategy-advisor pick
-        final_score = pick.ai_pick if pick.ai_pick else rec.recommended_pick
-        pick_desc = _describe_score(
-            pick.home_team, pick.away_team,
-            final_score.home_goals, final_score.away_goals,
-        )
         home_label = _with_flag(pick.home_team)
         away_label = _with_flag(pick.away_team)
 
         lines.append(f"{icon} *{home_label} נגד {away_label}*")
-        lines.append(
-            f"   ניחוש: *{pick_desc}* ({final_score.probability * 100:.0f}% סיכוי)"
-        )
+
+        # ── Simulation block (primary output) ────────────────────────────────
+        has_sim = pick.sim_score_home is not None and pick.sim_score_away is not None
+        if pick.poisson_p_home is not None:
+            lines.append(
+                f"   📊 Poisson: H={pick.poisson_p_home:.0%}  "
+                f"D={pick.poisson_p_draw:.0%}  A={pick.poisson_p_away:.0%}"
+            )
+        if pick.sim_p_home is not None:
+            lines.append(
+                f"   🎲 Sim (10k): H={pick.sim_p_home:.0%}  "
+                f"D={pick.sim_p_draw:.0%}  A={pick.sim_p_away:.0%}"
+            )
+
+        # Final prediction = simulation's most likely score; fall back to AI pick, then strategy advisor
+        if has_sim:
+            pick_desc = _describe_score(
+                pick.home_team, pick.away_team,
+                pick.sim_score_home, pick.sim_score_away,
+            )
+        else:
+            _fs = pick.ai_pick if pick.ai_pick else rec.recommended_pick
+            pick_desc = _describe_score(
+                pick.home_team, pick.away_team,
+                _fs.home_goals, _fs.away_goals,
+            )
+
+        lines.append(f"   ⚽ *Final Prediction: {pick_desc}*")
         lines.append(f"   אסטרטגיה: {rec.strategy.value}")
 
+        # ── Supplementary context (ESPN / RapidAPI reasoning) ────────────────
         if pick.ai_reasoning:
-            lines.append(f"   🤖 AI: {pick.ai_reasoning}")
+            lines.append(f"   💡 Context: {pick.ai_reasoning}")
         if pick.logic_chain:
             lines.append(f"   📐 Chain: {pick.logic_chain}")
 

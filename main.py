@@ -631,12 +631,19 @@ def run_daily_pipeline(
         _logic_chain = " | ".join(_chain_steps) + f"  [{_total_h_pct} total vs market]"
         print(f"[chain] {match.home_team} vs {match.away_team}: {_logic_chain}")
 
-        # ── Monte Carlo Simulation ──────────────────────────────────────────
+        # ── Monte Carlo Simulation (primary prediction engine) ───────────────
         sim = simulate(lam_h, lam_a)
+        _sim_h, _sim_a = sim.score_grid.most_likely_score()
+        _sim_score_pct  = sim.score_grid.probs[_sim_h][_sim_a]
+        print(
+            f"[sim] Poisson (analytical): "
+            f"H={sim.poisson_p_home:.1%}  D={sim.poisson_p_draw:.1%}  A={sim.poisson_p_away:.1%}"
+        )
         print(
             f"[sim] Monte Carlo (n={sim.n_sims:,}): "
             f"H={sim.p_home:.1%}  D={sim.p_draw:.1%}  A={sim.p_away:.1%}"
         )
+        print(f"[sim] Most-likely score: {_sim_h}-{_sim_a}  ({_sim_score_pct:.1%})")
         # Compare sim vs market (true_probs already computed above)
         _VALUE_THRESHOLD      = 0.05
         _HIGH_VALUE_THRESHOLD = 0.20
@@ -828,6 +835,15 @@ def run_daily_pipeline(
             sg_value_bet            = sg_value_bet,
             tournament_context_lines = (_match_motivation.to_whatsapp_lines() or None) if _show_context else None,
             logic_chain    = _logic_chain,
+            # Simulation fields — drive final prediction in WhatsApp
+            sim_score_home  = _sim_h,
+            sim_score_away  = _sim_a,
+            sim_p_home      = round(sim.p_home,          4),
+            sim_p_draw      = round(sim.p_draw,          4),
+            sim_p_away      = round(sim.p_away,          4),
+            poisson_p_home  = round(sim.poisson_p_home,  4),
+            poisson_p_draw  = round(sim.poisson_p_draw,  4),
+            poisson_p_away  = round(sim.poisson_p_away,  4),
         ))
         morning_data.append({
             "date":             date.today().isoformat(),
@@ -836,8 +852,8 @@ def run_daily_pipeline(
             "stage":            stage.value,
             "lambda_home":      model.lambda_home,
             "lambda_away":      model.lambda_away,
-            "final_home_goals": (ai_pick_prob.home_goals  if ai_pick_prob else rec.recommended_pick.home_goals),
-            "final_away_goals": (ai_pick_prob.away_goals  if ai_pick_prob else rec.recommended_pick.away_goals),
+            "final_home_goals": _sim_h,   # simulation-derived score (was: AI pick or strategy advisor)
+            "final_away_goals": _sim_a,
             "sim_p_home":       round(sim.p_home,       4),
             "sim_p_draw":       round(sim.p_draw,       4),
             "sim_p_away":       round(sim.p_away,       4),

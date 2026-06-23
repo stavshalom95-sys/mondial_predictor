@@ -1,6 +1,6 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-23T07:32:29Z. Fill in decimal odds before the daily pipeline runs.",
-  "France vs Argentina": {
+  "_note": "Reset by master_reset.py on 2026-06-23T08:17:59Z. Fill in decimal odds before the daily pipeline runs.",
+  "Portugal vs Uzbekistan": {
     "winner": {
       "home": 0.0,
       "draw": 0.0,
@@ -16,7 +16,23 @@
       "12+": 0.0
     }
   },
-  "England vs United States": {
+  "England vs Ghana": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "over_under_2_5": {
+      "over": 0.0,
+      "under": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Panama vs Croatia": {
     "winner": {
       "home": 0.0,
       "draw": 0.0,

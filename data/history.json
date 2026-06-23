@@ -54,5 +54,61 @@
     "correct_result": true,
     "points_earned": 1,
     "points_possible": 3
+  },
+  {
+    "date": "2026-06-22",
+    "home_team": "Argentina",
+    "away_team": "Austria",
+    "stage": "שלב הבתים",
+    "predicted_home": 2,
+    "predicted_away": 0,
+    "actual_home": 2,
+    "actual_away": 0,
+    "exact_match": true,
+    "correct_result": true,
+    "points_earned": 3,
+    "points_possible": 3
+  },
+  {
+    "date": "2026-06-22",
+    "home_team": "France",
+    "away_team": "Iraq",
+    "stage": "שלב הבתים",
+    "predicted_home": 3,
+    "predicted_away": 0,
+    "actual_home": 3,
+    "actual_away": 0,
+    "exact_match": true,
+    "correct_result": true,
+    "points_earned": 3,
+    "points_possible": 3
+  },
+  {
+    "date": "2026-06-22",
+    "home_team": "Norway",
+    "away_team": "Senegal",
+    "stage": "שלב הבתים",
+    "predicted_home": 1,
+    "predicted_away": 0,
+    "actual_home": 3,
+    "actual_away": 2,
+    "exact_match": false,
+    "correct_result": true,
+    "points_earned": 1,
+    "points_possible": 3
+  },
+  {
+    "date": "2026-06-22",
+    "home_team": "Jordan",
+    "away_team": "Algeria",
+    "stage": "שלב הבתים",
+    "predicted_home": 0,
+    "predicted_away": 1,
+    "actual_home": 1,
+    "actual_away": 2,
+    "exact_match": false,
+    "correct_result": true,
+    "points_earned": 1,
+    "points_possible": 3
   }
 ]

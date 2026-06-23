@@ -313,20 +313,20 @@
     "stage": "group_stage",
     "start_time": "2026-06-15T22:00:00Z",
     "home": "KSA",
-    "away": "URU",
+    "away": "URY",
     "teams": {
       "KSA": {
         "name": "Saudi Arabia",
         "abbreviation": "KSA"
       },
-      "URU": {
+      "URY": {
         "name": "Uruguay",
-        "abbreviation": "URU"
+        "abbreviation": "URY"
       }
     },
     "score": {
       "KSA": 1,
-      "URU": 1
+      "URY": 1
     }
   },
   {
@@ -840,12 +840,12 @@
     "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-21T22:00:00Z",
-    "home": "URU",
+    "home": "URY",
     "away": "CPV",
     "teams": {
-      "URU": {
+      "URY": {
         "name": "Uruguay",
-        "abbreviation": "URU"
+        "abbreviation": "URY"
       },
       "CPV": {
         "name": "Cape Verde Islands",
@@ -853,7 +853,7 @@
       }
     },
     "score": {
-      "URU": 2,
+      "URY": 2,
       "CPV": 2
     }
   },
@@ -1368,12 +1368,12 @@
     "status": "scheduled",
     "stage": "group_stage",
     "start_time": "2026-06-27T00:00:00Z",
-    "home": "URU",
+    "home": "URY",
     "away": "ESP",
     "teams": {
-      "URU": {
+      "URY": {
         "name": "Uruguay",
-        "abbreviation": "URU"
+        "abbreviation": "URY"
       },
       "ESP": {
         "name": "Spain",
@@ -1381,7 +1381,7 @@
       }
     },
     "score": {
-      "URU": null,
+      "URY": null,
       "ESP": null
     }
   },

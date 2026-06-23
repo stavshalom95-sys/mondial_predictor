@@ -75,7 +75,7 @@ def _fetch_live_schedule(api_key: str) -> list[dict]:
 
     _now    = datetime.now(timezone.utc)
     _d_from = (_now - timedelta(days=1)).strftime("%Y-%m-%d")
-    _d_to   = (_now + timedelta(days=1)).strftime("%Y-%m-%d")
+    _d_to   = (_now + timedelta(days=2)).strftime("%Y-%m-%d")   # +2 to include next-day UTC slots
     resp = requests.get(
         f"{API_BASE}/competitions/WC/matches",
         headers={"X-Auth-Token": api_key},
@@ -152,18 +152,24 @@ def _parse_start(raw: str) -> datetime:
 
 def todays_matches(raw_games: list[dict]) -> list[dict]:
     """
-    Return unfinished matches within the IDT (Israel, UTC+3) calendar day.
+    Return all matches in a 30-hour forward window rooted at the IDT calendar day.
 
-    Window: previous day 21:00 UTC (= 00:00 IDT) → today 23:59 UTC.
-    The 3-hour lookback ensures early morning IDT kickoffs (e.g. 02:00 UTC = 05:00 IDT)
-    are captured even though they fall in the 'previous' UTC calendar day.
+    Window: previous day 21:00 UTC (= 00:00 IDT) → today+30h UTC.
 
-    Mirrors data_pipeline.get_todays_matches().
+    Why 30 hours?
+      WC 2026 is in North America. Late-night local kickoffs land in UTC early the
+      next morning (e.g. 22:00 PDT = 05:00 UTC, 23:00 EDT = 03:00 UTC).
+      Colombia vs Congo starts at 2026-06-24T02:00Z (05:00 IDT) — 2 hours past the
+      previous 24h cutoff. 30h covers all realistic WC slots (up to ~06:00 UTC the
+      next calendar day) so upcoming matches are pre-seeded for odds input in advance.
+
+    Finished matches are passed through; reset_winner_odds() routes them to
+    _played_today rather than the main entries section.
     """
     now          = datetime.now(timezone.utc)
     today_start  = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    window_start = today_start - timedelta(hours=3)   # 21:00 UTC prev day = 00:00 IDT
-    today_end    = today_start + timedelta(hours=24)
+    window_start = today_start - timedelta(hours=3)    # 21:00 UTC prev day = 00:00 IDT
+    today_end    = today_start + timedelta(hours=30)   # covers UTC early-morning next day
 
     result: list[dict] = []
     for g in raw_games:
@@ -407,7 +413,7 @@ def main() -> int:
         return 1
 
     # ── PHASE 2: Filter today's matches (IDT window) ─────────────────────────
-    _header("PHASE 2 — IDT-day matches (prev day 21:00 UTC -> today 23:59 UTC)")
+    _header("PHASE 2 — IDT-day matches (prev day 21:00 UTC -> today+30h UTC)")
     today = todays_matches(raw_games)
     now_utc = datetime.now(timezone.utc)
     today_start_utc = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -415,7 +421,7 @@ def main() -> int:
     print(
         f"  Clock  : {now_utc.strftime('%Y-%m-%d %H:%M UTC')}  "
         f"(IDT window: {window_start_utc.strftime('%Y-%m-%d %H:%M')} UTC -> "
-        f"{(today_start_utc + timedelta(hours=24)).strftime('%Y-%m-%d %H:%M')} UTC)"
+        f"{(today_start_utc + timedelta(hours=30)).strftime('%Y-%m-%d %H:%M')} UTC)"
     )
 
     upcoming = [g for g in today if g.get("status") != "final"]

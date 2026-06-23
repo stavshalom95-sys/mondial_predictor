@@ -257,9 +257,9 @@ _AUDIT_CHECKS: list[tuple[str, str, str]] = [
         "Call get_all_odds() before the match loop",
     ),
     (
-        "ou_value_bet detection",
-        r"ou_value_bet.*=.*['\"]over['\"]|ou_value_bet.*=.*['\"]under['\"]",
-        "Add O/U EV detection block after market calc",
+        "sg_value_bet detection",
+        r"sg_value_bet\s*=\s*_bracket|sg_value_bet.*=.*['\"]0-1['\"]|_SG_KEY_MAP",
+        "Add sum-goals EV detection block after market calc (sg_value_bet = _bracket)",
     ),
     (
         "tournament_context_section passed to enhance()",

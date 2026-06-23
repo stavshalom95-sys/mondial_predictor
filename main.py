@@ -511,6 +511,7 @@ def run_daily_pipeline(
         #          lam_final  = (1 - w) × lam  +  w × lam × form_scale
         # where w = FORM_BLEND_WEIGHT (15 %). Falls back gracefully when a
         # team has no WC data yet (n_games == 0 → no adjustment applied).
+        _h_form = _a_form = None   # initialized here so AI context block can access them
         if _form_cache is not None:
             _t_avg  = _form_cache.tournament_avg or 1.32
             _h_form = _form_cache.get(match.home_team)
@@ -679,6 +680,39 @@ def run_daily_pipeline(
         match_ctx       = fetch_match_context(match.home_team, match.away_team, api_key=rapidapi_key)
         context_section = match_ctx.to_prompt_section() if match_ctx else ""
 
+        # ── WC form context (no API needed — built from schedule JSON) ──────────
+        # Ensures the AI always receives form data even without RAPIDAPI_KEY,
+        # replacing the generic "No live context available" fallback.
+        _t_avg_ctx  = (_form_cache.tournament_avg if _form_cache else None) or 1.52
+        _form_lines = []
+        for _team, _form in ((match.home_team, _h_form), (match.away_team, _a_form)):
+            if _form and _form.n_games > 0:
+                _vs_avg = _form.goals_scored_avg / _t_avg_ctx
+                _trend  = "above" if _vs_avg > 1.05 else ("below" if _vs_avg < 0.95 else "at")
+                _form_lines.append(
+                    f"{_team} WC form (last {_form.n_games} game{'s' if _form.n_games > 1 else ''}): "
+                    f"scored {_form.goals_scored_avg:.2f}/g, conceded {_form.goals_conceded_avg:.2f}/g "
+                    f"({_trend} tournament avg of {_t_avg_ctx:.2f})"
+                )
+            else:
+                _form_lines.append(f"{_team}: no WC matches played yet (tournament debut)")
+        # Bias correction note (helps AI understand λ adjustments applied)
+        if _bias is not None:
+            for _team in (match.home_team, match.away_team):
+                _off = _bias.get_offset(_team)
+                if _off != 0.0:
+                    _dir = "under-predicted" if _off > 0 else "over-predicted"
+                    _form_lines.append(
+                        f"[Model note] {_team} goals have been systematically {_dir} "
+                        f"in past matches; λ adjusted {_off:+.2f} to compensate."
+                    )
+        _form_context_section = "\n".join(_form_lines)
+
+        # Merge: RapidAPI (injuries/lineups) takes priority; form is always appended
+        _merged_context = "\n\n".join(
+            s for s in [context_section, _form_context_section] if s.strip()
+        )
+
         ai_pick_prob = None
         ai_reasoning = None
         ensemble_pick = enhance(
@@ -686,7 +720,7 @@ def run_daily_pipeline(
             away_team                  = match.away_team,
             stage                      = stage,
             model                      = model,
-            context_section            = context_section,
+            context_section            = _merged_context,
             value_bet_edge             = _active_edge,
             value_bet_outcome          = sim_value_bet or "",
             tournament_context_section = _match_motivation.to_ai_section(),

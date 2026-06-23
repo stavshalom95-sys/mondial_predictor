@@ -73,9 +73,13 @@ def _fetch_live_schedule(api_key: str) -> list[dict]:
         "SEMI_FINALS": "semi_final", "THIRD_PLACE": "third_place", "FINAL": "final_stage",
     }
 
+    _now    = datetime.now(timezone.utc)
+    _d_from = (_now - timedelta(days=1)).strftime("%Y-%m-%d")
+    _d_to   = (_now + timedelta(days=1)).strftime("%Y-%m-%d")
     resp = requests.get(
         f"{API_BASE}/competitions/WC/matches",
         headers={"X-Auth-Token": api_key},
+        params={"dateFrom": _d_from, "dateTo": _d_to},
         timeout=30,
     )
     resp.raise_for_status()
@@ -182,17 +186,53 @@ def _team_name(game: dict, key: str) -> str:
 # PHASE 3 — Write fresh winner_odds.json
 # ─────────────────────────────────────────────────────────────────────────────
 
-def reset_winner_odds(matches: list[dict], output: Path) -> list[str]:
+def reset_winner_odds(
+    matches: list[dict], output: Path
+) -> tuple[list[str], list[str]]:
     """
-    Build and write a fresh winner_odds.json.
+    Build and write winner_odds.json, preserving any entry whose odds are
+    already filled in (at least one value > 0.0 in any sub-market).
 
-    Upcoming / live matches → full odds entry with 0.0 placeholders.
-    Already-finished matches → logged under _played_today (no odds needed).
+    Upcoming / live matches:
+      - If a matching entry exists with non-zero odds → preserve it unchanged.
+      - Otherwise → write 0.0 placeholders.
+    Already-finished matches → logged under _played_today (no odds entry).
 
-    Returns list of upcoming match keys written.
+    Returns (upcoming_keys, preserved_keys):
+      upcoming_keys  — all non-final match keys written (preserved + new)
+      preserved_keys — subset whose existing odds were kept intact
     """
-    upcoming_keys: list[str] = []
-    played_keys:   list[str] = []
+    # Load existing file so we can avoid overwriting filled odds
+    existing: dict = {}
+    if output.exists():
+        try:
+            existing = json.loads(output.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    def _has_nonzero_odds(entry: dict) -> bool:
+        """Return True if any nested numeric odds value is > 0.0."""
+        for sub in entry.values():
+            if isinstance(sub, dict):
+                if any(isinstance(v, (int, float)) and v > 0.0 for v in sub.values()):
+                    return True
+        return False
+
+    def _find_existing_entry(home: str, away: str) -> dict | None:
+        """Case-insensitive lookup for an existing odds entry by team names."""
+        h, a = home.lower(), away.lower()
+        for k, v in existing.items():
+            if k.startswith("_") or " vs " not in k:
+                continue
+            k_h, k_a = (p.strip().lower() for p in k.split(" vs ", 1))
+            if (k_h == h and k_a == a) or (k_h == a and k_a == h):
+                if isinstance(v, dict):
+                    return v
+        return None
+
+    upcoming_keys:  list[str] = []
+    preserved_keys: list[str] = []
+    played_keys:    list[str] = []
     data: dict = {
         "_note": (
             f"Reset by master_reset.py on {datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}. "
@@ -211,11 +251,16 @@ def reset_winner_odds(matches: list[dict], output: Path) -> list[str]:
             # Game already finished — log for traceability, skip odds entry
             played_keys.append(match_key)
         else:
-            data[match_key] = {
-                "winner":      {"home": 0.0, "draw": 0.0, "away": 0.0},
-                "sum_goals":   {"0-1": 0.0, "2-3": 0.0, "+4": 0.0},
-                "corners_range": {"0-8": 0.0, "9-11": 0.0, "12+": 0.0},
-            }
+            existing_entry = _find_existing_entry(h_name, a_name)
+            if existing_entry is not None and _has_nonzero_odds(existing_entry):
+                data[match_key] = existing_entry   # preserve filled odds
+                preserved_keys.append(match_key)
+            else:
+                data[match_key] = {
+                    "winner":        {"home": 0.0, "draw": 0.0, "away": 0.0},
+                    "sum_goals":     {"0-1": 0.0, "2-3": 0.0, "+4": 0.0},
+                    "corners_range": {"0-8": 0.0, "9-11": 0.0, "12+": 0.0},
+                }
             upcoming_keys.append(match_key)
 
     if played_keys:
@@ -225,7 +270,7 @@ def reset_winner_odds(matches: list[dict], output: Path) -> list[str]:
     with open(output, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    return upcoming_keys
+    return upcoming_keys, preserved_keys
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -390,21 +435,11 @@ def main() -> int:
                 if status == "final" else ""
             print(f"  [{status:<10}]  {h} vs {a}  @ {start.strftime('%H:%M UTC')}{suffix}")
 
-    # ── PHASE 3: Reset winner_odds.json ──────────────────────────────────────
-    _header(f"PHASE 3 — Resetting {output}")
+    # ── PHASE 3: Update winner_odds.json (preserve filled odds) ──────────────
+    _header(f"PHASE 3 — Updating {output} (preserving filled odds)")
 
-    # Show what is being replaced
-    if output.exists():
-        try:
-            old = json.loads(output.read_text(encoding="utf-8"))
-            old_keys = [k for k in old if not k.startswith("_")]
-            print(f"  Removing {len(old_keys)} stale entry/entries:")
-            for k in old_keys:
-                print(f"    - {k}")
-        except Exception:
-            print(f"  (could not read existing file)")
-
-    new_keys = reset_winner_odds(today, output)
+    new_keys, preserved_keys = reset_winner_odds(today, output)
+    blank_keys = [k for k in new_keys if k not in preserved_keys]
 
     if played:
         print(f"\n  Already played ({len(played)} game(s) — recorded in _played_today):")
@@ -412,10 +447,14 @@ def main() -> int:
             h = _team_name(g, g.get("home", "")); a = _team_name(g, g.get("away", ""))
             print(f"    ~ {h} vs {a}  [final — no odds entry created]")
 
-    print(f"\n  Written {len(new_keys)} upcoming entry/entries to '{output}':")
-    for k in new_keys:
-        print(f"    + {k}  (odds: 0.0 — fill in before pipeline runs)")
-
+    if preserved_keys:
+        print(f"\n  Preserved {len(preserved_keys)} entry/entries (odds already filled):")
+        for k in preserved_keys:
+            print(f"    = {k}  (kept — odds > 0.0)")
+    if blank_keys:
+        print(f"\n  Added {len(blank_keys)} placeholder entry/entries (fill in before pipeline):")
+        for k in blank_keys:
+            print(f"    + {k}  (odds: 0.0)")
     if not new_keys:
         print("  (no upcoming matches today — file written with only _note metadata)")
 
@@ -442,17 +481,20 @@ def main() -> int:
     print(f"{'=' * 60}")
     print(f"  Schedule source  : {source}")
     print(f"  Today's matches  : {len(today)}")
-    print(f"  winner_odds.json : reset ({len(new_keys)} entries, odds=0.0)")
+    _blank_count = len(new_keys) - len(preserved_keys)
+    print(f"  winner_odds.json : {len(preserved_keys)} preserved, {_blank_count} new (odds=0.0)")
     print(f"  main.py audit    : {audit_status}  ({len(passed)}/{len(passed)+len(failed)} checks)")
 
-    if new_keys:
+    if blank_keys:
         print(f"\n  ACTION REQUIRED:")
         print(f"  Open {output} and fill in")
         print(f"  decimal odds for each match before the pipeline runs.")
         print(f"  Leave at 0.0 to skip O/U EV detection (pipeline still works).")
-    else:
+    elif not new_keys:
         print(f"\n  No WC matches today — winner_odds.json cleared. Pipeline will")
         print(f"  exit cleanly with 'No odds found for today'.")
+    else:
+        print(f"\n  All odds already filled — no action required.")
 
     print(f"{'=' * 60}\n")
     return exit_code

@@ -24,8 +24,9 @@ except ImportError:
 
 # ── Budget configuration ──────────────────────────────────────────────────────
 # Edit these two values to match your situation.
-TOTAL_BANKROLL   = 10_000   # NIS — your full betting bankroll
-DAILY_BUDGET_CAP =    100   # NIS — maximum you are willing to stake today
+TOTAL_BANKROLL      = 10_000   # NIS — your full betting bankroll
+DAILY_BUDGET_CAP    =    100   # NIS — cap for high-confidence bets (model prob ≥ 40%)
+LOW_PROB_BUDGET_CAP =     20   # NIS — cap for low-confidence bets (model prob < 40%)
 
 
 # ---------------------------------------------------------------------------
@@ -315,13 +316,25 @@ def format_daily_message(picks: list[DailyPick], context: TournamentContext, per
                 f"   ✨ {_with_flag(home)} נגד {_with_flag(away)} — {outcome_he}"
             )
             _stake_raw = vb.half_kelly * TOTAL_BANKROLL
-            _capped    = _stake_raw > DAILY_BUDGET_CAP
-            _stake     = DAILY_BUDGET_CAP if _capped else _stake_raw
-            _stake_str = (
-                f"{_stake:.0f} ₪ ⚠️ (מקסימום יומי)"
-                if _capped
-                else f"{_stake:.0f} ₪"
-            )
+            if vb.our_prob >= 0.40:
+                # High confidence — half-Kelly, capped at daily budget
+                _capped    = _stake_raw > DAILY_BUDGET_CAP
+                _stake     = DAILY_BUDGET_CAP if _capped else _stake_raw
+                _stake_str = (
+                    f"{_stake:.0f} ₪ ⚠️ (מקסימום יומי)"
+                    if _capped
+                    else f"{_stake:.0f} ₪"
+                )
+            else:
+                # Low confidence (< 40%) — quarter-Kelly, capped at low-prob budget
+                _reduced   = _stake_raw / 4
+                _stake     = min(_reduced, LOW_PROB_BUDGET_CAP)
+                _capped    = _reduced > LOW_PROB_BUDGET_CAP
+                _stake_str = (
+                    f"{_stake:.0f} ₪ ⚠️ (הגבלת סיכון — סיכוי נמוך)"
+                    if _capped
+                    else f"{_stake:.0f} ₪ (÷4 — סיכוי נמוך)"
+                )
             lines.append(
                 f"      אודס: {vb.decimal_odds:.2f} | "
                 f"Edge: {vb.edge_pct:+.1f}% | "

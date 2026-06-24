@@ -3,9 +3,9 @@ context_fetcher.py — Pre-match context from API-Football (via RapidAPI).
 
 Free tier: 100 calls/day.
 Call budget per day:
-  Morning run  : 1 (fixture list) + N×3 (injuries + home-form + away-form) ≤ 25 for N=8
+  Morning run  : 1 (fixture list) + N×4 (injuries + home-stats + away-stats + h2h) ≤ 33 for N=8
   Lineup run   : N×1 (lineups) ≤ 8
-  Grand total  : ≤ 33 calls ≪ 100 limit.
+  Grand total  : ≤ 41 calls ≪ 100 limit.
 
 Register free at: https://rapidapi.com/api-sports/api/api-football
 Add key as GitHub Secret: RAPIDAPI_KEY
@@ -45,12 +45,22 @@ class MatchContext:
     home_lineup:   list[str] = field(default_factory=list)   # confirmed starting XI
     away_lineup:   list[str] = field(default_factory=list)
     lineups_confirmed: bool = False
+    # Goals stats from last-5 WC fixtures (no extra API call — reuses /fixtures endpoint)
+    home_goals_scored_avg:   Optional[float] = None
+    away_goals_scored_avg:   Optional[float] = None
+    home_goals_conceded_avg: Optional[float] = None
+    away_goals_conceded_avg: Optional[float] = None
+    # Head-to-head (last 5 meetings, any competition)
+    h2h_over25_rate: Optional[float] = None   # fraction of H2H games with total goals > 2.5
+    h2h_avg_goals:   Optional[float] = None   # avg total goals per H2H game
 
     @property
     def has_context(self) -> bool:
         return bool(
             self.home_form or self.away_form
             or self.home_injuries or self.away_injuries
+            or self.home_goals_scored_avg is not None
+            or self.h2h_avg_goals is not None
         )
 
     def to_prompt_section(self) -> str:
@@ -60,6 +70,26 @@ class MatchContext:
             lines.append(f"{self.home_team} recent form (oldest→newest): {self.home_form}")
         if self.away_form:
             lines.append(f"{self.away_team} recent form (oldest→newest): {self.away_form}")
+        # Goals stats (from last-5 WC matches via API-Football)
+        if self.home_goals_scored_avg is not None:
+            lines.append(
+                f"{self.home_team} WC stats (last 5): "
+                f"scored {self.home_goals_scored_avg:.2f}/g, "
+                f"conceded {self.home_goals_conceded_avg:.2f}/g"
+            )
+        if self.away_goals_scored_avg is not None:
+            lines.append(
+                f"{self.away_team} WC stats (last 5): "
+                f"scored {self.away_goals_scored_avg:.2f}/g, "
+                f"conceded {self.away_goals_conceded_avg:.2f}/g"
+            )
+        # H2H history
+        if self.h2h_avg_goals is not None:
+            h2h_over = f"{self.h2h_over25_rate:.0%}" if self.h2h_over25_rate is not None else "N/A"
+            lines.append(
+                f"H2H (last 5 meetings, any competition): "
+                f"avg {self.h2h_avg_goals:.1f} goals/game | Over 2.5 rate: {h2h_over}"
+            )
         if self.home_injuries:
             lines.append(f"{self.home_team} injuries/suspensions: {', '.join(self.home_injuries)}")
         else:
@@ -175,10 +205,16 @@ def _fetch_injuries(
     return home_inj, away_inj
 
 
-def _fetch_team_form(team_id: int, api_key: str) -> str:
+def _fetch_team_stats(
+    team_id: int,
+    api_key: str,
+) -> tuple[str, Optional[float], Optional[float]]:
     """
-    Return a form string like 'WWDLW' (last 5 WC results, oldest → newest).
-    Empty string if no data.
+    Fetch last 5 WC fixtures for a team.
+
+    Returns (form_str, goals_scored_avg, goals_conceded_avg).
+    One API call — /fixtures endpoint, same as the old _fetch_team_form.
+    form_str is oldest→newest e.g. 'WWDLW'.  Averages are None when no games found.
     """
     data = _get("fixtures", {
         "team":   team_id,
@@ -187,28 +223,64 @@ def _fetch_team_form(team_id: int, api_key: str) -> str:
         "season": _WC_SEASON,
     }, api_key)
     if not data:
-        return ""
+        return "", None, None
 
-    results: list[str] = []
+    results:   list[str] = []
+    total_scored   = 0
+    total_conceded = 0
+
     for fx in data.get("response", []):
-        teams = fx.get("teams", {})
-        goals = fx.get("goals", {})
-        if teams.get("home", {}).get("id") == team_id:
-            g_team, g_opp = goals.get("home"), goals.get("away")
-        else:
-            g_team, g_opp = goals.get("away"), goals.get("home")
-
+        teams   = fx.get("teams", {})
+        goals   = fx.get("goals", {})
+        is_home = teams.get("home", {}).get("id") == team_id
+        g_team  = goals.get("home") if is_home else goals.get("away")
+        g_opp   = goals.get("away") if is_home else goals.get("home")
         if g_team is None or g_opp is None:
             continue
-        if g_team > g_opp:
-            results.append("W")
-        elif g_team == g_opp:
-            results.append("D")
-        else:
-            results.append("L")
+        total_scored   += int(g_team)
+        total_conceded += int(g_opp)
+        results.append("W" if g_team > g_opp else ("D" if g_team == g_opp else "L"))
 
-    # API returns newest→oldest; reverse to show oldest→newest
-    return "".join(reversed(results)) if results else ""
+    n            = len(results)
+    form_str     = "".join(reversed(results)) if results else ""  # API: newest→oldest
+    scored_avg   = round(total_scored   / n, 2) if n else None
+    conceded_avg = round(total_conceded / n, 2) if n else None
+    return form_str, scored_avg, conceded_avg
+
+
+def _fetch_h2h(
+    home_id: int,
+    away_id: int,
+    api_key: str,
+    last: int = 5,
+) -> tuple[Optional[float], Optional[float]]:
+    """
+    Fetch last H2H meetings between two teams (any competition — more data than WC-only).
+
+    Returns (over25_rate, avg_total_goals). Both None when no meetings found.
+    One API call: GET /fixtures/headtohead?h2h={home_id}-{away_id}&last={last}
+    """
+    data = _get("fixtures/headtohead", {
+        "h2h":  f"{home_id}-{away_id}",
+        "last": last,
+    }, api_key)
+    if not data:
+        return None, None
+
+    totals: list[int] = []
+    for fx in data.get("response", []):
+        g  = fx.get("goals", {})
+        gh = g.get("home")
+        ga = g.get("away")
+        if gh is not None and ga is not None:
+            totals.append(int(gh) + int(ga))
+
+    if not totals:
+        return None, None
+
+    over25_rate = round(sum(1 for t in totals if t > 2) / len(totals), 3)
+    avg_goals   = round(sum(totals) / len(totals), 2)
+    return over25_rate, avg_goals
 
 
 def _fetch_lineups(
@@ -295,13 +367,32 @@ def fetch_match_context(
         print(f"[context]   {home_team} injuries: {ctx.home_injuries or 'none'}")
         print(f"[context]   {away_team} injuries: {ctx.away_injuries or 'none'}")
 
-    # Form (last 5 WC results per team)
+    # Form + goals stats (last 5 WC results per team — one call each, no extra API cost)
     if home_id:
-        ctx.home_form = _fetch_team_form(home_id, api_key)
-        print(f"[context]   {home_team} form: {ctx.home_form or 'N/A'}")
+        ctx.home_form, ctx.home_goals_scored_avg, ctx.home_goals_conceded_avg = \
+            _fetch_team_stats(home_id, api_key)
+        print(
+            f"[context]   {home_team} form: {ctx.home_form or 'N/A'} | "
+            f"scored {ctx.home_goals_scored_avg}/g  conceded {ctx.home_goals_conceded_avg}/g"
+        )
     if away_id:
-        ctx.away_form = _fetch_team_form(away_id, api_key)
-        print(f"[context]   {away_team} form: {ctx.away_form or 'N/A'}")
+        ctx.away_form, ctx.away_goals_scored_avg, ctx.away_goals_conceded_avg = \
+            _fetch_team_stats(away_id, api_key)
+        print(
+            f"[context]   {away_team} form: {ctx.away_form or 'N/A'} | "
+            f"scored {ctx.away_goals_scored_avg}/g  conceded {ctx.away_goals_conceded_avg}/g"
+        )
+
+    # H2H (one extra call per match)
+    if home_id and away_id:
+        ctx.h2h_over25_rate, ctx.h2h_avg_goals = _fetch_h2h(home_id, away_id, api_key)
+        if ctx.h2h_avg_goals is not None:
+            print(
+                f"[context]   H2H (last 5): avg {ctx.h2h_avg_goals:.1f} goals/game | "
+                f"Over 2.5: {ctx.h2h_over25_rate:.0%}"
+            )
+        else:
+            print(f"[context]   H2H: no historical meetings found")
 
     # Confirmed lineups (only in --lineup-check runs)
     if include_lineups and fixture_id and home_id and away_id:

@@ -455,6 +455,8 @@ def run_daily_pipeline(
     morning_data:    list[dict]      = []
     no_odds_matches: list            = []   # schedule matches with no bookmaker odds yet
 
+    rapidapi_key = os.environ.get("RAPIDAPI_KEY", "")   # defined once; reused per match
+
     for match in todays_matches:
         odds_key = _find_odds_for_match(match.home_team, match.away_team, odds_map)
 
@@ -566,6 +568,11 @@ def run_daily_pipeline(
         _lam_h_post_bias = lam_h   # snapshot after bias correction
         _lam_a_post_bias = lam_a
 
+        # ── Pre-match context (API-Football — injuries, form, goals stats, H2H) ──
+        # Fetched here so the stats feed the λ adjustment below; result is
+        # also reused unchanged by the AI ensemble prompt later in the loop.
+        match_ctx = fetch_match_context(match.home_team, match.away_team, api_key=rapidapi_key)
+
         # ── Tournament Motivation (rotation-trap λ adjustment) ──────────────
         _match_motivation = build_match_motivation(
             match.home_team, match.away_team, _group_tables
@@ -586,6 +593,56 @@ def run_daily_pipeline(
                 f"(status: {_match_motivation.home.qualification_status} / "
                 f"{_match_motivation.away.qualification_status})"
             )
+
+        # ── API-Football Stats Adjustment (defence concede rate + H2H) ────────
+        # Two signals genuinely new vs. the existing form/strength/bias blocks:
+        #   1. Opponent's goals_conceded_avg → how "leaky" is the defence we're
+        #      attacking? (Dixon-Coles uses WC history only — this uses last-5 data)
+        #   2. H2H over25_rate → historical goal-scoring pattern in this fixture.
+        # Weight: 15 % per signal — gentle nudge; market Poisson baseline dominates.
+        # Each raw ratio is clamped to [0.88, 1.15] before blending.
+        _STATS_W   = 0.15
+        _T_AVG_API = 1.52   # WC 2026 running average goals/team/game
+        _stats_tag = ""     # logged in logic chain if any adjustment is made
+
+        if match_ctx is not None:
+            _raw_h = 1.0   # multiplier that will be blended into lam_h
+            _raw_a = 1.0   # multiplier that will be blended into lam_a
+
+            # Signal 1 — defence quality: porous away defence → more home goals
+            if match_ctx.away_goals_conceded_avg is not None:
+                _raw_h *= max(0.88, min(1.15, match_ctx.away_goals_conceded_avg / _T_AVG_API))
+            # Signal 1 — defence quality: porous home defence → more away goals
+            if match_ctx.home_goals_conceded_avg is not None:
+                _raw_a *= max(0.88, min(1.15, match_ctx.home_goals_conceded_avg / _T_AVG_API))
+
+            # Signal 2 — H2H goal pattern: high-scoring history nudges both λ up
+            _h2h_mult = 1.0
+            if match_ctx.h2h_over25_rate is not None:
+                if match_ctx.h2h_over25_rate >= 0.6:
+                    _h2h_mult = 1.05   # over 60 % of H2H games had 3+ goals
+                elif match_ctx.h2h_over25_rate <= 0.3:
+                    _h2h_mult = 0.95   # under 30 % → low-scoring H2H history
+
+            # Blend: new signal at 15 % weight
+            _blend_h = (1 - _STATS_W) + _STATS_W * _raw_h * _h2h_mult
+            _blend_a = (1 - _STATS_W) + _STATS_W * _raw_a * _h2h_mult
+
+            if abs(_blend_h - 1.0) >= 0.005 or abs(_blend_a - 1.0) >= 0.005:
+                _pre_h, _pre_a = lam_h, lam_a
+                lam_h = round(max(0.1, lam_h * _blend_h), 3)
+                lam_a = round(max(0.1, lam_a * _blend_a), 3)
+                _stats_tag = f"Stats×{_blend_h:.3f}/{_blend_a:.3f}"
+                print(
+                    f"[api-stats] {match.home_team} vs {match.away_team}: "
+                    f"def_h={_raw_h:.3f}  def_a={_raw_a:.3f}  h2h={_h2h_mult:.2f} "
+                    f"→ lam_h {_pre_h}→{lam_h}  lam_a {_pre_a}→{lam_a}"
+                )
+            else:
+                print(f"[api-stats] No significant adjustment for "
+                      f"{match.home_team} vs {match.away_team}")
+        else:
+            print(f"[api-stats] Context unavailable — stats adjustment skipped")
 
         # ── Knockout stage intensity boost ───────────────────────────────────
         # Knockout matches tend toward higher-intensity, end-to-end play.
@@ -623,6 +680,8 @@ def run_daily_pipeline(
         _motiv_mult = _match_motivation.home.lambda_multiplier
         if abs(_motiv_mult - 1.0) >= 0.01:
             _chain_steps.append(f"Motiv×{_motiv_mult:.2f}")
+        if _stats_tag:
+            _chain_steps.append(_stats_tag)
         if stage != TournamentStage.GROUP_STAGE:
             _chain_steps.append("KO×1.20")
         _chain_steps.append(f"→ {lam_h:.2f}/{lam_a:.2f}")
@@ -746,9 +805,8 @@ def run_daily_pipeline(
 
         _context_sources: list[str] = []
 
-        # P1: RapidAPI — injuries, confirmed form, lineups
-        rapidapi_key    = os.environ.get("RAPIDAPI_KEY", "")
-        match_ctx       = fetch_match_context(match.home_team, match.away_team, api_key=rapidapi_key)
+        # P1: RapidAPI — injuries, form, goals stats, H2H
+        # match_ctx already fetched before the λ-adjustment block above; reuse here.
         context_section = match_ctx.to_prompt_section() if match_ctx else ""
         if context_section.strip():
             _context_sources.append("RapidAPI")

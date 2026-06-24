@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-06-24T06:30:22Z",
+  "generated_at": "2026-06-24T08:59:07Z",
   "bankroll": 100.0,
   "ev_min": 0.1,
   "ds_min": 70.0,
-  "wc_matches": 8,
+  "wc_matches": 10,
   "sniper_bets": [
     {
       "match": "South Africa vs South Korea",
       "outcome": "Home Win",
       "odds": 4.8,
-      "sim_prob": 0.35075,
+      "sim_prob": 0.3497,
       "implied": 0.20833333333333334,
-      "edge": 0.14241666666666666,
-      "ev": 0.6836,
-      "ds": 70.4,
+      "edge": 0.14136666666666667,
+      "ev": 0.67856,
+      "ds": 70.1,
       "stake": 4.5
     }
   ],

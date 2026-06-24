@@ -1,16 +1,23 @@
 {
-  "generated_at": "2026-06-24T06:03:18Z",
+  "generated_at": "2026-06-24T06:30:22Z",
   "bankroll": 100.0,
   "ev_min": 0.1,
   "ds_min": 70.0,
   "wc_matches": 8,
-  "sniper_bets": [],
-  "skipped": [
-    "Switzerland vs Canada",
-    "Bosnia-Herzegovina vs Qatar",
-    "Morocco vs Haiti",
-    "Scotland vs Brazil"
+  "sniper_bets": [
+    {
+      "match": "South Africa vs South Korea",
+      "outcome": "Home Win",
+      "odds": 4.8,
+      "sim_prob": 0.35075,
+      "implied": 0.20833333333333334,
+      "edge": 0.14241666666666666,
+      "ev": 0.6836,
+      "ds": 70.4,
+      "stake": 4.5
+    }
   ],
-  "total_stake": 0,
-  "bet_count": 0
+  "skipped": [],
+  "total_stake": 4.5,
+  "bet_count": 1
 }

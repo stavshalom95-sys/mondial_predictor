@@ -461,12 +461,137 @@ def run_daily_pipeline(
         odds_key = _find_odds_for_match(match.home_team, match.away_team, odds_map)
 
         if odds_key is None:
+            if match.status == "final":
+                print(f"[pipeline] '{match.home_team} vs {match.away_team}' already finished — skipping.")
+                continue
+
+            # ── Prior-only path: no bookmaker odds → generate prediction from ──────
+            # strength model + FIFA priors + FDR (vice-captain.com) + motivation.
+            # No value-bet or edge analysis (no market to compare against).
+            # Every scheduled match gets a prediction — no "No odds yet" gaps.
             print(
-                f"[pipeline] ⚠️  NO ODDS: '{match.home_team} vs {match.away_team}' "
-                f"[{match.start_time_utc.strftime('%Y-%m-%d %H:%M UTC')}] — "
-                f"in schedule but not found in The Odds API. Adding to no-odds list."
+                f"[prior] ⚠️  NO ODDS — generating prior-only prediction for "
+                f"{match.home_team} vs {match.away_team}"
             )
-            no_odds_matches.append(match)
+            _pr_stage = match.stage or TournamentStage.GROUP_STAGE
+
+            # λ from strength model (falls back to FIFA priors for teams with 0 WC games)
+            _pr_lh, _pr_la = (
+                strength_model.lambdas(match.home_team, match.away_team)
+                if strength_model else (1.30, 1.10)
+            )
+
+            # FDR modifier — independent of odds, still applies
+            _pr_fdr = fetch_fixture_mu(match.home_team, match.away_team)
+            if _pr_fdr:
+                _pr_mx  = _build_matrix(_pr_lh, _pr_la)
+                _pr_mdl = PoissonMatchModel(lambda_home=_pr_lh, lambda_away=_pr_la, _matrix=_pr_mx)
+                _pr_mdl = apply_fdr_modifier(_pr_mdl, mu_home=_pr_fdr[0], mu_away=_pr_fdr[1])
+                _pr_lh, _pr_la = _pr_mdl.lambda_home, _pr_mdl.lambda_away
+
+            # Motivation
+            _pr_motiv = build_match_motivation(match.home_team, match.away_team, _group_tables)
+            _pr_lh = round(_pr_lh * _pr_motiv.home.lambda_multiplier, 3)
+            _pr_la = round(_pr_la * _pr_motiv.away.lambda_multiplier, 3)
+            print(f"[prior]   λ  home={_pr_lh}  away={_pr_la}")
+
+            # Build model + simulate
+            _pr_matrix = _build_matrix(_pr_lh, _pr_la)
+            _pr_model  = PoissonMatchModel(lambda_home=_pr_lh, lambda_away=_pr_la, _matrix=_pr_matrix)
+            _pr_sim    = simulate(_pr_lh, _pr_la)
+            _pr_sh, _pr_sa = _pr_sim.score_grid.most_likely_score()
+
+            # Sub-markets (for O/U bullet)
+            _pr_markets = None
+            try:
+                _pr_markets = calculate_all_markets(
+                    _pr_lh, _pr_la,
+                    home_team=match.home_team,
+                    away_team=match.away_team,
+                )
+            except Exception:
+                pass
+
+            # Why bullets (no market-edge section since no odds)
+            _pr_bullets: list[str] = ["⚠️ אין מחירים — תחזית מבוססת מודל בלבד"]
+            _pr_ratio = _pr_lh / _pr_la if _pr_la > 0.01 else 1.0
+            _pr_lstr  = f"λ H={_pr_lh:.1f} / A={_pr_la:.1f}"
+            if _pr_ratio >= 1.6:
+                _pr_bullets.append(f"⚡ {match.home_team} dominant ({_pr_ratio:.1f}×, {_pr_lstr})")
+            elif _pr_ratio >= 1.2:
+                _pr_bullets.append(f"📈 {match.home_team} has the edge ({_pr_lstr})")
+            elif _pr_ratio <= 0.625:
+                _pr_bullets.append(f"⚡ {match.away_team} dominant ({round(1/_pr_ratio,1)}×, {_pr_lstr})")
+            elif _pr_ratio <= 0.833:
+                _pr_bullets.append(f"📈 {match.away_team} has the edge ({_pr_lstr})")
+            else:
+                _pr_bullets.append(f"⚖️ Even match ({_pr_lstr})")
+            _PR_STATUS_HE = {
+                "must_win":               "חייב לנצח",
+                "need_draw":              "צריך תיקו",
+                "qualified_secure_1st":   "מובטח ראשון — עשוי לנוח שחקנים",
+                "qualified_top_seed_fight": "נאבק על גרעין ראשון — הרכב מלא",
+                "qualified":              "מוסמך — עשוי להחליף שחקנים",
+                "eliminated":             "מודח — מוריד עצימות",
+            }
+            if not _pr_motiv.is_trivial():
+                for _prt, _prm in (
+                    (match.home_team, _pr_motiv.home),
+                    (match.away_team, _pr_motiv.away),
+                ):
+                    if abs(_prm.lambda_multiplier - 1.0) >= 0.05:
+                        _prs = _PR_STATUS_HE.get(_prm.qualification_status, _prm.qualification_status)
+                        _pr_bullets.append(f"🎯 {_prt}: {_prs} (עצימות ×{_prm.lambda_multiplier:.2f})")
+            if _pr_markets and _pr_markets.ou.get(2.5):
+                _pr_ou = _pr_markets.ou[2.5]
+                _pr_bullets.append(
+                    f"⚽ צפי {_pr_ou['expected_goals']:.1f} גולים — "
+                    f"Over 2.5: {_pr_ou['p_over']:.0%} | Under 2.5: {_pr_ou['p_under']:.0%}"
+                )
+
+            _pr_rec = recommend(_pr_model, context, _pr_stage)
+            _pr_show_ctx = (
+                _pr_stage != TournamentStage.GROUP_STAGE or
+                _pr_motiv.home.played >= 2 or _pr_motiv.away.played >= 2
+            )
+            picks.append(DailyPick(
+                home_team      = match.home_team,
+                away_team      = match.away_team,
+                recommendation = _pr_rec,
+                market_data    = _pr_markets,
+                tournament_context_lines = (
+                    _pr_motiv.to_whatsapp_lines() or None
+                ) if _pr_show_ctx else None,
+                why_bullets    = _pr_bullets,
+                logic_chain    = (
+                    f"Prior (no odds): λ H={_pr_lh:.2f}/A={_pr_la:.2f} "
+                    f"— strength model + FIFA priors" +
+                    (f" + FDR(μ={_pr_fdr[0]:.2f}/{_pr_fdr[1]:.2f})" if _pr_fdr else "")
+                ),
+                sim_score_home = _pr_sh,
+                sim_score_away = _pr_sa,
+                sim_p_home     = round(_pr_sim.p_home,         4),
+                sim_p_draw     = round(_pr_sim.p_draw,         4),
+                sim_p_away     = round(_pr_sim.p_away,         4),
+                poisson_p_home = round(_pr_sim.poisson_p_home, 4),
+                poisson_p_draw = round(_pr_sim.poisson_p_draw, 4),
+                poisson_p_away = round(_pr_sim.poisson_p_away, 4),
+            ))
+            morning_data.append({
+                "date":          date.today().isoformat(),
+                "home_team":     match.home_team,
+                "away_team":     match.away_team,
+                "stage":         _pr_stage.value,
+                "lambda_home":   _pr_lh,
+                "lambda_away":   _pr_la,
+                "final_home_goals": _pr_sh,
+                "final_away_goals": _pr_sa,
+                "sim_p_home":    round(_pr_sim.p_home, 4),
+                "sim_p_draw":    round(_pr_sim.p_draw, 4),
+                "sim_p_away":    round(_pr_sim.p_away, 4),
+                "prior_only":    True,
+            })
+            no_odds_matches.append(match)   # kept for reference; not shown as "no odds" in report
             continue
 
         cfg = odds_map[odds_key]
@@ -889,11 +1014,12 @@ def run_daily_pipeline(
         # 3. Tournament motivation (only when multiplier moves λ by ≥ 5%)
         if not _match_motivation.is_trivial():
             _STATUS_HE = {
-                "must_win":             "חייב לנצח",
-                "need_draw":            "צריך תיקו",
-                "qualified_secure_1st": "מובטח ראשון — עשוי לנוח שחקנים",
-                "qualified":            "מוסמך — עשוי להחליף שחקנים",
-                "eliminated":           "מודח — מוריד עצימות",
+                "must_win":               "חייב לנצח",
+                "need_draw":              "צריך תיקו",
+                "qualified_secure_1st":   "מובטח ראשון — עשוי לנוח שחקנים",
+                "qualified_top_seed_fight": "נאבק על גרעין ראשון — הרכב מלא",
+                "qualified":              "מוסמך — עשוי להחליף שחקנים",
+                "eliminated":             "מודח — מוריד עצימות",
             }
             for _mt, _mm in (
                 (match.home_team, _match_motivation.home),
@@ -1079,12 +1205,18 @@ def run_daily_pipeline(
         ticket=_ticket, prob_ticket=_prob_ticket, conf_ticket=_conf_ticket,
     )
 
-    # Append schedule matches that had no bookmaker odds yet
-    if no_odds_matches:
-        _no_odds_lines = ["\n\n📅 *מתוכנן — טרם התקבלו מאיסות:*"]
-        for _nm in no_odds_matches:
+    # no_odds_matches now receive prior-only predictions (included in picks above).
+    # Only list here if they somehow never made it into picks (safety net).
+    _prior_covered = {f"{p.home_team}|{p.away_team}" for p in picks}
+    _truly_missing = [
+        m for m in no_odds_matches
+        if f"{m.home_team}|{m.away_team}" not in _prior_covered
+    ]
+    if _truly_missing:
+        _no_odds_lines = ["\n\n📅 *מתוכנן — אין נתונים:*"]
+        for _nm in _truly_missing:
             _ko_str = _nm.start_time_utc.strftime("%H:%M UTC")
-            _no_odds_lines.append(f"  ⏳ {_nm.home_team} vs {_nm.away_team}  [{_ko_str}]  — No odds yet")
+            _no_odds_lines.append(f"  ⏳ {_nm.home_team} vs {_nm.away_team}  [{_ko_str}]")
         message += "\n".join(_no_odds_lines)
 
     if send_notification:

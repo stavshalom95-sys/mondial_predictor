@@ -26,23 +26,25 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 
 MOTIVATION_MULTIPLIER: dict[str, float] = {
-    "qualified_secure_1st": 0.85,  # position locked in — heavy squad rotation
-    "qualified":             0.92,  # qualified but seeding contested — minor rotation
-    "need_draw":             1.05,  # draw qualifies — high motivation, patient play
-    "must_win":              1.10,  # win-or-go-home — maximum intensity
-    "open":                  1.00,  # qualification still open — normal
-    "eliminated":            0.90,  # pride only — possible youth appearances
-    "unknown":               1.00,  # no table data — no adjustment
+    "qualified_secure_1st":   0.85,  # 1st place mathematically locked — heavy rotation
+    "qualified":              0.92,  # qualified & seeding settled (2nd locked) — minor rotation
+    "qualified_top_seed_fight": 1.05, # qualified but 1st vs 2nd seed still contested — full squad
+    "need_draw":              1.05,  # draw qualifies — high motivation, patient play
+    "must_win":               1.10,  # win-or-go-home — maximum intensity
+    "open":                   1.00,  # qualification still open — normal
+    "eliminated":             0.90,  # pride only — possible youth appearances
+    "unknown":                1.00,  # no table data — no adjustment
 }
 
 _CONTEXT_LABEL: dict[str, str] = {
-    "qualified_secure_1st": "Already qualified & position secured — heavy squad rotation expected",
-    "qualified":             "Already qualified — likely to rotate some players",
-    "need_draw":             "A draw qualifies — high motivation",
-    "must_win":              "Must win to stay in tournament — full-strength squad expected",
-    "open":                  "Qualification still open — full motivation",
-    "eliminated":            "Already eliminated — playing for pride only",
-    "unknown":               "",
+    "qualified_secure_1st":     "Already qualified & 1st place locked in — heavy rotation expected",
+    "qualified":                "Already qualified, seeding settled — likely to rotate some players",
+    "qualified_top_seed_fight": "Qualified but fighting for top seed — full-strength squad expected",
+    "need_draw":                "A draw qualifies — high motivation",
+    "must_win":                 "Must win to stay in tournament — full-strength squad expected",
+    "open":                     "Qualification still open — full motivation",
+    "eliminated":               "Already eliminated — playing for pride only",
+    "unknown":                  "",
 }
 
 
@@ -179,23 +181,30 @@ def compute_group_statuses(rows: list[dict]) -> list[dict]:
         fourth_pts = all_pts[3] if len(all_pts) > 3 else 0
 
         if pos_0 == 0:       # Currently 1st
-            # Secure 1st if 3rd-place can't overtake 2nd even with a win
-            # (i.e. our lead over 3rd is so large they can't get past 2nd)
+            # Secure 1st if 2nd-place can't catch us even with a win
             if pts > (all_pts[1] + remaining * 3):
-                # Even 2nd can't catch us
+                # 1st place mathematically locked — heavy rotation expected
                 row["qualification_status"] = "qualified_secure_1st"
             elif pts > third_pts + remaining * 3:
-                # Can't drop to 3rd — guaranteed qualification
-                row["qualification_status"] = "qualified"
+                # Can't drop below 2nd — qualification guaranteed.
+                # But 1st place is NOT yet locked → fighting for top seed.
+                row["qualification_status"] = "qualified_top_seed_fight"
             else:
-                # 3rd could in theory overtake (GD battle), still play to win
-                row["qualification_status"] = "qualified"
+                # 3rd could overtake → qualification not yet certain → full effort
+                row["qualification_status"] = "open"
 
         elif pos_0 == 1:     # Currently 2nd
             third_max = third_pts + remaining * 3
             if pts > third_max:
-                # 3rd can't catch us even with a win — qualified
-                row["qualification_status"] = "qualified"
+                # 3rd can't catch us — qualified.
+                # Now check whether winning today could leapfrog current 1st.
+                if pts + 3 >= all_pts[0]:
+                    # A win could equal or beat 1st place's current points →
+                    # seeding still contested → play for the top seed.
+                    row["qualification_status"] = "qualified_top_seed_fight"
+                else:
+                    # Can't reach 1st regardless — seeding settled → minor rotation OK
+                    row["qualification_status"] = "qualified"
             elif pts == third_max:
                 # 3rd reaches our current points only if they win AND we lose
                 row["qualification_status"] = "need_draw"

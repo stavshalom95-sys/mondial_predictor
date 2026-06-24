@@ -15,7 +15,7 @@ Decision Score formula (0–100):
 Stake sizing: Quarter-Kelly × bankroll (NO external APIs called).
 
 Usage:
-  python scripts/profit_engine.py [--bankroll 100] [--min-prob 0.50] [--ev-min 0.10] [--ds-min 70] [--output data/profit_report.json]
+  python scripts/profit_engine.py [--bankroll 100] [--min-prob 0.50] [--ev-min 0.10] [--ds-min 70] [--output data/profit_report.json] [--notify]
 """
 from __future__ import annotations
 
@@ -96,12 +96,57 @@ def combo_suggestion(candidates: list[dict], bankroll: float) -> dict | None:
     }
 
 
+def _format_whatsapp(sniper_bets: list[dict], combo: dict | None, bankroll: float) -> str:
+    """Format sniper bets + combo suggestion as a WhatsApp-ready message."""
+    from datetime import date
+    today = date.today().strftime("%d/%m/%Y")
+    lines = [
+        f"🎯 *Sniper Protocol — {today}*",
+        f"_Bankroll: {bankroll:.0f} NIS | ¼-Kelly_",
+        "",
+    ]
+
+    if sniper_bets:
+        lines.append(f"✅ *{len(sniper_bets)} Sniper Bet(s):*")
+        for b in sniper_bets:
+            lines.append(f"  • {b['match']}")
+            lines.append(f"    → *{b['outcome']}* @ {b['odds']:.2f}")
+            lines.append(f"    Model {b['sim_prob']:.0%} vs Mkt {b['implied']:.0%} | "
+                         f"Edge {b['edge']:+.0%} | EV {b['ev']:+.0%} | DS {b['ds']:.0f}")
+            lines.append(f"    💰 Stake: *{b['stake']:.1f} NIS*")
+            lines.append("")
+    else:
+        lines.append("❌ *No sniper bets today* — no outcome cleared all 3 gates.")
+        lines.append("")
+
+    # Combo section
+    lines.append("🎰 *Combo Suggestion (Top 3 by DS):*")
+    if combo is None:
+        lines.append("  ⏭ Not enough matches for a 3-leg combo.")
+    else:
+        for i, leg in enumerate(combo["legs"], 1):
+            lines.append(f"  Leg {i}: {leg['match']}")
+            lines.append(f"          → *{leg['outcome']}* @ {leg['odds']:.2f}  (DS {leg['ds']:.0f})")
+        lines.append("")
+        lines.append(f"  Combined odds: *{combo['combined_odds']:.2f}*")
+        lines.append(f"  Combined prob: {combo['combined_prob']:.1%}")
+        lines.append(f"  Combined EV:   {combo['combined_ev']:+.1%}")
+        if combo["is_value"]:
+            lines.append(f"  ✅ *POSITIVE EV COMBO!*")
+            lines.append(f"  💰 Combo stake: *{combo['combo_stake']:.1f} NIS*")
+        else:
+            lines.append("  ❌ Negative EV — skip or reduce stake.")
+
+    return "\n".join(lines)
+
+
 def run(
-    bankroll:    float = _BANKROLL,
-    min_prob:    float = _MIN_PROB,
-    ev_min:      float = _EV_MIN,
-    ds_min:      float = _DS_MIN,
-    output_path: str   = "",
+    bankroll:          float = _BANKROLL,
+    min_prob:          float = _MIN_PROB,
+    ev_min:            float = _EV_MIN,
+    ds_min:            float = _DS_MIN,
+    output_path:       str   = "",
+    send_notification: bool  = False,
 ) -> None:
     # ── Build strength model from tournament history ───────────────────────────
     history_path = os.path.join(_ROOT, "data", "history.json")
@@ -281,6 +326,12 @@ def run(
     print("  ✅  Analysis complete — zero external API calls made")
     print("=" * 65)
 
+    # ── WhatsApp notification ──────────────────────────────────────────────────
+    if send_notification:
+        msg = _format_whatsapp(sniper_bets, combo, bankroll)
+        from notifications.notifier import send_whatsapp_message
+        send_whatsapp_message(msg)
+
     # ── Write JSON report if requested ────────────────────────────────────────
     if output_path:
         report = {
@@ -309,11 +360,13 @@ if __name__ == "__main__":
     parser.add_argument("--ev-min",    type=float, default=_EV_MIN)
     parser.add_argument("--ds-min",    type=float, default=_DS_MIN)
     parser.add_argument("--output",    type=str,   default="", help="Path to write JSON report")
+    parser.add_argument("--notify",    action="store_true", help="Send results via WhatsApp (requires GREEN_API env vars)")
     args = parser.parse_args()
     run(
-        bankroll    = args.bankroll,
-        min_prob    = args.min_prob,
-        ev_min      = args.ev_min,
-        ds_min      = args.ds_min,
-        output_path = args.output,
+        bankroll           = args.bankroll,
+        min_prob           = args.min_prob,
+        ev_min             = args.ev_min,
+        ds_min             = args.ds_min,
+        output_path        = args.output,
+        send_notification  = args.notify,
     )

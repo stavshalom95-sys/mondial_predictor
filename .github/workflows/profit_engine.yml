@@ -47,16 +47,21 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install numpy
+        run: pip install numpy requests
 
       - name: Run Profit Engine
+        env:
+          GREEN_API_INSTANCE_ID:   ${{ secrets.GREEN_API_INSTANCE_ID }}
+          GREEN_API_TOKEN:         ${{ secrets.GREEN_API_TOKEN }}
+          WHATSAPP_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_RECIPIENT_PHONE }}
         run: |
           python scripts/profit_engine.py \
             --bankroll ${{ github.event.inputs.bankroll  || '100'  }} \
             --min-prob ${{ github.event.inputs.min_prob  || '0.50' }} \
             --ds-min   ${{ github.event.inputs.ds_min    || '70'   }} \
             --ev-min   ${{ github.event.inputs.ev_min    || '0.10' }} \
-            --output   data/profit_report.json
+            --output   data/profit_report.json \
+            --notify
 
       - name: Commit report to repository
         run: |

@@ -12,6 +12,10 @@ on:
         description: "Bankroll in NIS (default 100)"
         required: false
         default: "100"
+      min_prob:
+        description: "Minimum model probability 0-1 (default 0.50 = 50% — no longshots)"
+        required: false
+        default: "0.50"
       ds_min:
         description: "Minimum Decision Score threshold (default 70)"
         required: false
@@ -48,9 +52,10 @@ jobs:
       - name: Run Profit Engine
         run: |
           python scripts/profit_engine.py \
-            --bankroll ${{ github.event.inputs.bankroll || '100' }} \
-            --ds-min   ${{ github.event.inputs.ds_min   || '70'  }} \
-            --ev-min   ${{ github.event.inputs.ev_min   || '0.10'}} \
+            --bankroll ${{ github.event.inputs.bankroll  || '100'  }} \
+            --min-prob ${{ github.event.inputs.min_prob  || '0.50' }} \
+            --ds-min   ${{ github.event.inputs.ds_min    || '70'   }} \
+            --ev-min   ${{ github.event.inputs.ev_min    || '0.10' }} \
             --output   data/profit_report.json
 
       - name: Commit report to repository

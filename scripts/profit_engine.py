@@ -5,8 +5,9 @@ Reads winner_odds.json from repo root, builds strength model from data/history.j
 runs Monte Carlo simulation (20k draws), and applies the Sniper Protocol filter.
 
 Sniper Protocol:
-  Gate 1: EV  > EV_MIN   (default 10%)
-  Gate 2: DS  > DS_MIN   (default 70)
+  Gate 1: prob >= MIN_PROB  (default 50%) — no longshots
+  Gate 2: EV   >= EV_MIN   (default 10%)
+  Gate 3: DS   >= DS_MIN   (default 70)
 
 Decision Score formula (0–100):
   DS = 100 × (0.50 × min(prob/0.80,1) + 0.30 × min(edge/0.15,1) + 0.20 × min(ev/0.20,1))
@@ -14,7 +15,7 @@ Decision Score formula (0–100):
 Stake sizing: Quarter-Kelly × bankroll (NO external APIs called).
 
 Usage:
-  python scripts/profit_engine.py [--bankroll 100] [--ds-min 70] [--ev-min 0.10] [--output data/profit_report.json]
+  python scripts/profit_engine.py [--bankroll 100] [--min-prob 0.50] [--ev-min 0.10] [--ds-min 70] [--output data/profit_report.json]
 """
 from __future__ import annotations
 
@@ -28,11 +29,12 @@ sys.path.insert(0, _ROOT)
 from core.strength_model import build_strength_model
 from core.simulator import simulate
 
-# ── Defaults (Sniper Protocol v2) ─────────────────────────────────────────────
+# ── Defaults (Sniper Protocol v3) ─────────────────────────────────────────────
 _BANKROLL  = 100.0
 _KF        = 0.25    # quarter-Kelly
-_EV_MIN    = 0.10    # Gate 1: minimum EV
-_DS_MIN    = 70.0    # Gate 2: minimum Decision Score  ← updated from 75
+_MIN_PROB  = 0.50    # Gate 1: minimum model probability — no longshots
+_EV_MIN    = 0.10    # Gate 2: minimum EV
+_DS_MIN    = 70.0    # Gate 3: minimum Decision Score
 
 
 def decision_score(prob: float, edge: float, ev: float) -> float:
@@ -45,6 +47,7 @@ def decision_score(prob: float, edge: float, ev: float) -> float:
 
 def run(
     bankroll:    float = _BANKROLL,
+    min_prob:    float = _MIN_PROB,
     ev_min:      float = _EV_MIN,
     ds_min:      float = _DS_MIN,
     output_path: str   = "",
@@ -97,7 +100,7 @@ def run(
     print("=" * 65)
     print("  🎯  PROFIT ENGINE — DAILY BETTING PLAN")
     print("=" * 65)
-    print(f"  Bankroll: {bankroll:.0f} NIS  |  ¼-Kelly  |  EV≥{ev_min:.0%}  DS≥{ds_min:.0f}")
+    print(f"  Bankroll: {bankroll:.0f} NIS  |  ¼-Kelly  |  Prob≥{min_prob:.0%}  EV≥{ev_min:.0%}  DS≥{ds_min:.0f}")
     print(f"  ⚡ No external APIs called — internal model + history only")
     print("=" * 65)
 
@@ -143,10 +146,17 @@ def run(
             kf_full = max(ev / net, 0.0) if net > 0 else 0.0
             stake   = round(kf_full * _KF * bankroll, 1)
 
-            passes  = ev >= ev_min and ds >= ds_min
-            marker  = "🔥" if passes else "  "
+            below_prob = prob < min_prob
+            passes     = not below_prob and ev >= ev_min and ds >= ds_min
+            if below_prob:
+                marker = "🚫"   # prob gate failed — longshot filtered out
+            elif passes:
+                marker = "🔥"
+            else:
+                marker = "  "
             print(f"   {marker} {label:<10} | odds={dec_odds:.2f} | sim={prob:.1%} mkt={implied:.1%} "
-                  f"edge={edge:+.1%} EV={ev:+.1%} DS={ds:.0f} → stake={stake:.1f} NIS")
+                  f"edge={edge:+.1%} EV={ev:+.1%} DS={ds:.0f} → stake={stake:.1f} NIS"
+                  + (" [prob<50%]" if below_prob else ""))
 
             if passes:
                 sniper_bets.append({
@@ -168,7 +178,7 @@ def run(
         print(f"  ⏭  SKIPPED (no odds): {', '.join(skipped)}")
 
     if not sniper_bets:
-        print(f"  ❌  NO SNIPER BETS — no bet clears EV≥{ev_min:.0%} + DS≥{ds_min:.0f}")
+        print(f"  ❌  NO SNIPER BETS — no bet clears Prob≥{min_prob:.0%} + EV≥{ev_min:.0%} + DS≥{ds_min:.0f}")
     else:
         total_stake = sum(b["stake"] for b in sniper_bets)
         print(f"  🎯  SNIPER BETS: {len(sniper_bets)} found  |  total stake: {total_stake:.1f} NIS")
@@ -189,6 +199,7 @@ def run(
         report = {
             "generated_at":  datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "bankroll":      bankroll,
+            "min_prob":      min_prob,
             "ev_min":        ev_min,
             "ds_min":        ds_min,
             "wc_matches":    sm.n_matches if sm else 0,
@@ -205,9 +216,16 @@ def run(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sniper Protocol Profit Engine")
-    parser.add_argument("--bankroll", type=float, default=_BANKROLL)
-    parser.add_argument("--ev-min",   type=float, default=_EV_MIN)
-    parser.add_argument("--ds-min",   type=float, default=_DS_MIN)
-    parser.add_argument("--output",   type=str,   default="", help="Path to write JSON report")
+    parser.add_argument("--bankroll",  type=float, default=_BANKROLL)
+    parser.add_argument("--min-prob",  type=float, default=_MIN_PROB, help="Min model probability (default 0.50)")
+    parser.add_argument("--ev-min",    type=float, default=_EV_MIN)
+    parser.add_argument("--ds-min",    type=float, default=_DS_MIN)
+    parser.add_argument("--output",    type=str,   default="", help="Path to write JSON report")
     args = parser.parse_args()
-    run(bankroll=args.bankroll, ev_min=args.ev_min, ds_min=args.ds_min, output_path=args.output)
+    run(
+        bankroll    = args.bankroll,
+        min_prob    = args.min_prob,
+        ev_min      = args.ev_min,
+        ds_min      = args.ds_min,
+        output_path = args.output,
+    )

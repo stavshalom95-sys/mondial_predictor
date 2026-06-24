@@ -969,7 +969,7 @@
   },
   {
     "id": "537405",
-    "status": "live",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-23T17:00:00Z",
     "home": "POR",
@@ -985,13 +985,13 @@
       }
     },
     "score": {
-      "POR": 2,
-      "UZB": 1
+      "POR": 5,
+      "UZB": 0
     }
   },
   {
     "id": "537411",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-23T20:00:00Z",
     "home": "ENG",
@@ -1007,13 +1007,13 @@
       }
     },
     "score": {
-      "ENG": null,
-      "GHA": null
+      "ENG": 0,
+      "GHA": 0
     }
   },
   {
     "id": "537412",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-23T23:00:00Z",
     "home": "PAN",
@@ -1029,13 +1029,13 @@
       }
     },
     "score": {
-      "PAN": null,
-      "CRO": null
+      "PAN": 0,
+      "CRO": 1
     }
   },
   {
     "id": "537406",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-24T02:00:00Z",
     "home": "COL",
@@ -1051,8 +1051,8 @@
       }
     },
     "score": {
-      "COL": null,
-      "COD": null
+      "COL": 1,
+      "COD": 0
     }
   },
   {
@@ -1622,20 +1622,15 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-06-29T20:30:00Z",
-    "home": "GER",
+    "home": null,
     "away": null,
     "teams": {
-      "GER": {
-        "name": "Germany",
-        "abbreviation": "GER"
-      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
-      "GER": null,
       "null": null
     }
   },
@@ -1695,20 +1690,15 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-01T01:00:00Z",
-    "home": "MEX",
+    "home": null,
     "away": null,
     "teams": {
-      "MEX": {
-        "name": "Mexico",
-        "abbreviation": "MEX"
-      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
-      "MEX": null,
       "null": null
     }
   },
@@ -1751,20 +1741,15 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-02T00:00:00Z",
-    "home": "USA",
+    "home": null,
     "away": null,
     "teams": {
-      "USA": {
-        "name": "United States",
-        "abbreviation": "USA"
-      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
-      "USA": null,
       "null": null
     }
   },

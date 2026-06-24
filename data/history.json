@@ -110,5 +110,37 @@
     "correct_result": true,
     "points_earned": 1,
     "points_possible": 3
+  },
+  {
+    "date": "2026-06-23",
+    "home_team": "England",
+    "away_team": "Ghana",
+    "stage": "שלב הבתים",
+    "predicted_home": 2,
+    "predicted_away": 0,
+    "actual_home": 0,
+    "actual_away": 0,
+    "exact_match": false,
+    "correct_result": false,
+    "points_earned": 0,
+    "points_possible": 3,
+    "bet_won": null,
+    "pnl_nis": null
+  },
+  {
+    "date": "2026-06-23",
+    "home_team": "Panama",
+    "away_team": "Croatia",
+    "stage": "שלב הבתים",
+    "predicted_home": 0,
+    "predicted_away": 2,
+    "actual_home": 0,
+    "actual_away": 1,
+    "exact_match": false,
+    "correct_result": true,
+    "points_earned": 1,
+    "points_possible": 3,
+    "bet_won": false,
+    "pnl_nis": -20.0
   }
 ]

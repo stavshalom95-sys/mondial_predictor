@@ -1,13 +1,5 @@
 {
-  "_note": "Reset 2026-06-24. Fill decimal odds before running Profit Engine. Leave 0.0 if unavailable.",
-  "_played_today": [
-    "Norway vs Senegal",
-    "Jordan vs Algeria",
-    "Portugal vs Uzbekistan",
-    "England vs Ghana",
-    "Panama vs Croatia",
-    "Colombia vs Congo DR"
-  ],
+  "_note": "Reset by master_reset.py on 2026-06-24T06:37:05Z. Fill in decimal odds before the daily pipeline runs.",
   "Switzerland vs Canada": {
     "winner": {
       "home": 2.25,
@@ -177,5 +169,8 @@
       "9-11": 2.6,
       "12+": 3.05
     }
-  }
+  },
+  "_played_today": [
+    "Colombia vs Congo DR"
+  ]
 }

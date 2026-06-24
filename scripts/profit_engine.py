@@ -14,11 +14,12 @@ Decision Score formula (0–100):
 Stake sizing: Quarter-Kelly × bankroll (NO external APIs called).
 
 Usage:
-  python scripts/profit_engine.py [--bankroll 100] [--ds-min 70] [--ev-min 0.10]
+  python scripts/profit_engine.py [--bankroll 100] [--ds-min 70] [--ev-min 0.10] [--output data/profit_report.json]
 """
 from __future__ import annotations
 
 import sys, json, os, argparse
+from datetime import datetime, timezone
 sys.stdout.reconfigure(encoding="utf-8")
 
 _ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -42,7 +43,12 @@ def decision_score(prob: float, edge: float, ev: float) -> float:
     return round(100 * (0.50 * s_prob + 0.30 * s_edge + 0.20 * s_ev), 1)
 
 
-def run(bankroll: float = _BANKROLL, ev_min: float = _EV_MIN, ds_min: float = _DS_MIN) -> None:
+def run(
+    bankroll:    float = _BANKROLL,
+    ev_min:      float = _EV_MIN,
+    ds_min:      float = _DS_MIN,
+    output_path: str   = "",
+) -> None:
     # ── Build strength model from tournament history ───────────────────────────
     history_path = os.path.join(_ROOT, "data", "history.json")
     with open(history_path, encoding="utf-8") as f:
@@ -178,11 +184,30 @@ def run(bankroll: float = _BANKROLL, ev_min: float = _EV_MIN, ds_min: float = _D
     print("  ✅  Analysis complete — zero external API calls made")
     print("=" * 65)
 
+    # ── Write JSON report if requested ────────────────────────────────────────
+    if output_path:
+        report = {
+            "generated_at":  datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "bankroll":      bankroll,
+            "ev_min":        ev_min,
+            "ds_min":        ds_min,
+            "wc_matches":    sm.n_matches if sm else 0,
+            "sniper_bets":   sniper_bets,
+            "skipped":       skipped,
+            "total_stake":   round(sum(b["stake"] for b in sniper_bets), 1),
+            "bet_count":     len(sniper_bets),
+        }
+        os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2, ensure_ascii=False)
+        print(f"\n  📄  Report written to: {output_path}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sniper Protocol Profit Engine")
     parser.add_argument("--bankroll", type=float, default=_BANKROLL)
     parser.add_argument("--ev-min",   type=float, default=_EV_MIN)
     parser.add_argument("--ds-min",   type=float, default=_DS_MIN)
+    parser.add_argument("--output",   type=str,   default="", help="Path to write JSON report")
     args = parser.parse_args()
-    run(bankroll=args.bankroll, ev_min=args.ev_min, ds_min=args.ds_min)
+    run(bankroll=args.bankroll, ev_min=args.ev_min, ds_min=args.ds_min, output_path=args.output)

@@ -1,23 +1,100 @@
 {
-  "generated_at": "2026-06-24T08:59:07Z",
+  "generated_at": "2026-06-24T09:00:31Z",
   "bankroll": 100.0,
   "ev_min": 0.1,
-  "ds_min": 70.0,
+  "ds_min": 60.0,
   "wc_matches": 10,
   "sniper_bets": [
+    {
+      "match": "Bosnia-Herzegovina vs Qatar",
+      "outcome": "Away Win",
+      "odds": 6.4,
+      "sim_prob": 0.29575,
+      "implied": 0.15625,
+      "edge": 0.1395,
+      "ev": 0.8928000000000003,
+      "ds": 66.4,
+      "stake": 4.1
+    },
+    {
+      "match": "Morocco vs Haiti",
+      "outcome": "Draw",
+      "odds": 6.0,
+      "sim_prob": 0.29065,
+      "implied": 0.16666666666666666,
+      "edge": 0.12398333333333336,
+      "ev": 0.7439,
+      "ds": 63.0,
+      "stake": 3.7
+    },
+    {
+      "match": "Morocco vs Haiti",
+      "outcome": "Away Win",
+      "odds": 12.5,
+      "sim_prob": 0.2545,
+      "implied": 0.08,
+      "edge": 0.1745,
+      "ev": 2.18125,
+      "ds": 65.9,
+      "stake": 4.7
+    },
+    {
+      "match": "Scotland vs Brazil",
+      "outcome": "Home Win",
+      "odds": 8.6,
+      "sim_prob": 0.26715,
+      "implied": 0.11627906976744186,
+      "edge": 0.15087093023255815,
+      "ev": 1.2974899999999998,
+      "ds": 66.7,
+      "stake": 4.3
+    },
     {
       "match": "South Africa vs South Korea",
       "outcome": "Home Win",
       "odds": 4.8,
-      "sim_prob": 0.3497,
+      "sim_prob": 0.3548,
       "implied": 0.20833333333333334,
-      "edge": 0.14136666666666667,
-      "ev": 0.67856,
-      "ds": 70.1,
-      "stake": 4.5
+      "edge": 0.14646666666666666,
+      "ev": 0.7030399999999999,
+      "ds": 71.5,
+      "stake": 4.6
+    },
+    {
+      "match": "Curaçao vs Ivory Coast",
+      "outcome": "Home Win",
+      "odds": 15.0,
+      "sim_prob": 0.29445,
+      "implied": 0.06666666666666667,
+      "edge": 0.22778333333333334,
+      "ev": 3.4167499999999995,
+      "ds": 68.4,
+      "stake": 6.1
+    },
+    {
+      "match": "Curaçao vs Ivory Coast",
+      "outcome": "Draw",
+      "odds": 6.6,
+      "sim_prob": 0.30835,
+      "implied": 0.15151515151515152,
+      "edge": 0.1568348484848485,
+      "ev": 1.03511,
+      "ds": 69.3,
+      "stake": 4.6
+    },
+    {
+      "match": "Tunisia vs Netherlands",
+      "outcome": "Home Win",
+      "odds": 17.0,
+      "sim_prob": 0.24075,
+      "implied": 0.058823529411764705,
+      "edge": 0.1819264705882353,
+      "ev": 3.0927499999999997,
+      "ds": 65.0,
+      "stake": 4.8
     }
   ],
   "skipped": [],
-  "total_stake": 4.5,
-  "bet_count": 1
+  "total_stake": 36.9,
+  "bet_count": 8
 }

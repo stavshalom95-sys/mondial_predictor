@@ -2,16 +2,16 @@ name: Mondial Predictor — Daily Run
 
 on:
   schedule:
-    # Primary: 06:00 UTC = 09:00 IDT (summer, UTC+3).
+    # Primary: 05:00 UTC = 08:00 IDT (summer, UTC+3).
     # WC 2026 latest games (21:00 PDT = 00:00 UTC) finish by ~02:00 UTC,
-    # giving a 4-hour safety margin before this run fetches results.
-    - cron: "0 6 * * *"
-    # Safety net 1: 06:30 UTC — catches GitHub scheduler lag (common 15–30 min delay).
-    - cron: "30 6 * * *"
-    # Safety net 2: 07:00 UTC — catches a complete 06:00 slot miss.
+    # giving a 3-hour safety margin before this run fetches results.
+    - cron: "0 5 * * *"
+    # Safety net 1: 05:30 UTC — catches GitHub scheduler lag (common 15–30 min delay).
+    - cron: "30 5 * * *"
+    # Safety net 2: 06:00 UTC — catches a complete 05:00 slot miss.
     # last_run.json guard ensures the pipeline runs only once per day regardless
     # of how many of these three slots actually fire.
-    - cron: "0 7 * * *"
+    - cron: "0 6 * * *"
 
   workflow_dispatch:
     inputs:

@@ -195,6 +195,7 @@ class DailyPick:
     poisson_p_home: Optional[float] = None   # analytical Poisson probability
     poisson_p_draw: Optional[float] = None
     poisson_p_away: Optional[float] = None
+    why_bullets:    Optional[list[str]] = None  # 3-5 bullets explaining the prediction
 
 
 def format_daily_message(
@@ -294,6 +295,12 @@ def format_daily_message(
 
         lines.append(f"   ⚽ *Final Prediction: {pick_desc}*")
         lines.append(f"   אסטרטגיה: {rec.strategy.value}")
+
+        # ── Why section ───────────────────────────────────────────────────────
+        if pick.why_bullets:
+            lines.append("   📌 *למה?*")
+            for _b in pick.why_bullets:
+                lines.append(f"      {_b}")
 
         # ── Supplementary context (ESPN / RapidAPI reasoning) ────────────────
         if pick.ai_reasoning:

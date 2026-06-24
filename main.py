@@ -798,6 +798,78 @@ def run_daily_pipeline(
         _src_label = "/".join(_context_sources) if _context_sources else "Internal"
         print(f"[context] Data sources active for {match.home_team} vs {match.away_team}: {_src_label}")
 
+        # ── Why Bullets — 3-5 short reasons shown in WhatsApp ───────────────
+        _why_bullets: list[str] = []
+
+        # 1. λ attack ratio (how lopsided the match is)
+        _lam_ratio = round(lam_h / lam_a, 2) if lam_a > 0.01 else 1.0
+        _lam_str   = f"λ H={lam_h:.1f} / A={lam_a:.1f}"
+        if _lam_ratio >= 1.6:
+            _why_bullets.append(f"⚡ {match.home_team} dominant ({_lam_ratio:.1f}× stronger, {_lam_str})")
+        elif _lam_ratio >= 1.2:
+            _why_bullets.append(f"📈 {match.home_team} has the edge ({_lam_str})")
+        elif _lam_ratio <= 0.625:
+            _why_bullets.append(f"⚡ {match.away_team} dominant ({round(1/_lam_ratio, 1)}× stronger, {_lam_str})")
+        elif _lam_ratio <= 0.833:
+            _why_bullets.append(f"📈 {match.away_team} has the edge ({_lam_str})")
+        else:
+            _why_bullets.append(f"⚖️ Even match ({_lam_str})")
+
+        # 2. WC form (only when a team scored noticeably above/below tournament avg)
+        _t_avg_why = (_form_cache.tournament_avg if _form_cache else None) or 1.52
+        for _wt, _wf in ((match.home_team, _h_form), (match.away_team, _a_form)):
+            if _wf and _wf.n_games > 0:
+                if _wf.goals_scored_avg > _t_avg_why * 1.15:
+                    _why_bullets.append(
+                        f"🔥 {_wt} in form: {_wf.goals_scored_avg:.1f}g/game (last {_wf.n_games})"
+                    )
+                elif _wf.goals_scored_avg < _t_avg_why * 0.80:
+                    _why_bullets.append(
+                        f"🧊 {_wt} low output: {_wf.goals_scored_avg:.1f}g/game (last {_wf.n_games})"
+                    )
+
+        # 3. Tournament motivation (only when multiplier moves λ by ≥ 5%)
+        if not _match_motivation.is_trivial():
+            _STATUS_HE = {
+                "must_win":             "חייב לנצח",
+                "need_draw":            "צריך תיקו",
+                "qualified_secure_1st": "מובטח ראשון — עשוי לנוח שחקנים",
+                "qualified":            "מוסמך — עשוי להחליף שחקנים",
+                "eliminated":           "מודח — מוריד עצימות",
+            }
+            for _mt, _mm in (
+                (match.home_team, _match_motivation.home),
+                (match.away_team, _match_motivation.away),
+            ):
+                if abs(_mm.lambda_multiplier - 1.0) >= 0.05:
+                    _ms = _STATUS_HE.get(_mm.qualification_status, _mm.qualification_status)
+                    _why_bullets.append(f"🎯 {_mt}: {_ms} (עצימות ×{_mm.lambda_multiplier:.2f})")
+
+        # 4. Winner market value (shown when model sees ≥ 5% edge over bookmaker)
+        _edge_data = [
+            (edge_h, sim.p_home, true_probs.home, odds_1x2.home, f"ניצחון {match.home_team}"),
+            (edge_d, sim.p_draw, true_probs.draw, odds_1x2.draw, "תיקו"),
+            (edge_a, sim.p_away, true_probs.away, odds_1x2.away, f"ניצחון {match.away_team}"),
+        ]
+        _top_edge = max(_edge_data, key=lambda x: x[0])
+        if _top_edge[0] >= 0.05:
+            _e, _bm, _bmkt, _bodd, _blbl = _top_edge
+            _why_bullets.append(
+                f"💡 VALUE: {_blbl} @ {_bodd:.2f}"
+                f" — מודל {_bm:.0%} vs שוק {_bmkt:.0%} (יתרון {_e:+.0%})"
+            )
+
+        # 5. Goals expectation (Over/Under 2.5 from DC matrix + sum_goals value flag)
+        if markets and markets.ou.get(2.5):
+            _ou25  = markets.ou[2.5]
+            _p_ov  = _ou25["p_over"]
+            _p_un  = _ou25["p_under"]
+            _exp_g = _ou25["expected_goals"]
+            _ou_extra = f" | 🔥 VALUE: {sg_value_bet} גולים" if sg_value_bet else ""
+            _why_bullets.append(
+                f"⚽ צפי {_exp_g:.1f} גולים — Over 2.5: {_p_ov:.0%} | Under 2.5: {_p_un:.0%}{_ou_extra}"
+            )
+
         ai_pick_prob = None
         ai_reasoning = None
         ensemble_pick = enhance(
@@ -835,6 +907,7 @@ def run_daily_pipeline(
             sg_value_bet            = sg_value_bet,
             tournament_context_lines = (_match_motivation.to_whatsapp_lines() or None) if _show_context else None,
             logic_chain    = _logic_chain,
+            why_bullets    = _why_bullets or None,
             # Simulation fields — drive final prediction in WhatsApp
             sim_score_home  = _sim_h,
             sim_score_away  = _sim_a,

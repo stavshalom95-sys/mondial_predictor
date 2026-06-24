@@ -45,6 +45,57 @@ def decision_score(prob: float, edge: float, ev: float) -> float:
     return round(100 * (0.50 * s_prob + 0.30 * s_edge + 0.20 * s_ev), 1)
 
 
+def combo_suggestion(candidates: list[dict], bankroll: float) -> dict | None:
+    """
+    Select top 3 candidates by DS score (one per match — no mutually-exclusive legs),
+    compute combined parlay probability/odds/EV, and return the result.
+
+    Returns None when fewer than 3 distinct matches are available.
+    The 'is_value' flag is True only when combined EV > 0.
+
+    Parlay math:
+      combined_prob = p1 × p2 × p3
+      combined_odds = o1 × o2 × o3
+      combined_ev   = combined_prob × combined_odds − 1
+      combo_stake   = max(combined_ev / (combined_odds − 1), 0) × ¼-Kelly × bankroll
+    """
+    if not candidates:
+        return None
+
+    # Best outcome per match, sorted by DS descending
+    seen: set[str] = set()
+    top3: list[dict] = []
+    for c in sorted(candidates, key=lambda x: x["ds"], reverse=True):
+        if c["match"] not in seen:
+            top3.append(c)
+            seen.add(c["match"])
+        if len(top3) == 3:
+            break
+
+    if len(top3) < 3:
+        return None
+
+    combined_prob = 1.0
+    combined_odds = 1.0
+    for leg in top3:
+        combined_prob *= leg["prob"]
+        combined_odds *= leg["odds"]
+
+    combined_ev = combined_prob * combined_odds - 1.0
+    net         = combined_odds - 1.0
+    kf_full     = max(combined_ev / net, 0.0) if net > 0 else 0.0
+    combo_stake = round(kf_full * _KF * bankroll, 1)
+
+    return {
+        "legs":          top3,
+        "combined_prob": round(combined_prob, 4),
+        "combined_odds": round(combined_odds, 2),
+        "combined_ev":   round(combined_ev,   4),
+        "combo_stake":   combo_stake,
+        "is_value":      combined_ev > 0.0,
+    }
+
+
 def run(
     bankroll:    float = _BANKROLL,
     min_prob:    float = _MIN_PROB,
@@ -104,8 +155,9 @@ def run(
     print(f"  ⚡ No external APIs called — internal model + history only")
     print("=" * 65)
 
-    sniper_bets: list[dict] = []
-    skipped:     list[str]  = []
+    sniper_bets:    list[dict] = []
+    all_candidates: list[dict] = []   # every evaluated outcome, for combo logic
+    skipped:        list[str]  = []
 
     for match_label, markets in matches.items():
         winner    = markets.get("winner", {})
@@ -145,6 +197,17 @@ def run(
             ds      = decision_score(prob, edge, ev)
             kf_full = max(ev / net, 0.0) if net > 0 else 0.0
             stake   = round(kf_full * _KF * bankroll, 1)
+
+            all_candidates.append({
+                "match":   match_label,
+                "outcome": label,
+                "odds":    dec_odds,
+                "prob":    prob,
+                "implied": implied,
+                "edge":    edge,
+                "ev":      ev,
+                "ds":      ds,
+            })
 
             below_prob = prob < min_prob
             passes     = not below_prob and ev >= ev_min and ds >= ds_min
@@ -190,6 +253,30 @@ def run(
             print(f"      💰  Stake: {b['stake']:.1f} NIS  (¼-Kelly × {bankroll:.0f} NIS)")
             print()
 
+    # ── Combo Suggestion ───────────────────────────────────────────────────────
+    combo = combo_suggestion(all_candidates, bankroll)
+    print()
+    print("=" * 65)
+    print("  🎰  COMBO SUGGESTION (Top 3 by DS — one leg per match)")
+    print("-" * 65)
+    if combo is None:
+        print("  ⏭  Not enough matches to build a 3-leg combo.")
+    else:
+        for i, leg in enumerate(combo["legs"], 1):
+            print(f"  Leg {i}: {leg['match']}")
+            print(f"         → {leg['outcome']:<10}  DS={leg['ds']:.0f}  "
+                  f"odds={leg['odds']:.2f}  sim={leg['prob']:.1%}")
+        print("-" * 65)
+        print(f"  Combined prob:  {combo['combined_prob']:.2%}")
+        print(f"  Combined odds:  {combo['combined_odds']:.2f}")
+        print(f"  Combined EV:    {combo['combined_ev']:+.1%}")
+        if combo["is_value"]:
+            print(f"  ✅  COMBO FLAGGED — positive EV!")
+            print(f"  💰  Combo stake: {combo['combo_stake']:.1f} NIS  (¼-Kelly × {bankroll:.0f} NIS)")
+        else:
+            print("  ❌  NOT flagged — combined EV is negative (house edge wins the parlay)")
+
+    print()
     print("=" * 65)
     print("  ✅  Analysis complete — zero external API calls made")
     print("=" * 65)
@@ -197,16 +284,17 @@ def run(
     # ── Write JSON report if requested ────────────────────────────────────────
     if output_path:
         report = {
-            "generated_at":  datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "bankroll":      bankroll,
-            "min_prob":      min_prob,
-            "ev_min":        ev_min,
-            "ds_min":        ds_min,
-            "wc_matches":    sm.n_matches if sm else 0,
-            "sniper_bets":   sniper_bets,
-            "skipped":       skipped,
-            "total_stake":   round(sum(b["stake"] for b in sniper_bets), 1),
-            "bet_count":     len(sniper_bets),
+            "generated_at":     datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "bankroll":         bankroll,
+            "min_prob":         min_prob,
+            "ev_min":           ev_min,
+            "ds_min":           ds_min,
+            "wc_matches":       sm.n_matches if sm else 0,
+            "sniper_bets":      sniper_bets,
+            "skipped":          skipped,
+            "total_stake":      round(sum(b["stake"] for b in sniper_bets), 1),
+            "bet_count":        len(sniper_bets),
+            "combo_suggestion": combo,
         }
         os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:

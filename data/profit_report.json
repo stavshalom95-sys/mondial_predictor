@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-24T09:04:21Z",
+  "generated_at": "2026-06-24T11:20:58Z",
   "bankroll": 100.0,
   "min_prob": 0.5,
   "ev_min": 0.1,
@@ -8,5 +8,44 @@
   "sniper_bets": [],
   "skipped": [],
   "total_stake": 0,
-  "bet_count": 0
+  "bet_count": 0,
+  "combo_suggestion": {
+    "legs": [
+      {
+        "match": "South Africa vs South Korea",
+        "outcome": "Home Win",
+        "odds": 4.8,
+        "prob": 0.35055,
+        "implied": 0.20833333333333334,
+        "edge": 0.14221666666666663,
+        "ev": 0.6826399999999999,
+        "ds": 70.4
+      },
+      {
+        "match": "Curaçao vs Ivory Coast",
+        "outcome": "Draw",
+        "odds": 6.6,
+        "prob": 0.31375,
+        "implied": 0.15151515151515152,
+        "edge": 0.16223484848484845,
+        "ev": 1.0707499999999999,
+        "ds": 69.6
+      },
+      {
+        "match": "Bosnia-Herzegovina vs Qatar",
+        "outcome": "Away Win",
+        "odds": 6.4,
+        "prob": 0.3054,
+        "implied": 0.15625,
+        "edge": 0.14915,
+        "ev": 0.9545600000000001,
+        "ds": 68.9
+      }
+    ],
+    "combined_prob": 0.0336,
+    "combined_odds": 202.75,
+    "combined_ev": 5.8103,
+    "combo_stake": 0.7,
+    "is_value": true
+  }
 }

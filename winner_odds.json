@@ -5,25 +5,9 @@
     "Jordan vs Algeria",
     "Portugal vs Uzbekistan",
     "England vs Ghana",
-    "Panama vs Croatia"
+    "Panama vs Croatia",
+    "Colombia vs Congo DR"
   ],
-  "Colombia vs Congo DR": {
-    "winner": {
-      "home": 0.0,
-      "draw": 0.0,
-      "away": 0.0
-    },
-    "sum_goals": {
-      "0-1": 0.0,
-      "2-3": 0.0,
-      "+4": 0.0
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
   "Switzerland vs Canada": {
     "winner": {
       "home": 0.0,

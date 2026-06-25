@@ -1057,7 +1057,7 @@
   },
   {
     "id": "537337",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-24T19:00:00Z",
     "home": "SUI",
@@ -1073,13 +1073,13 @@
       }
     },
     "score": {
-      "SUI": null,
-      "CAN": null
+      "SUI": 2,
+      "CAN": 1
     }
   },
   {
     "id": "537338",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-24T19:00:00Z",
     "home": "BIH",
@@ -1095,13 +1095,13 @@
       }
     },
     "score": {
-      "BIH": null,
-      "QAT": null
+      "BIH": 3,
+      "QAT": 1
     }
   },
   {
     "id": "537344",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-24T22:00:00Z",
     "home": "MAR",
@@ -1117,13 +1117,13 @@
       }
     },
     "score": {
-      "MAR": null,
-      "HAI": null
+      "MAR": 4,
+      "HAI": 2
     }
   },
   {
     "id": "537343",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-24T22:00:00Z",
     "home": "SCO",
@@ -1139,13 +1139,13 @@
       }
     },
     "score": {
-      "SCO": null,
-      "BRA": null
+      "SCO": 0,
+      "BRA": 3
     }
   },
   {
     "id": "537331",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-25T01:00:00Z",
     "home": "CZE",
@@ -1161,13 +1161,13 @@
       }
     },
     "score": {
-      "CZE": null,
-      "MEX": null
+      "CZE": 0,
+      "MEX": 3
     }
   },
   {
     "id": "537332",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-25T01:00:00Z",
     "home": "RSA",
@@ -1183,8 +1183,8 @@
       }
     },
     "score": {
-      "RSA": null,
-      "KOR": null
+      "RSA": 1,
+      "KOR": 0
     }
   },
   {

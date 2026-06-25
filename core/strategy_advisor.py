@@ -43,6 +43,7 @@ class TournamentContext:
     leader_points:     int
     matches_remaining: int          # overridden at runtime by data_pipeline
     current_stage:     TournamentStage = TournamentStage.GROUP_STAGE
+    standings_source:  str             = "fallback"  # "live" | "fallback"
 
     @property
     def point_gap(self) -> int:
@@ -50,8 +51,10 @@ class TournamentContext:
 
     @property
     def gap_per_match(self) -> float:
-        if self.matches_remaining == 0:
-            return float("inf")
+        if self.matches_remaining <= 0:
+            # No matches left → nothing to chase. Return 0 so the advisor
+            # always picks SAFE (protect whatever lead or position we have).
+            return 0.0
         return self.point_gap / self.matches_remaining
 
 

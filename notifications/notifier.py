@@ -224,6 +224,10 @@ def format_daily_message(
     """
     lines = [
         "⚽ *תחזית מונדיאל שטראוס - היום*",
+    ]
+    if getattr(context, "standings_source", "fallback") == "fallback":
+        lines.append("⚠️ _דירוגים: נתוני גיבוי (365Scores לא זמין) — פער עשוי להיות לא מעודכן_")
+    lines += [
         f"📊 מצב נוכחי: {context.my_points} נק' (אתה) | {context.leader_points} נק' (מוביל)",
         f"📉 פער: {context.point_gap} נק' | {context.matches_remaining} משחקים נותרו",
         "",
@@ -543,12 +547,20 @@ def send_whatsapp_message(
         "message": message,
     }
 
-    try:
-        resp = requests.post(url, json=payload, timeout=15)
-        resp.raise_for_status()
-        print("[notifier] WhatsApp message sent successfully.")
-        return True
-    except Exception as exc:
-        print(f"[notifier] WhatsApp send failed: {exc}")
-        print("[notifier] Message content:\n", message)
-        return False
+    import time
+    _delays = [0, 3, 5]   # wait 0s before attempt 1, 3s before attempt 2, 5s before attempt 3
+    for _attempt, _wait in enumerate(_delays, 1):
+        if _wait:
+            time.sleep(_wait)
+        try:
+            resp = requests.post(url, json=payload, timeout=15)
+            resp.raise_for_status()
+            print(f"[notifier] WhatsApp message sent successfully (attempt {_attempt}).")
+            return True
+        except Exception as exc:
+            print(f"[notifier] WhatsApp send failed (attempt {_attempt}/3): {exc}")
+
+    # All attempts exhausted — print to stdout so the pick is not lost
+    print("[notifier] All 3 send attempts failed. Message content:")
+    print(message)
+    return False

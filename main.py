@@ -432,6 +432,7 @@ def run_daily_pipeline(
                 perf_report["brier_score"] = _all_time["brier_score"]
 
     # ── Step 1: Live standings sync ──────────────────────────────────────────
+    _standings_source = "fallback"   # assume fallback until live data confirmed
     if dry_run:
         print("[pipeline] Dry run — skipping standings sync (using hardcoded state).")
     else:
@@ -440,6 +441,7 @@ def run_daily_pipeline(
             MY_CURRENT_STATE["my_points"]     = live_standings["my_points"]
             MY_CURRENT_STATE["leader_points"] = live_standings["leader_points"]
             MY_CURRENT_STATE["leader_name"]   = live_standings["leader_name"]
+            _standings_source = "live"
         else:
             print("[pipeline] Using hardcoded standings from tournament_state.py (365Scores sync unavailable).")
 
@@ -454,6 +456,7 @@ def run_daily_pipeline(
         my_points         = MY_CURRENT_STATE["my_points"],
         leader_points     = MY_CURRENT_STATE["leader_points"],
         matches_remaining = remaining,
+        standings_source  = _standings_source,
     )
     _gap = max(0, context.leader_points - context.my_points)
 
@@ -492,6 +495,19 @@ def run_daily_pipeline(
         return msg
 
     # ── Step 4: Match odds to today's schedule ────────────────────────────────
+    # Cross-check: flag any scheduled match that has no odds entry so the user
+    # knows to add a team-name alias to _TEAM_NAME_MAP in data/odds_fetcher.py.
+    _missing_odds: list[str] = []
+    for _m in todays_matches:
+        if _m.status != "final" and _find_odds_for_match(_m.home_team, _m.away_team, odds_map) is None:
+            _missing_odds.append(f"{_m.home_team} vs {_m.away_team}")
+    if _missing_odds:
+        print(f"[pipeline] ⚠️  {len(_missing_odds)} scheduled match(es) have NO odds — will use prior-only model:")
+        for _mn in _missing_odds:
+            print(f"[pipeline]   ✗ {_mn}  → check _TEAM_NAME_MAP in data/odds_fetcher.py")
+    else:
+        print(f"[pipeline] ✓ Odds coverage: all {len(todays_matches)} scheduled matches have odds.")
+
     # todays_matches already computed above (before dry-run exit)
 
     # Pre-load bookmaker odds once (no-op if winner_odds.json absent)

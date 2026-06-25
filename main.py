@@ -253,6 +253,35 @@ def calculate_lambda(home_team: str, away_team: str, strength_model) -> tuple[fl
 
 
 # ---------------------------------------------------------------------------
+# Competition pick helpers
+# ---------------------------------------------------------------------------
+
+def _competition_score_pick(sim, gap: int) -> tuple[int, int]:
+    """
+    Return the score to submit as the competition prediction.
+
+    Normal mode (gap < 8): modal score — maximises P(exact) + P(correct_direction).
+    Variance mode (gap >= 8): second-most-likely score in the SAME 1X2 direction.
+
+    Rationale: when behind, picking the same obvious scoreline as the field gives
+    zero differential gain. A same-direction but less-picked exact score gives
+    identical direction pts when wrong and +2 extra pts vs the field when correct.
+    """
+    _VARIANCE_THRESH = 8
+    modal_h, modal_a = sim.score_grid.most_likely_score()
+    if gap < _VARIANCE_THRESH:
+        return modal_h, modal_a
+
+    modal_dir = "1" if modal_h > modal_a else ("X" if modal_h == modal_a else "2")
+    for h, a, _ in sim.score_grid.top_scores(8)[1:]:   # skip index-0 (= modal)
+        cand_dir = "1" if h > a else ("X" if h == a else "2")
+        if cand_dir == modal_dir:
+            return h, a
+
+    return modal_h, modal_a   # no same-direction alt found in top-8
+
+
+# ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
 
@@ -406,6 +435,7 @@ def run_daily_pipeline(
         leader_points     = MY_CURRENT_STATE["leader_points"],
         matches_remaining = remaining,
     )
+    _gap = max(0, context.leader_points - context.my_points)
 
     # ── Always print today's schedule (visible in dry-run AND live run) ───────
     todays_matches = get_todays_matches(all_matches)
@@ -512,7 +542,7 @@ def run_daily_pipeline(
             _pr_matrix = _build_matrix(_pr_lh, _pr_la)
             _pr_model  = PoissonMatchModel(lambda_home=_pr_lh, lambda_away=_pr_la, _matrix=_pr_matrix)
             _pr_sim    = simulate(_pr_lh, _pr_la)
-            _pr_sh, _pr_sa = _pr_sim.score_grid.most_likely_score()
+            _pr_sh, _pr_sa = _competition_score_pick(_pr_sim, _gap)
 
             # Sub-markets (for O/U bullet)
             _pr_markets = None
@@ -603,6 +633,7 @@ def run_daily_pipeline(
                 "sim_p_draw":    round(_pr_sim.p_draw, 4),
                 "sim_p_away":    round(_pr_sim.p_away, 4),
                 "prior_only":    True,
+                "variance_mode": _gap >= 8,
                 "predicted_by":  "prior_only",
             })
             no_odds_matches.append(match)   # kept for reference; not shown as "no odds" in report
@@ -831,7 +862,7 @@ def run_daily_pipeline(
 
         # ── Monte Carlo Simulation (primary prediction engine) ───────────────
         sim = simulate(lam_h, lam_a)
-        _sim_h, _sim_a = sim.score_grid.most_likely_score()
+        _sim_h, _sim_a = _competition_score_pick(sim, _gap)
         _sim_score_pct  = sim.score_grid.probs[_sim_h][_sim_a]
         print(
             f"[sim] Poisson (analytical): "
@@ -1156,6 +1187,7 @@ def run_daily_pipeline(
             "kelly_value_bet":        _kvb.outcome      if _kvb else None,
             "kelly_value_bet_odds":   round(_kvb.decimal_odds, 3) if _kvb else None,
             "kelly_value_bet_stake":  round(_kvb_stake, 2) if _kvb_stake else None,
+            "variance_mode": _gap >= 8,
             "predicted_by": "ai_override" if (ensemble_pick and ensemble_pick.overrode_poisson) else "poisson_only",
         })
 

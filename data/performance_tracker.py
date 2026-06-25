@@ -162,6 +162,12 @@ def ingest_results(
             "bet_won":         bet_won,
             "pnl_nis":         pnl_nis,
             "predicted_by":    pick.get("predicted_by", "unknown"),
+            "sim_p_home":      pick.get("sim_p_home"),
+            "sim_p_draw":      pick.get("sim_p_draw"),
+            "sim_p_away":      pick.get("sim_p_away"),
+            "market_p_home":   pick.get("market_p_home"),
+            "market_p_draw":   pick.get("market_p_draw"),
+            "market_p_away":   pick.get("market_p_away"),
         }
         new_records.append(record)
         seen.add(dedup_key)
@@ -211,11 +217,8 @@ def compute_stats(records: list[dict]) -> dict:
     exact        = sum(1 for r in records if r.get("exact_match"))
     pts_earned   = sum(r.get("points_earned", 0)   for r in records)
     pts_possible = sum(r.get("points_possible", 0) for r in records)
-    # P&L: aggregate only records where a value bet was placed and result known
-    bet_records  = [r for r in records if r.get("pnl_nis") is not None]
-    pnl_total    = round(sum(r["pnl_nis"] for r in bet_records), 2) if bet_records else None
 
-    # Brier score (proper scoring rule) — lower is better; random baseline = 0.333
+    # Brier score (proper scoring rule) — lower is better; random baseline = 0.667
     brier = brier_score(records)
 
     # Per-source win rate breakdown
@@ -236,16 +239,48 @@ def compute_stats(records: list[dict]) -> dict:
         for src, v in by_source.items()
     }
 
+    # ── Betting: records where a real bet was placed and result known ─────────
+    bet_records = [r for r in records if r.get("pnl_nis") is not None]
+    pnl_total   = round(sum(r["pnl_nis"] for r in bet_records), 2) if bet_records else None
+    staked      = sum(r.get("kelly_value_bet_stake", 0) or 0 for r in bet_records)
+
+    # ── Alpha: model edge over market on actual outcomes ─────────────────────
+    edge_records = [
+        r for r in records
+        if r.get("sim_p_home") is not None and r.get("market_p_home") is not None
+        and r.get("actual_home") is not None and r.get("actual_away") is not None
+    ]
+    alpha_info = None
+    if edge_records:
+        def _actual_prob(r: dict, src: str) -> float:
+            ah, aa = int(r["actual_home"]), int(r["actual_away"])
+            if ah > aa:  return r.get(f"{src}_p_home", 0) or 0
+            if ah < aa:  return r.get(f"{src}_p_away", 0) or 0
+            return r.get(f"{src}_p_draw", 0) or 0
+        model_on_actual  = [_actual_prob(r, "sim")    for r in edge_records]
+        market_on_actual = [_actual_prob(r, "market") for r in edge_records]
+        alpha_info = round(
+            sum(model_on_actual) / len(model_on_actual) -
+            sum(market_on_actual) / len(market_on_actual),
+            4,
+        )
+
     return {
+        # ── Competition ───────────────────────────────────────────────────────
         "total":               total,
         "correct":             correct,
         "exact":               exact,
         "pts_earned":          pts_earned,
         "pts_possible":        pts_possible,
-        "pnl_nis":             pnl_total,
-        "bets_placed":         len(bet_records),
         "brier_score":         brier,
         "win_rate_by_source":  win_rate_by_source,
+        # ── Betting ───────────────────────────────────────────────────────────
+        "bets_placed":         len(bet_records),
+        "bets_won":            sum(1 for r in bet_records if r.get("bet_won")),
+        "pnl_nis":             pnl_total,
+        "roi":                 round(pnl_total / staked, 3) if staked else None,
+        # ── Alpha ─────────────────────────────────────────────────────────────
+        "model_vs_market_edge": alpha_info,  # +ve = model assigns higher prob to actual outcome
     }
 
 
@@ -267,7 +302,7 @@ def brier_score(records: list[dict]) -> Optional[float]:
     """
     scored_records = [
         r for r in records
-        if r.get("poisson_p_home") and r.get("poisson_p_draw") and r.get("poisson_p_away")
+        if (r.get("sim_p_home") or r.get("poisson_p_home"))
         and r.get("actual_home") is not None and r.get("actual_away") is not None
     ]
     if not scored_records:
@@ -275,9 +310,9 @@ def brier_score(records: list[dict]) -> Optional[float]:
 
     total_bs = 0.0
     for rec in scored_records:
-        ph = float(rec["poisson_p_home"])
-        pd = float(rec["poisson_p_draw"])
-        pa = float(rec["poisson_p_away"])
+        ph = float(rec.get("sim_p_home") or rec.get("poisson_p_home", 0))
+        pd = float(rec.get("sim_p_draw") or rec.get("poisson_p_draw", 0))
+        pa = float(rec.get("sim_p_away") or rec.get("poisson_p_away", 0))
 
         ah = int(rec["actual_home"])
         aa = int(rec["actual_away"])

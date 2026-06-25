@@ -41,7 +41,7 @@
         "goal_difference": -1,
         "points": 3,
         "position": 3,
-        "qualification_status": "eliminated"
+        "qualification_status": "third_place_bubble"
       },
       {
         "name": "Czechia",
@@ -95,7 +95,7 @@
         "goal_difference": -1,
         "points": 4,
         "position": 3,
-        "qualification_status": "eliminated"
+        "qualification_status": "third_place_bubble"
       },
       {
         "name": "Qatar",
@@ -149,7 +149,7 @@
         "goal_difference": -3,
         "points": 3,
         "position": 3,
-        "qualification_status": "eliminated"
+        "qualification_status": "third_place_bubble"
       },
       {
         "name": "Haiti",
@@ -260,7 +260,7 @@
         "qualification_status": "must_win"
       },
       {
-        "name": "Curaçao",
+        "name": "Curaֳ§ao",
         "played": 2,
         "won": 0,
         "drawn": 1,

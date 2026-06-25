@@ -1622,15 +1622,20 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-06-29T20:30:00Z",
-    "home": null,
+    "home": "GER",
     "away": null,
     "teams": {
+      "GER": {
+        "name": "Germany",
+        "abbreviation": "GER"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "GER": null,
       "null": null
     }
   },
@@ -1690,15 +1695,20 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-01T01:00:00Z",
-    "home": null,
+    "home": "MEX",
     "away": null,
     "teams": {
+      "MEX": {
+        "name": "Mexico",
+        "abbreviation": "MEX"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "MEX": null,
       "null": null
     }
   },
@@ -1741,15 +1751,20 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-02T00:00:00Z",
-    "home": null,
+    "home": "USA",
     "away": null,
     "teams": {
+      "USA": {
+        "name": "United States",
+        "abbreviation": "USA"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "USA": null,
       "null": null
     }
   },
@@ -1826,15 +1841,20 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-03T22:00:00Z",
-    "home": null,
+    "home": "ARG",
     "away": null,
     "teams": {
+      "ARG": {
+        "name": "Argentina",
+        "abbreviation": "ARG"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "ARG": null,
       "null": null
     }
   },

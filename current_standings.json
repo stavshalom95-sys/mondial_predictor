@@ -1,0 +1,153 @@
+{
+  "source": "User-provided standings extract (as of June 21, 2026)",
+  "note": "Groups A-H have played 2/3 games. Groups I-L have played 1/3 games.",
+  "goals_scored_total": 121,
+  "matches_played": 40,
+  "avg_goals_per_match": 3.02,
+  "groups": [
+    {
+      "group": "A",
+      "games_played_per_team": 2,
+      "standings": [
+        {"rank": 1, "team": "Mexico",       "P": 2, "W": 2, "D": 0, "L": 0, "GF": 3, "GA": 0, "GD": 3,  "Pts": 6},
+        {"rank": 2, "team": "Korea Republic","P": 2, "W": 1, "D": 0, "L": 1, "GF": 2, "GA": 2, "GD": 0,  "Pts": 3},
+        {"rank": 3, "team": "Czechia",       "P": 2, "W": 0, "D": 1, "L": 1, "GF": 2, "GA": 3, "GD": -1, "Pts": 1},
+        {"rank": 4, "team": "South Africa",  "P": 2, "W": 0, "D": 1, "L": 1, "GF": 1, "GA": 3, "GD": -2, "Pts": 1}
+      ]
+    },
+    {
+      "group": "B",
+      "games_played_per_team": 2,
+      "standings": [
+        {"rank": 1, "team": "Canada",               "P": 2, "W": 1, "D": 1, "L": 0, "GF": 7, "GA": 1, "GD": 6,  "Pts": 4},
+        {"rank": 2, "team": "Switzerland",           "P": 2, "W": 1, "D": 1, "L": 0, "GF": 5, "GA": 2, "GD": 3,  "Pts": 4},
+        {"rank": 3, "team": "Bosnia and Herzegovina","P": 2, "W": 0, "D": 1, "L": 1, "GF": 2, "GA": 5, "GD": -3, "Pts": 1},
+        {"rank": 4, "team": "Qatar",                 "P": 2, "W": 0, "D": 1, "L": 1, "GF": 1, "GA": 7, "GD": -6, "Pts": 1}
+      ]
+    },
+    {
+      "group": "C",
+      "games_played_per_team": 2,
+      "standings": [
+        {"rank": 1, "team": "Brazil",   "P": 2, "W": 1, "D": 1, "L": 0, "GF": 4, "GA": 1, "GD": 3,  "Pts": 4},
+        {"rank": 2, "team": "Morocco",  "P": 2, "W": 1, "D": 1, "L": 0, "GF": 2, "GA": 1, "GD": 1,  "Pts": 4},
+        {"rank": 3, "team": "Scotland", "P": 2, "W": 1, "D": 0, "L": 1, "GF": 1, "GA": 1, "GD": 0,  "Pts": 3},
+        {"rank": 4, "team": "Haiti",    "P": 2, "W": 0, "D": 0, "L": 2, "GF": 0, "GA": 4, "GD": -4, "Pts": 0}
+      ]
+    },
+    {
+      "group": "D",
+      "games_played_per_team": 2,
+      "standings": [
+        {"rank": 1, "team": "USA",       "P": 2, "W": 2, "D": 0, "L": 0, "GF": 6, "GA": 1, "GD": 5,  "Pts": 6},
+        {"rank": 2, "team": "Australia", "P": 2, "W": 1, "D": 0, "L": 1, "GF": 2, "GA": 2, "GD": 0,  "Pts": 3},
+        {"rank": 3, "team": "Paraguay",  "P": 2, "W": 1, "D": 0, "L": 1, "GF": 2, "GA": 4, "GD": -2, "Pts": 3},
+        {"rank": 4, "team": "Türkiye",   "P": 2, "W": 0, "D": 0, "L": 2, "GF": 0, "GA": 3, "GD": -3, "Pts": 0}
+      ]
+    },
+    {
+      "group": "E",
+      "games_played_per_team": 2,
+      "standings": [
+        {"rank": 1, "team": "Germany",       "P": 2, "W": 2, "D": 0, "L": 0, "GF": 9, "GA": 2, "GD": 7,  "Pts": 6},
+        {"rank": 2, "team": "Côte d'Ivoire", "P": 2, "W": 1, "D": 0, "L": 1, "GF": 2, "GA": 2, "GD": 0,  "Pts": 3},
+        {"rank": 3, "team": "Ecuador",       "P": 2, "W": 0, "D": 1, "L": 1, "GF": 0, "GA": 1, "GD": -1, "Pts": 1},
+        {"rank": 4, "team": "Curaçao",       "P": 2, "W": 0, "D": 1, "L": 1, "GF": 1, "GA": 7, "GD": -6, "Pts": 1}
+      ]
+    },
+    {
+      "group": "F",
+      "games_played_per_team": 2,
+      "standings": [
+        {"rank": 1, "team": "Netherlands", "P": 2, "W": 1, "D": 1, "L": 0, "GF": 7, "GA": 3, "GD": 4,  "Pts": 4},
+        {"rank": 2, "team": "Japan",       "P": 2, "W": 1, "D": 1, "L": 0, "GF": 6, "GA": 2, "GD": 4,  "Pts": 4},
+        {"rank": 3, "team": "Sweden",      "P": 2, "W": 1, "D": 0, "L": 1, "GF": 6, "GA": 6, "GD": 0,  "Pts": 3},
+        {"rank": 4, "team": "Tunisia",     "P": 2, "W": 0, "D": 0, "L": 2, "GF": 1, "GA": 9, "GD": -8, "Pts": 0}
+      ]
+    },
+    {
+      "group": "G",
+      "games_played_per_team": 2,
+      "standings": [
+        {"rank": 1, "team": "Egypt",       "P": 2, "W": 1, "D": 1, "L": 0, "GF": 4, "GA": 2, "GD": 2,  "Pts": 4},
+        {"rank": 2, "team": "IR Iran",     "P": 2, "W": 0, "D": 2, "L": 0, "GF": 2, "GA": 2, "GD": 0,  "Pts": 2},
+        {"rank": 3, "team": "Belgium",     "P": 2, "W": 0, "D": 2, "L": 0, "GF": 1, "GA": 1, "GD": 0,  "Pts": 2},
+        {"rank": 4, "team": "New Zealand", "P": 2, "W": 0, "D": 1, "L": 1, "GF": 3, "GA": 5, "GD": -2, "Pts": 1}
+      ]
+    },
+    {
+      "group": "H",
+      "games_played_per_team": 2,
+      "standings": [
+        {"rank": 1, "team": "Spain",        "P": 2, "W": 1, "D": 1, "L": 0, "GF": 4, "GA": 0, "GD": 4,  "Pts": 4},
+        {"rank": 2, "team": "Uruguay",      "P": 2, "W": 0, "D": 2, "L": 0, "GF": 3, "GA": 3, "GD": 0,  "Pts": 2},
+        {"rank": 3, "team": "Cabo Verde",   "P": 2, "W": 0, "D": 2, "L": 0, "GF": 2, "GA": 2, "GD": 0,  "Pts": 2},
+        {"rank": 4, "team": "Saudi Arabia", "P": 2, "W": 0, "D": 1, "L": 1, "GF": 1, "GA": 5, "GD": -4, "Pts": 1}
+      ]
+    },
+    {
+      "group": "I",
+      "games_played_per_team": 1,
+      "standings": [
+        {"rank": 1, "team": "Norway",  "P": 1, "W": 1, "D": 0, "L": 0, "GF": 4, "GA": 1, "GD": 3,  "Pts": 3},
+        {"rank": 2, "team": "France",  "P": 1, "W": 1, "D": 0, "L": 0, "GF": 3, "GA": 1, "GD": 2,  "Pts": 3},
+        {"rank": 3, "team": "Senegal", "P": 1, "W": 0, "D": 0, "L": 1, "GF": 1, "GA": 3, "GD": -2, "Pts": 0},
+        {"rank": 4, "team": "Iraq",    "P": 1, "W": 0, "D": 0, "L": 1, "GF": 1, "GA": 4, "GD": -3, "Pts": 0}
+      ]
+    },
+    {
+      "group": "J",
+      "games_played_per_team": 1,
+      "standings": [
+        {"rank": 1, "team": "Argentina", "P": 1, "W": 1, "D": 0, "L": 0, "GF": 3, "GA": 0, "GD": 3,  "Pts": 3},
+        {"rank": 2, "team": "Austria",   "P": 1, "W": 1, "D": 0, "L": 0, "GF": 3, "GA": 1, "GD": 2,  "Pts": 3},
+        {"rank": 3, "team": "Jordan",    "P": 1, "W": 0, "D": 0, "L": 1, "GF": 1, "GA": 3, "GD": -2, "Pts": 0},
+        {"rank": 4, "team": "Algeria",   "P": 1, "W": 0, "D": 0, "L": 1, "GF": 0, "GA": 3, "GD": -3, "Pts": 0}
+      ]
+    },
+    {
+      "group": "K",
+      "games_played_per_team": 1,
+      "standings": [
+        {"rank": 1, "team": "Colombia",   "P": 1, "W": 1, "D": 0, "L": 0, "GF": 3, "GA": 1, "GD": 2,  "Pts": 3},
+        {"rank": 2, "team": "Congo DR",   "P": 1, "W": 0, "D": 1, "L": 0, "GF": 1, "GA": 1, "GD": 0,  "Pts": 1},
+        {"rank": 3, "team": "Portugal",   "P": 1, "W": 0, "D": 1, "L": 0, "GF": 1, "GA": 1, "GD": 0,  "Pts": 1},
+        {"rank": 4, "team": "Uzbekistan", "P": 1, "W": 0, "D": 0, "L": 1, "GF": 1, "GA": 3, "GD": -2, "Pts": 0}
+      ]
+    },
+    {
+      "group": "L",
+      "games_played_per_team": 1,
+      "standings": [
+        {"rank": 1, "team": "England", "P": 1, "W": 1, "D": 0, "L": 0, "GF": 4, "GA": 2, "GD": 2,  "Pts": 3},
+        {"rank": 2, "team": "Ghana",   "P": 1, "W": 1, "D": 0, "L": 0, "GF": 1, "GA": 0, "GD": 1,  "Pts": 3},
+        {"rank": 3, "team": "Panama",  "P": 1, "W": 0, "D": 0, "L": 1, "GF": 0, "GA": 1, "GD": -1, "Pts": 0},
+        {"rank": 4, "team": "Croatia", "P": 1, "W": 0, "D": 0, "L": 1, "GF": 2, "GA": 4, "GD": -2, "Pts": 0}
+      ]
+    }
+  ],
+  "top_scorers": [
+    {"goals": 3, "player": "Lionel Messi",   "team": "Argentina"},
+    {"goals": 3, "player": "Jonathan David", "team": "Canada"},
+    {"goals": 3, "player": "Deniz Undav",    "team": "Germany"},
+    {"goals": 2, "player": "Matheus Cunha",       "team": "Brazil"},
+    {"goals": 2, "player": "Vinícius Júnior",     "team": "Brazil"},
+    {"goals": 2, "player": "Cyle Larin",          "team": "Canada"},
+    {"goals": 2, "player": "Harry Kane",          "team": "England"},
+    {"goals": 2, "player": "Kylian Mbappé",       "team": "France"},
+    {"goals": 2, "player": "Kai Havertz",         "team": "Germany"},
+    {"goals": 2, "player": "Daichi Kamada",       "team": "Japan"},
+    {"goals": 2, "player": "Ayase Ueda",          "team": "Japan"},
+    {"goals": 2, "player": "Ismael Saibari",      "team": "Morocco"},
+    {"goals": 2, "player": "Brian Brobbey",       "team": "Netherlands"},
+    {"goals": 2, "player": "Cody Gakpo",          "team": "Netherlands"},
+    {"goals": 2, "player": "Crysencio Summerville","team": "Netherlands"},
+    {"goals": 2, "player": "Elijah Just",         "team": "New Zealand"},
+    {"goals": 2, "player": "Erling Haaland",      "team": "Norway"},
+    {"goals": 2, "player": "Mikel Oyarzabal",     "team": "Spain"},
+    {"goals": 2, "player": "Yasin Ayari",         "team": "Sweden"},
+    {"goals": 2, "player": "Johan Manzambi",      "team": "Switzerland"},
+    {"goals": 2, "player": "Folarin Balogun",     "team": "USA"},
+    {"goals": 2, "player": "Maximiliano Araújo",  "team": "Uruguay"}
+  ]
+}

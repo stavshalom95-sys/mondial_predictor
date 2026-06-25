@@ -213,6 +213,10 @@ def compute_stats(records: list[dict]) -> dict:
     # P&L: aggregate only records where a value bet was placed and result known
     bet_records  = [r for r in records if r.get("pnl_nis") is not None]
     pnl_total    = round(sum(r["pnl_nis"] for r in bet_records), 2) if bet_records else None
+
+    # Brier score (proper scoring rule) — lower is better; random baseline = 0.333
+    brier = brier_score(records)
+
     return {
         "total":        total,
         "correct":      correct,
@@ -221,7 +225,51 @@ def compute_stats(records: list[dict]) -> dict:
         "pts_possible": pts_possible,
         "pnl_nis":      pnl_total,
         "bets_placed":  len(bet_records),
+        "brier_score":  brier,
     }
+
+
+def brier_score(records: list[dict]) -> Optional[float]:
+    """
+    Multi-class Brier score for 1X2 outcome predictions.
+
+    AI Research Skills: brainstorming-research-ideas Framework 4 (Cross-Pollination).
+    Proper scoring rule from meteorological forecasting (Brier 1950), adopted
+    by ML for probability calibration assessment.
+
+    Score = (1/N) * Σ [ (p_home - y_home)² + (p_draw - y_draw)² + (p_away - y_away)² ]
+    where y_* ∈ {0, 1} is the one-hot actual outcome.
+
+    Range: 0 (perfect) to 2 (maximally wrong). Random baseline for 3-class = 0.667.
+
+    Requires records to have poisson_p_home/poisson_p_draw/poisson_p_away fields.
+    Returns None when no records have these stored probabilities.
+    """
+    scored_records = [
+        r for r in records
+        if r.get("poisson_p_home") and r.get("poisson_p_draw") and r.get("poisson_p_away")
+        and r.get("actual_home") is not None and r.get("actual_away") is not None
+    ]
+    if not scored_records:
+        return None
+
+    total_bs = 0.0
+    for rec in scored_records:
+        ph = float(rec["poisson_p_home"])
+        pd = float(rec["poisson_p_draw"])
+        pa = float(rec["poisson_p_away"])
+
+        ah = int(rec["actual_home"])
+        aa = int(rec["actual_away"])
+
+        # One-hot encode actual outcome
+        y_home = 1.0 if ah > aa else 0.0
+        y_draw = 1.0 if ah == aa else 0.0
+        y_away = 1.0 if ah < aa else 0.0
+
+        total_bs += (ph - y_home)**2 + (pd - y_draw)**2 + (pa - y_away)**2
+
+    return round(total_bs / len(scored_records), 4)
 
 
 # ---------------------------------------------------------------------------

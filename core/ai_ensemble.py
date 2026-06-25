@@ -4,27 +4,40 @@ ai_ensemble.py — Claude contextual calibration layer.
 Takes the Poisson top-3 candidates + live match context (injuries, form, lineups)
 and returns the best exact score prediction with a brief reasoning note.
 
-Model  : claude-opus-4-6 with adaptive thinking.
-Output : structured JSON via output_config (Pydantic-compatible schema).
-Cost   : ~$0.01–0.03 per match call with Opus 4.6 (well within budget).
+Model  : claude-opus-4-6
+Output : Pydantic-validated structured output via `instructor` (auto-retry on
+         malformed JSON, type coercion, validation error feedback to model).
+         Falls back to raw Anthropic SDK if instructor not installed.
+Cost   : ~$0.01–0.03 per match call with Opus 4.6.
 
-New env var / GitHub Secret: ANTHROPIC_API_KEY
+AI Research Skills applied:
+  - instructor skill (16-prompt-engineering/instructor): Pydantic + auto-retry
+  - brainstorming-research-ideas Framework 6 (Failure Analysis):
+      previous output_config+thinking approach failed silently on schema mismatches;
+      instructor fixes this with max_retries=2 + validation error feedback.
 """
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
-from typing import Optional
+from typing import Literal, Optional
 
 from config.scoring_rules import TournamentStage
 from core.poisson_engine import PoissonMatchModel, ScoreProb
 
+# ── Optional dependency checks ───────────────────────────────────────────────
 try:
     import anthropic as _anthropic
     _SDK_AVAILABLE = True
 except ImportError:
     _SDK_AVAILABLE = False
+
+try:
+    import instructor as _instructor
+    from pydantic import BaseModel, Field
+    _INSTRUCTOR_AVAILABLE = True
+except ImportError:
+    _INSTRUCTOR_AVAILABLE = False
 
 _MODEL = "claude-opus-4-6"
 
@@ -42,49 +55,17 @@ Guidelines:
 - Be direct: state whether context reinforces or challenges the statistical baseline.
 """
 
-# JSON schema for structured output (additionalProperties: false required by API)
-_OUTPUT_SCHEMA: dict = {
-    "type": "json_schema",
-    "schema": {
-        "type": "object",
-        "properties": {
-            "chosen_home_goals": {
-                "type": "integer",
-                "description": "Predicted home team goals (0–5)",
-            },
-            "chosen_away_goals": {
-                "type": "integer",
-                "description": "Predicted away team goals (0–5)",
-            },
-            "reasoning": {
-                "type": "string",
-                "description": "1–2 sentence explanation shown to the user in WhatsApp",
-            },
-            "confidence_level": {
-                "type": "string",
-                "enum": ["high", "medium", "low"],
-                "description": "How much context shifts the pick vs. pure statistics",
-            },
-            "overrode_poisson": {
-                "type": "boolean",
-                "description": "True if the chosen score differs from the Poisson #1 pick",
-            },
-        },
-        "required": [
-            "chosen_home_goals",
-            "chosen_away_goals",
-            "reasoning",
-            "confidence_level",
-            "overrode_poisson",
-        ],
-        "additionalProperties": False,
-    },
-}
+# ── Pydantic schema (instructor-validated) ───────────────────────────────────
+if _INSTRUCTOR_AVAILABLE:
+    class _EnsembleSchema(BaseModel):
+        chosen_home_goals: int = Field(..., ge=0, le=5, description="Predicted home team goals (0-5)")
+        chosen_away_goals: int = Field(..., ge=0, le=5, description="Predicted away team goals (0-5)")
+        reasoning:         str = Field(..., description="1-2 sentence explanation for the WhatsApp message")
+        confidence_level:  Literal["high", "medium", "low"] = Field(..., description="How much context shifts the pick vs. pure statistics")
+        overrode_poisson:  bool = Field(..., description="True if the chosen score differs from the Poisson #1 pick")
 
 
-# ---------------------------------------------------------------------------
-# Public data class
-# ---------------------------------------------------------------------------
+# ── Public data class ────────────────────────────────────────────────────────
 
 @dataclass
 class EnsemblePick:
@@ -95,7 +76,6 @@ class EnsemblePick:
     overrode_poisson:  bool
 
     def to_score_prob(self, model: PoissonMatchModel) -> ScoreProb:
-        """Convert to a ScoreProb using the probability from the Poisson model."""
         prob = model.probability_of(self.chosen_home_goals, self.chosen_away_goals)
         return ScoreProb(
             home_goals  = self.chosen_home_goals,
@@ -104,11 +84,9 @@ class EnsemblePick:
         )
 
 
-# ---------------------------------------------------------------------------
-# Private helpers
-# ---------------------------------------------------------------------------
+# ── Private helpers ──────────────────────────────────────────────────────────
 
-_HIGH_VALUE_THRESHOLD = 0.20   # edge at which simulation outweighs Poisson exact-score bias
+_HIGH_VALUE_THRESHOLD = 0.20
 
 
 def _build_user_prompt(
@@ -127,7 +105,6 @@ def _build_user_prompt(
         for i, c in enumerate(top3)
     )
 
-    # Tournament context (rotation / motivation) is injected FIRST — highest priority
     parts: list[str] = []
     if tournament_context_section.strip():
         parts.append(tournament_context_section.strip())
@@ -137,7 +114,6 @@ def _build_user_prompt(
         "No live context available — base your decision on statistics only."
     )
 
-    # VALUE ALERT: injected when simulation edge over market is significant
     value_alert = ""
     if value_bet_edge >= _HIGH_VALUE_THRESHOLD:
         value_alert = (
@@ -164,9 +140,17 @@ def _build_user_prompt(
     )
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+def _pick_from_dict(data: dict) -> EnsemblePick:
+    return EnsemblePick(
+        chosen_home_goals = int(data["chosen_home_goals"]),
+        chosen_away_goals = int(data["chosen_away_goals"]),
+        reasoning         = str(data["reasoning"]),
+        confidence_level  = str(data.get("confidence_level", "medium")),
+        overrode_poisson  = bool(data.get("overrode_poisson", False)),
+    )
+
+
+# ── Public API ───────────────────────────────────────────────────────────────
 
 def enhance(
     home_team:                  str,
@@ -182,17 +166,9 @@ def enhance(
     """
     Call Claude to select the best exact score given Poisson stats + live context.
 
-    Args:
-        home_team: Schedule home team name.
-        away_team: Schedule away team name.
-        stage: TournamentStage (affects prompt framing).
-        model: Calibrated PoissonMatchModel for this match.
-        context_section: Text block from MatchContext.to_prompt_section() (may be "").
-        api_key: ANTHROPIC_API_KEY. Falls back to env var.
-
-    Returns:
-        EnsemblePick with chosen score + reasoning, or None on any failure.
-        On failure the caller should fall back to Poisson #1.
+    Uses instructor (Pydantic + auto-retry) when available, falls back to
+    raw Anthropic SDK otherwise. Returns None on any failure — caller falls
+    back to Poisson #1.
     """
     if not _SDK_AVAILABLE:
         print("[ensemble] 'anthropic' package not installed — skipping AI ensemble.")
@@ -209,40 +185,55 @@ def enhance(
             f"injecting value-priority directive into prompt."
         )
 
-    client = _anthropic.Anthropic(api_key=api_key)
-    prompt = _build_user_prompt(
+    prompt   = _build_user_prompt(
         home_team, away_team, stage, model, context_section,
         value_bet_edge, value_bet_outcome, tournament_context_section,
     )
-
+    messages = [{"role": "user", "content": prompt}]
     print(f"[ensemble] Calling {_MODEL} for {home_team} vs {away_team}...")
 
     try:
-        response = client.messages.create(
-            model        = _MODEL,
-            max_tokens   = 1024,
-            thinking     = {"type": "adaptive"},
-            system       = _SYSTEM_PROMPT,
-            messages     = [{"role": "user", "content": prompt}],
-            output_config= {"format": _OUTPUT_SCHEMA},
-        )
+        # ── Path A: instructor — Pydantic + auto-retry (preferred) ───────────
+        if _INSTRUCTOR_AVAILABLE:
+            client = _instructor.from_anthropic(_anthropic.Anthropic(api_key=api_key))
+            raw    = client.messages.create(
+                model          = _MODEL,
+                max_tokens     = 1024,
+                system         = _SYSTEM_PROMPT,
+                messages       = messages,
+                response_model = _EnsembleSchema,
+                max_retries    = 2,
+            )
+            pick = EnsemblePick(
+                chosen_home_goals = raw.chosen_home_goals,
+                chosen_away_goals = raw.chosen_away_goals,
+                reasoning         = raw.reasoning,
+                confidence_level  = raw.confidence_level,
+                overrode_poisson  = raw.overrode_poisson,
+            )
 
-        # Adaptive thinking returns thinking + text blocks; extract the text block.
-        text_block = next(
-            (b for b in response.content if b.type == "text"), None
-        )
-        if text_block is None:
-            print("[ensemble] No text block in response — falling back to Poisson.")
-            return None
-
-        data = json.loads(text_block.text)
-        pick = EnsemblePick(
-            chosen_home_goals = int(data["chosen_home_goals"]),
-            chosen_away_goals = int(data["chosen_away_goals"]),
-            reasoning         = str(data["reasoning"]),
-            confidence_level  = str(data.get("confidence_level", "medium")),
-            overrode_poisson  = bool(data.get("overrode_poisson", False)),
-        )
+        # ── Path B: raw SDK — simple text response + JSON parse ───────────────
+        else:
+            import json
+            print("[ensemble] instructor not installed — using raw SDK fallback.")
+            client   = _anthropic.Anthropic(api_key=api_key)
+            response = client.messages.create(
+                model    = _MODEL,
+                max_tokens = 1024,
+                system   = _SYSTEM_PROMPT,
+                messages = messages,
+            )
+            text_block = next((b for b in response.content if b.type == "text"), None)
+            if text_block is None:
+                print("[ensemble] No text block in response — falling back to Poisson.")
+                return None
+            # Extract JSON from response (may be wrapped in markdown code fence)
+            text = text_block.text.strip()
+            if "```" in text:
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+            pick = _pick_from_dict(json.loads(text.strip()))
 
         override_note = " [DEVIATED from Poisson #1]" if pick.overrode_poisson else ""
         print(

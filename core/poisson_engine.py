@@ -250,6 +250,33 @@ def calibrate(
                 best_loss = loss
                 best_lh, best_la = lh, la
 
+    # ── scipy polish (v3): continuous optimisation from grid best-point ───────
+    # The grid search finds the nearest discrete optimum (step 0.02).
+    # Nelder-Mead refines it to the true continuous minimum with ~100 evaluations.
+    # Falls back silently when scipy is not installed.
+    try:
+        from scipy.optimize import minimize as _sp_min  # optional dependency
+
+        def _obj(x: list[float]) -> float:
+            lh_, la_ = x
+            if lh_ <= 0.01 or la_ <= 0.01:
+                return 1e6
+            mat_ = _build_matrix(lh_, la_)
+            ph_, pd_, pa_ = _matrix_1x2(mat_)
+            return _loss(ph_, pd_, pa_, true_probs)
+
+        res = _sp_min(
+            _obj,
+            x0=[best_lh, best_la],
+            method="Nelder-Mead",
+            options={"xatol": 1e-5, "fatol": 1e-9, "maxiter": 300},
+        )
+        if res.fun < best_loss and res.x[0] > 0.01 and res.x[1] > 0.01:
+            best_lh = round(float(res.x[0]), 4)
+            best_la = round(float(res.x[1]), 4)
+    except Exception:
+        pass  # grid result stands
+
     matrix = _build_matrix(best_lh, best_la)
     return PoissonMatchModel(lambda_home=best_lh, lambda_away=best_la, _matrix=matrix)
 

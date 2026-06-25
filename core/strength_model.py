@@ -38,7 +38,28 @@ from dataclasses import dataclass, field
 
 MIN_MATCHES  = 3     # fewer than this → return None (not enough data)
 MIN_BLEND    = 8     # fewer than this → skip blending in main.py, log info only
-BLEND_WEIGHT = 0.20  # 80% market odds  +  20% historical strength
+BLEND_WEIGHT = 0.20  # static fallback — prefer dynamic_blend_weight() in main.py
+
+
+def dynamic_blend_weight(n_matches: int) -> float:
+    """
+    Returns the strength-model blend weight as a function of WC matches played.
+
+    AI Research Skills: brainstorming-research-ideas Framework 5 (What Changed).
+    Early tournament: few samples → trust market odds more (low weight).
+    Late tournament:  many samples → historical strength is more informative.
+
+    Growth: 5% at 0 matches → 35% at 60+ matches (linear ramp, capped).
+    Formula: w = min(0.35, 0.05 + n_matches * 0.005)
+
+    Examples:
+        0  matches played → 5%   (almost pure market odds)
+        8  matches played → 9%   (just past MIN_BLEND gate)
+        20 matches played → 15%
+        40 matches played → 25%
+        60 matches played → 35%  (cap)
+    """
+    return round(min(0.35, 0.05 + n_matches * 0.005), 3)
 
 
 # ---------------------------------------------------------------------------

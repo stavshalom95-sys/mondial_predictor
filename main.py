@@ -55,7 +55,8 @@ from core.bias_corrector import build_bias_corrector
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket, build_probability_ticket, build_confidence_value_ticket, ConfidenceTicket
 from core.simulator import simulate
-from core.strength_model import build_strength_model, MIN_BLEND, BLEND_WEIGHT, _norm as _sm_norm
+from core.strength_model import build_strength_model, MIN_BLEND, BLEND_WEIGHT, dynamic_blend_weight, _norm as _sm_norm
+from core.calibration import build_calibrator
 from core.market_calculator import calculate_all_markets
 from data.winner_odds_loader import enrich_picks, get_all_odds, find_match_odds
 from data.motivation import load_group_tables, build_match_motivation
@@ -357,6 +358,16 @@ def run_daily_pipeline(
             print(f"[pipeline] Warning: result ingestion failed: {exc}")
             perf_report = yesterday_stats(history)
 
+    # ── Build probability calibrator from WC history ─────────────────────────
+    # AI Research Skills: temperature-scaling (cross-pollinated from ML calibration)
+    _calibrator = build_calibrator(history)
+    print(_calibrator.summary())
+
+    # ── Dynamic blend weight: grows with WC match count ───────────────────────
+    _n_completed = len(combined_results) if combined_results else 0
+    _dyn_blend   = dynamic_blend_weight(_n_completed)
+    print(f"[strength] dynamic blend weight: {_dyn_blend:.1%} ({_n_completed} completed matches)")
+
     # ── Augment perf_report with all-time tournament stats ───────────────────
     if history:
         _all_time = compute_stats(history)
@@ -368,6 +379,8 @@ def run_daily_pipeline(
             perf_report["all_time_hit_rate"] = round(_all_time["correct"] / _all_time["total"], 3)
             if _all_time.get("pnl_nis") is not None:
                 perf_report["all_time_pnl"] = _all_time["pnl_nis"]
+            if _all_time.get("brier_score") is not None:
+                perf_report["brier_score"] = _all_time["brier_score"]
 
     # ── Step 1: Live standings sync ──────────────────────────────────────────
     if dry_run:
@@ -640,8 +653,8 @@ def run_daily_pipeline(
         _lam_a_market = model.lambda_away
 
         if str_lh and strength_model and strength_model.n_matches >= MIN_BLEND:
-            lam_h = round((1 - BLEND_WEIGHT) * model.lambda_home + BLEND_WEIGHT * str_lh, 3)
-            lam_a = round((1 - BLEND_WEIGHT) * model.lambda_away + BLEND_WEIGHT * str_la, 3)
+            lam_h = round((1 - _dyn_blend) * model.lambda_home + _dyn_blend * str_lh, 3)
+            lam_a = round((1 - _dyn_blend) * model.lambda_away + _dyn_blend * str_la, 3)
             print(
                 f"[strength] blended λ: H={model.lambda_home}→{lam_h}  "
                 f"A={model.lambda_away}→{lam_a}  (str={str_lh},{str_la})"
@@ -890,6 +903,20 @@ def run_daily_pipeline(
                             f"model={_model_p:.1%}  book={_book_odds}  EV={_ev:+.1%}"
                         )
                         break
+
+        # ── Apply temperature-scaling calibration to Poisson probabilities ──
+        # Corrects systematic over/underconfidence using historical outcomes.
+        # Only active when ≥20 history records exist (calibrator.summary() shows T).
+        _ph_cal, _pd_cal, _pa_cal = _calibrator.calibrate(
+            model.p_home_win(), model.p_draw(), model.p_away_win()
+        )
+        if abs(_ph_cal - model.p_home_win()) > 0.005:
+            print(
+                f"[calibration] {match.home_team} vs {match.away_team}: "
+                f"H {model.p_home_win():.1%}→{_ph_cal:.1%}  "
+                f"D {model.p_draw():.1%}→{_pd_cal:.1%}  "
+                f"A {model.p_away_win():.1%}→{_pa_cal:.1%}  (T={_calibrator.temperature:.3f})"
+            )
 
         # ── Kelly / Value Bet analysis ──────────────────────────────────────
         kelly_analyses = analyse_match_bets(model, odds_1x2)

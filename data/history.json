@@ -11,7 +11,8 @@
     "exact_match": false,
     "correct_result": true,
     "points_earned": 1,
-    "points_possible": 3
+    "points_possible": 3,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-21",
@@ -25,7 +26,8 @@
     "exact_match": false,
     "correct_result": false,
     "points_earned": 0,
-    "points_possible": 3
+    "points_possible": 3,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-21",
@@ -39,7 +41,8 @@
     "exact_match": false,
     "correct_result": false,
     "points_earned": 0,
-    "points_possible": 3
+    "points_possible": 3,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-21",
@@ -53,7 +56,8 @@
     "exact_match": false,
     "correct_result": true,
     "points_earned": 1,
-    "points_possible": 3
+    "points_possible": 3,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-22",
@@ -67,7 +71,8 @@
     "exact_match": true,
     "correct_result": true,
     "points_earned": 3,
-    "points_possible": 3
+    "points_possible": 3,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-22",
@@ -81,7 +86,8 @@
     "exact_match": true,
     "correct_result": true,
     "points_earned": 3,
-    "points_possible": 3
+    "points_possible": 3,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-22",
@@ -95,7 +101,8 @@
     "exact_match": false,
     "correct_result": true,
     "points_earned": 1,
-    "points_possible": 3
+    "points_possible": 3,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-22",
@@ -109,7 +116,8 @@
     "exact_match": false,
     "correct_result": true,
     "points_earned": 1,
-    "points_possible": 3
+    "points_possible": 3,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-23",
@@ -125,7 +133,8 @@
     "points_earned": 0,
     "points_possible": 3,
     "bet_won": null,
-    "pnl_nis": null
+    "pnl_nis": null,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-23",
@@ -141,7 +150,8 @@
     "points_earned": 1,
     "points_possible": 3,
     "bet_won": false,
-    "pnl_nis": -20.0
+    "pnl_nis": -20.0,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-24",
@@ -157,7 +167,8 @@
     "points_earned": 0,
     "points_possible": 3,
     "bet_won": false,
-    "pnl_nis": -20.0
+    "pnl_nis": -20.0,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-24",
@@ -173,7 +184,8 @@
     "points_earned": 1,
     "points_possible": 3,
     "bet_won": null,
-    "pnl_nis": null
+    "pnl_nis": null,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-24",
@@ -189,7 +201,8 @@
     "points_earned": 1,
     "points_possible": 3,
     "bet_won": false,
-    "pnl_nis": -19.43
+    "pnl_nis": -19.43,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-24",
@@ -205,7 +218,8 @@
     "points_earned": 1,
     "points_possible": 3,
     "bet_won": false,
-    "pnl_nis": -20.0
+    "pnl_nis": -20.0,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-24",
@@ -221,7 +235,8 @@
     "points_earned": 0,
     "points_possible": 3,
     "bet_won": false,
-    "pnl_nis": -20.0
+    "pnl_nis": -20.0,
+    "predicted_by": "unknown"
   },
   {
     "date": "2026-06-24",
@@ -237,6 +252,7 @@
     "points_earned": 0,
     "points_possible": 3,
     "bet_won": false,
-    "pnl_nis": -20.0
+    "pnl_nis": -20.0,
+    "predicted_by": "unknown"
   }
 ]

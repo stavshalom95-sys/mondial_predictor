@@ -603,6 +603,7 @@ def run_daily_pipeline(
                 "sim_p_draw":    round(_pr_sim.p_draw, 4),
                 "sim_p_away":    round(_pr_sim.p_away, 4),
                 "prior_only":    True,
+                "predicted_by":  "prior_only",
             })
             no_odds_matches.append(match)   # kept for reference; not shown as "no odds" in report
             continue
@@ -1155,6 +1156,7 @@ def run_daily_pipeline(
             "kelly_value_bet":        _kvb.outcome      if _kvb else None,
             "kelly_value_bet_odds":   round(_kvb.decimal_odds, 3) if _kvb else None,
             "kelly_value_bet_stake":  round(_kvb_stake, 2) if _kvb_stake else None,
+            "predicted_by": "ai_override" if (ensemble_pick and ensemble_pick.overrode_poisson) else "poisson_only",
         })
 
     if not picks:

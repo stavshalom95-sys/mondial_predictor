@@ -161,6 +161,7 @@ def ingest_results(
             "points_possible": pts_possible,
             "bet_won":         bet_won,
             "pnl_nis":         pnl_nis,
+            "predicted_by":    pick.get("predicted_by", "unknown"),
         }
         new_records.append(record)
         seen.add(dedup_key)
@@ -217,15 +218,34 @@ def compute_stats(records: list[dict]) -> dict:
     # Brier score (proper scoring rule) — lower is better; random baseline = 0.333
     brier = brier_score(records)
 
+    # Per-source win rate breakdown
+    by_source: dict[str, dict] = {}
+    for r in records:
+        src = r.get("predicted_by", "unknown")
+        if src not in by_source:
+            by_source[src] = {"total": 0, "correct": 0}
+        by_source[src]["total"] += 1
+        if r.get("correct_result"):
+            by_source[src]["correct"] += 1
+    win_rate_by_source = {
+        src: {
+            "total":    v["total"],
+            "correct":  v["correct"],
+            "win_rate": round(v["correct"] / v["total"], 3) if v["total"] else None,
+        }
+        for src, v in by_source.items()
+    }
+
     return {
-        "total":        total,
-        "correct":      correct,
-        "exact":        exact,
-        "pts_earned":   pts_earned,
-        "pts_possible": pts_possible,
-        "pnl_nis":      pnl_total,
-        "bets_placed":  len(bet_records),
-        "brier_score":  brier,
+        "total":               total,
+        "correct":             correct,
+        "exact":               exact,
+        "pts_earned":          pts_earned,
+        "pts_possible":        pts_possible,
+        "pnl_nis":             pnl_total,
+        "bets_placed":         len(bet_records),
+        "brier_score":         brier,
+        "win_rate_by_source":  win_rate_by_source,
     }
 
 

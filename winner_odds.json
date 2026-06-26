@@ -1,5 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-26T08:53:12Z. Fill in decimal odds before the daily pipeline runs.",
+  "_note": "Reset by master_reset.py on 2026-06-26T18:04:25Z. Fill in decimal odds before the daily pipeline runs.",
   "Norway vs France": {
     "winner": {
       "home": 7.4,
@@ -9,7 +9,7 @@
     "sum_goals": {
       "0-1": 5.3,
       "2-3": 2.1,
-      "+4": 1.95 
+      "+4": 1.95
     },
     "corners_range": {
       "0-8": 0.0,

@@ -8,7 +8,7 @@ Redesigned with UI/UX Pro Max skill:
 from __future__ import annotations
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -751,7 +751,8 @@ if picks.empty:
     st.info("No picks found. Predictions are generated each morning by the GitHub Actions pipeline.")
 else:
     picks_date = picks["date"].iloc[0].date() if "date" in picks.columns else None
-    if picks_date and picks_date != date.today():
+    today_utc = datetime.now(timezone.utc).date()
+    if picks_date and picks_date != today_utc:
         st.warning(f"⚠️ Showing predictions from {picks_date.strftime('%d %b %Y')} — today's pipeline hasn't run yet.")
 
     display = picks.copy()

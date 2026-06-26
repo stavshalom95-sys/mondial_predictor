@@ -1,56 +1,24 @@
 {
-  "generated_at": "2026-06-25T11:11:09Z",
+  "generated_at": "2026-06-26T11:19:37Z",
   "bankroll": 100.0,
   "min_prob": 0.5,
   "ev_min": 0.1,
   "ds_min": 70.0,
-  "wc_matches": 16,
+  "wc_matches": 22,
   "sniper_bets": [],
   "skipped": [
-    "Turkey vs United States",
-    "Paraguay vs Australia",
     "Norway vs France",
-    "Senegal vs Iraq"
+    "Senegal vs Iraq",
+    "Uruguay vs Spain",
+    "Cape Verde Islands vs Saudi Arabia",
+    "New Zealand vs Belgium",
+    "Egypt vs Iran",
+    "Panama vs England",
+    "Croatia vs Ghana",
+    "Colombia vs Portugal",
+    "Congo DR vs Uzbekistan"
   ],
   "total_stake": 0,
   "bet_count": 0,
-  "combo_suggestion": {
-    "legs": [
-      {
-        "match": "Curaçao vs Ivory Coast",
-        "outcome": "Draw",
-        "odds": 6.6,
-        "prob": 0.3135,
-        "implied": 0.15151515151515152,
-        "edge": 0.16198484848484848,
-        "ev": 1.0690999999999997,
-        "ds": 69.6
-      },
-      {
-        "match": "Tunisia vs Netherlands",
-        "outcome": "Home Win",
-        "odds": 17.0,
-        "prob": 0.2438,
-        "implied": 0.058823529411764705,
-        "edge": 0.1849764705882353,
-        "ev": 3.1445999999999996,
-        "ds": 65.2
-      },
-      {
-        "match": "Japan vs Sweden",
-        "outcome": "Away Win",
-        "odds": 3.85,
-        "prob": 0.3447,
-        "implied": 0.2597402597402597,
-        "edge": 0.08495974025974029,
-        "ev": 0.32709500000000014,
-        "ds": 58.5
-      }
-    ],
-    "combined_prob": 0.0263,
-    "combined_odds": 431.97,
-    "combined_ev": 10.3806,
-    "combo_stake": 0.6,
-    "is_value": true
-  }
+  "combo_suggestion": null
 }

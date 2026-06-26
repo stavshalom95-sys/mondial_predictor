@@ -313,20 +313,20 @@
     "stage": "group_stage",
     "start_time": "2026-06-15T22:00:00Z",
     "home": "KSA",
-    "away": "URU",
+    "away": "URY",
     "teams": {
       "KSA": {
         "name": "Saudi Arabia",
         "abbreviation": "KSA"
       },
-      "URU": {
+      "URY": {
         "name": "Uruguay",
-        "abbreviation": "URU"
+        "abbreviation": "URY"
       }
     },
     "score": {
       "KSA": 1,
-      "URU": 1
+      "URY": 1
     }
   },
   {
@@ -840,12 +840,12 @@
     "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-21T22:00:00Z",
-    "home": "URU",
+    "home": "URY",
     "away": "CPV",
     "teams": {
-      "URU": {
+      "URY": {
         "name": "Uruguay",
-        "abbreviation": "URU"
+        "abbreviation": "URY"
       },
       "CPV": {
         "name": "Cape Verde Islands",
@@ -853,7 +853,7 @@
       }
     },
     "score": {
-      "URU": 2,
+      "URY": 2,
       "CPV": 2
     }
   },
@@ -1368,12 +1368,12 @@
     "status": "scheduled",
     "stage": "group_stage",
     "start_time": "2026-06-27T00:00:00Z",
-    "home": "URU",
+    "home": "URY",
     "away": "ESP",
     "teams": {
-      "URU": {
+      "URY": {
         "name": "Uruguay",
-        "abbreviation": "URU"
+        "abbreviation": "URY"
       },
       "ESP": {
         "name": "Spain",
@@ -1381,7 +1381,7 @@
       }
     },
     "score": {
-      "URU": null,
+      "URY": null,
       "ESP": null
     }
   },
@@ -1588,21 +1588,16 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-06-28T19:00:00Z",
-    "home": "RSA",
-    "away": "CAN",
+    "home": null,
+    "away": null,
     "teams": {
-      "RSA": {
-        "name": "South Africa",
-        "abbreviation": "RSA"
-      },
-      "CAN": {
-        "name": "Canada",
-        "abbreviation": "CAN"
+      "null": {
+        "name": null,
+        "abbreviation": null
       }
     },
     "score": {
-      "RSA": null,
-      "CAN": null
+      "null": null
     }
   },
   {
@@ -1610,21 +1605,16 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-06-29T17:00:00Z",
-    "home": "BRA",
-    "away": "JPN",
+    "home": null,
+    "away": null,
     "teams": {
-      "BRA": {
-        "name": "Brazil",
-        "abbreviation": "BRA"
-      },
-      "JPN": {
-        "name": "Japan",
-        "abbreviation": "JPN"
+      "null": {
+        "name": null,
+        "abbreviation": null
       }
     },
     "score": {
-      "BRA": null,
-      "JPN": null
+      "null": null
     }
   },
   {
@@ -1632,20 +1622,15 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-06-29T20:30:00Z",
-    "home": "GER",
+    "home": null,
     "away": null,
     "teams": {
-      "GER": {
-        "name": "Germany",
-        "abbreviation": "GER"
-      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
-      "GER": null,
       "null": null
     }
   },
@@ -1654,21 +1639,16 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-06-30T01:00:00Z",
-    "home": "NED",
-    "away": "MAR",
+    "home": null,
+    "away": null,
     "teams": {
-      "NED": {
-        "name": "Netherlands",
-        "abbreviation": "NED"
-      },
-      "MAR": {
-        "name": "Morocco",
-        "abbreviation": "MAR"
+      "null": {
+        "name": null,
+        "abbreviation": null
       }
     },
     "score": {
-      "NED": null,
-      "MAR": null
+      "null": null
     }
   },
   {
@@ -1710,20 +1690,15 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-01T01:00:00Z",
-    "home": "MEX",
+    "home": null,
     "away": null,
     "teams": {
-      "MEX": {
-        "name": "Mexico",
-        "abbreviation": "MEX"
-      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
-      "MEX": null,
       "null": null
     }
   },
@@ -1766,21 +1741,16 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-02T00:00:00Z",
-    "home": "USA",
-    "away": "BIH",
+    "home": null,
+    "away": null,
     "teams": {
-      "USA": {
-        "name": "United States",
-        "abbreviation": "USA"
-      },
-      "BIH": {
-        "name": "Bosnia-Herzegovina",
-        "abbreviation": "BIH"
+      "null": {
+        "name": null,
+        "abbreviation": null
       }
     },
     "score": {
-      "USA": null,
-      "BIH": null
+      "null": null
     }
   },
   {
@@ -1822,20 +1792,15 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-03T03:00:00Z",
-    "home": "SUI",
+    "home": null,
     "away": null,
     "teams": {
-      "SUI": {
-        "name": "Switzerland",
-        "abbreviation": "SUI"
-      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
-      "SUI": null,
       "null": null
     }
   },
@@ -1844,20 +1809,15 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-03T18:00:00Z",
-    "home": "AUS",
+    "home": null,
     "away": null,
     "teams": {
-      "AUS": {
-        "name": "Australia",
-        "abbreviation": "AUS"
-      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
-      "AUS": null,
       "null": null
     }
   },
@@ -1866,20 +1826,15 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-03T22:00:00Z",
-    "home": "ARG",
+    "home": null,
     "away": null,
     "teams": {
-      "ARG": {
-        "name": "Argentina",
-        "abbreviation": "ARG"
-      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
-      "ARG": null,
       "null": null
     }
   },

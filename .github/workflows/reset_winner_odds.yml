@@ -1,0 +1,60 @@
+name: Reset winner_odds.json (09:00 IST)
+
+on:
+  schedule:
+    # 06:00 UTC = 09:00 Israel Summer Time (UTC+3).
+    # Runs after the main predictor (05:00–06:00 UTC) has already sent the
+    # WhatsApp notification.  This gives a clean slate of today's matches so
+    # you can fill in actual bookmaker odds in the GitHub editor before placing bets.
+    - cron: "0 6 * * *"
+
+  workflow_dispatch:
+    inputs:
+      schedule_path:
+        description: "Path to schedule JSON (default: tests/sample_games.json)"
+        required: false
+        default: "tests/sample_games.json"
+
+concurrency:
+  group: reset-winner-odds
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Reset winner_odds.json to today's matches
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+        run: |
+          SCHEDULE="${{ github.event.inputs.schedule_path || 'tests/sample_games.json' }}"
+          python scripts/sync_winner_odds.py "$SCHEDULE" winner_odds.json
+
+      - name: Commit and push updated winner_odds.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add winner_odds.json
+          if git diff --staged --quiet; then
+            echo "winner_odds.json unchanged — nothing to commit."
+          else
+            git commit -m "chore: reset winner_odds $(date -u '+%Y-%m-%d') [skip ci]"
+            git push
+            echo "winner_odds.json pushed."
+          fi

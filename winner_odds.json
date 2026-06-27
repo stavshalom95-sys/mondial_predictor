@@ -1,5 +1,5 @@
 {
-  "_note": "Reset (forced blank) by sync_winner_odds.py on 2026-06-27T07:27:49Z. Fill in decimal odds before the daily pipeline runs.",
+  "_note": "Reset (forced blank) by sync_winner_odds.py on 2026-06-27T07:29:39Z. Fill in decimal odds before the daily pipeline runs.",
   "Uruguay vs Spain": {
     "winner": {
       "home": 0.0,

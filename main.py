@@ -988,7 +988,17 @@ def run_daily_pipeline(
             )
 
         # ── Kelly / Value Bet analysis ──────────────────────────────────────
-        kelly_analyses = analyse_match_bets(model, odds_1x2)
+        # Rebuild model from final motivation/strength/form-adjusted lambdas.
+        # Using the original `model` (market-calibrated, line 708) gives draw
+        # probabilities before the motivation multipliers are applied (e.g. an
+        # eliminated team gets ×0.9, dropping its draw prob from ~12% to ~7%).
+        # That pre-adjustment probability triggers false "Draw value" signals.
+        _final_kelly_model = PoissonMatchModel(
+            lambda_home = lam_h,
+            lambda_away = lam_a,
+            _matrix     = build_dc_matrix(lam_h, lam_a),
+        )
+        kelly_analyses = analyse_match_bets(_final_kelly_model, odds_1x2)
         _append_ev_log(match.home_team, match.away_team, kelly_analyses)
         value_bets = [a for a in kelly_analyses if a.is_value]
         if value_bets:

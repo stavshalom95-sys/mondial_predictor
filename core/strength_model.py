@@ -244,9 +244,12 @@ class StrengthModel:
         h_atk = _bayesian_attack(h.attack if h.games else avg, h_key, h.games)
         a_atk = _bayesian_attack(a.attack if a.games else avg, a_key, a.games)
 
-        # Raw observed defence (concede rate is more stable from game 1)
-        h_def = h.defence if h.games else avg
-        a_def = a.defence if a.games else avg
+        # Bayesian-smoothed defence rate toward tournament average.
+        # Raw rate collapses to 0.0 when a team hasn't conceded yet (common
+        # early in tournament), driving λ to the 0.10 floor and producing
+        # nonsense ~82% draw probabilities.  Smoothing prevents this.
+        h_def = (h.games * h.defence + _PRIOR_WEIGHT * avg) / (h.games + _PRIOR_WEIGHT) if h.games else avg
+        a_def = (a.games * a.defence + _PRIOR_WEIGHT * avg) / (a.games + _PRIOR_WEIGHT) if a.games else avg
 
         # Dixon-Coles neutral-venue formula
         # λ = (scorer_attack × conceder_defence) / tournament_average

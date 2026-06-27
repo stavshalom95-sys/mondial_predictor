@@ -488,11 +488,10 @@ def run_daily_pipeline(
     odds_map = fetch_todays_match_odds(odds_api_key)
 
     if not odds_map:
-        msg = "[pipeline] No odds found for today — nothing to analyse. Check THE_ODDS_API_KEY or no WC matches today."
-        print(msg)
-        if send_notification:
-            send_whatsapp_message(msg)
-        return msg
+        print("[pipeline] The Odds API returned no matches — continuing with prior-only model for all matches.")
+        # Don't bail out: todays_matches are already known from the schedule.
+        # Each match will use the prior-only path (Poisson without market calibration).
+        # winner_odds.json may still provide bookmaker context for value-bet detection.
 
     # ── Step 4: Match odds to today's schedule ────────────────────────────────
     # Cross-check: flag any scheduled match that has no odds entry so the user

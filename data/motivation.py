@@ -253,15 +253,17 @@ def compute_group_statuses(rows: list[dict]) -> list[dict]:
                 row["qualification_status"] = "need_draw" if pts >= 3 else "must_win"
 
         elif pos_0 == 2:     # Currently 3rd
-            second_pts = all_pts[1]
-            if pts + remaining * 3 < second_pts:
-                row["qualification_status"] = "eliminated"
-            else:
-                row["qualification_status"] = "must_win"
+            # FIFA WC 2026: best 8 of 12 third-place teams also advance.
+            # A 3rd-place team is NEVER eliminated while games remain — even if
+            # they can't mathematically reach 2nd, every point and goal counts
+            # for the cross-group bubble ranking.
+            row["qualification_status"] = "must_win"
 
         else:                # Currently 4th (or lower)
-            first_pts = all_pts[0]
-            if pts + remaining * 3 < first_pts:
+            # 4th place cannot advance (only top-2 + best-8-of-3rd qualify).
+            # Eliminated only if they can't even reach 3rd place.
+            third_pts = all_pts[2] if len(all_pts) > 2 else 0
+            if pts + remaining * 3 < third_pts:
                 row["qualification_status"] = "eliminated"
             else:
                 row["qualification_status"] = "must_win"

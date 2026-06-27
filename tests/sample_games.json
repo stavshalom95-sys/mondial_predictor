@@ -1321,7 +1321,7 @@
   },
   {
     "id": "537395",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-26T19:00:00Z",
     "home": "NOR",
@@ -1337,13 +1337,13 @@
       }
     },
     "score": {
-      "NOR": null,
-      "FRA": null
+      "NOR": 1,
+      "FRA": 4
     }
   },
   {
     "id": "537396",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-26T19:00:00Z",
     "home": "SEN",
@@ -1359,13 +1359,13 @@
       }
     },
     "score": {
-      "SEN": null,
-      "IRQ": null
+      "SEN": 5,
+      "IRQ": 0
     }
   },
   {
     "id": "537373",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-27T00:00:00Z",
     "home": "URU",
@@ -1381,13 +1381,13 @@
       }
     },
     "score": {
-      "URU": null,
-      "ESP": null
+      "URU": 0,
+      "ESP": 1
     }
   },
   {
     "id": "537374",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-27T00:00:00Z",
     "home": "CPV",
@@ -1403,13 +1403,13 @@
       }
     },
     "score": {
-      "CPV": null,
-      "KSA": null
+      "CPV": 0,
+      "KSA": 0
     }
   },
   {
     "id": "537367",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-27T03:00:00Z",
     "home": "NZL",
@@ -1425,13 +1425,13 @@
       }
     },
     "score": {
-      "NZL": null,
-      "BEL": null
+      "NZL": 1,
+      "BEL": 5
     }
   },
   {
     "id": "537368",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-27T03:00:00Z",
     "home": "EGY",
@@ -1447,8 +1447,8 @@
       }
     },
     "score": {
-      "EGY": null,
-      "IRN": null
+      "EGY": 1,
+      "IRN": 1
     }
   },
   {
@@ -1676,15 +1676,20 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-06-30T17:00:00Z",
-    "home": null,
+    "home": "CIV",
     "away": null,
     "teams": {
+      "CIV": {
+        "name": "Ivory Coast",
+        "abbreviation": "CIV"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "CIV": null,
       "null": null
     }
   },

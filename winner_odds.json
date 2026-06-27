@@ -1,15 +1,15 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-26T18:04:25Z. Fill in decimal odds before the daily pipeline runs.",
+  "_note": "Reset (forced blank) by sync_winner_odds.py on 2026-06-27T07:27:49Z. Fill in decimal odds before the daily pipeline runs.",
   "Uruguay vs Spain": {
     "winner": {
-      "home": 6.5,
-      "draw": 3.75,
-      "away": 1.5
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 3.05,
-      "2-3": 1.9,
-      "+4": 3.1
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
       "0-8": 0.0,
@@ -19,14 +19,14 @@
   },
   "Cape Verde Islands vs Saudi Arabia": {
     "winner": {
-      "home": 2.4,
-      "draw": 3.2,
-      "away": 2.8
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 3,
-      "2-3": 1.9,
-      "+4": 3.2
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
       "0-8": 0.0,
@@ -36,14 +36,14 @@
   },
   "New Zealand vs Belgium": {
     "winner": {
-      "home": 11.5,
-      "draw": 6.8,
-      "away": 1.15
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 7.4,
-      "2-3": 2.4,
-      "+4": 1.6
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
       "0-8": 0.0,
@@ -53,14 +53,14 @@
   },
   "Egypt vs Iran": {
     "winner": {
-      "home": 2.35,
-      "draw": 2.5,
-      "away": 3.85
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 2.25,
-      "2-3": 1.9,
-      "+4": 4.9
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
       "0-8": 0.0,
@@ -70,14 +70,14 @@
   },
   "Panama vs England": {
     "winner": {
-      "home": 14.5,
-      "draw": 7.2,
-      "away": 1.15
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 5.6,
-      "2-3": 2.15,
-      "+4": 1.9
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
       "0-8": 0.0,
@@ -87,14 +87,14 @@
   },
   "Croatia vs Ghana": {
     "winner": {
-      "home": 1.7,
-      "draw": 3.2,
-      "away": 5
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 2.75,
-      "2-3": 1.9,
-      "+4": 3.5
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
       "0-8": 0.0,
@@ -104,14 +104,14 @@
   },
   "Colombia vs Portugal": {
     "winner": {
-      "home": 4,
-      "draw": 3.45,
-      "away": 1.8
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 3.2,
-      "2-3": 1.9,
-      "+4": 3
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
       "0-8": 0.0,
@@ -121,14 +121,14 @@
   },
   "Congo DR vs Uzbekistan": {
     "winner": {
-      "home": 1.75,
-      "draw": 3.7,
-      "away": 4.1
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
     },
     "sum_goals": {
-      "0-1": 3.1,
-      "2-3": 1.9,
-      "+4": 3.1
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
     },
     "corners_range": {
       "0-8": 0.0,

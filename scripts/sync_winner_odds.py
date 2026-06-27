@@ -12,6 +12,11 @@ Usage:
     python scripts/sync_winner_odds.py
     python scripts/sync_winner_odds.py tests/sample_games.json
     python scripts/sync_winner_odds.py tests/sample_games.json winner_odds.json
+    python scripts/sync_winner_odds.py tests/sample_games.json winner_odds.json --reset
+
+Flags:
+    --reset   Zero out all odds for today's matches (daily fresh start).
+              Without this flag, existing odds are preserved.
 """
 from __future__ import annotations
 
@@ -123,7 +128,8 @@ def _keys_match(existing_key: str, home: str, away: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def sync(schedule_path: str = "tests/sample_games.json",
-         odds_path: str     = "winner_odds.json") -> None:
+         odds_path: str     = "winner_odds.json",
+         reset: bool        = False) -> None:
 
     print(f"[sync] Reading schedule from '{schedule_path}'...")
     raw_games = _parse_schedule(schedule_path)
@@ -139,45 +145,51 @@ def sync(schedule_path: str = "tests/sample_games.json",
 
     existing = _load_existing(odds_path)
 
-    # Build new dict: preserve matching existing entries, add blanks for new ones
+    # Build new dict: blank all entries (reset mode) or preserve matching ones
     new_data: dict = {}
 
-    # Always carry the metadata note
-    if "_note" in existing:
-        new_data["_note"] = existing["_note"]
-    else:
-        new_data["_note"] = (
-            "Multi-market bookmaker odds (decimal). "
-            "Run 'python scripts/sync_winner_odds.py' to regenerate from today's schedule. "
-            "Fill in non-zero odds before the daily run."
-        )
+    from datetime import datetime, timezone as _tz
+    new_data["_note"] = (
+        f"Reset {'(forced blank)' if reset else '(preserved)'} "
+        f"by sync_winner_odds.py on {datetime.now(_tz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}. "
+        "Fill in decimal odds before the daily pipeline runs."
+    )
 
     preserved = 0
     added     = 0
+    zeroed    = 0
 
     for home, away in today_pairs:
         canonical_key = _key(home, away)
 
-        # Try to find an existing entry that matches this match
-        existing_entry = None
-        for k, v in existing.items():
-            if k.startswith("_"):
-                continue
-            if _keys_match(k, home, away):
-                existing_entry = v
-                break
-
-        if existing_entry is not None:
-            new_data[canonical_key] = existing_entry
-            preserved += 1
-            print(f"[sync] PRESERVED  {canonical_key}")
-        else:
+        if reset:
             new_data[canonical_key] = _blank_entry()
-            added += 1
-            print(f"[sync] ADDED      {canonical_key}  (placeholder odds — fill in before run!)")
+            zeroed += 1
+            print(f"[sync] RESET      {canonical_key}  (odds zeroed — fill in before run!)")
+        else:
+            # Try to find an existing entry that matches this match
+            existing_entry = None
+            for k, v in existing.items():
+                if k.startswith("_"):
+                    continue
+                if _keys_match(k, home, away):
+                    existing_entry = v
+                    break
 
-    removed = len([k for k in existing if not k.startswith("_")]) - preserved
-    print(f"\n[sync] Summary: {preserved} preserved, {added} added, {removed} stale removed.")
+            if existing_entry is not None:
+                new_data[canonical_key] = existing_entry
+                preserved += 1
+                print(f"[sync] PRESERVED  {canonical_key}")
+            else:
+                new_data[canonical_key] = _blank_entry()
+                added += 1
+                print(f"[sync] ADDED      {canonical_key}  (placeholder odds — fill in before run!)")
+
+    removed = len([k for k in existing if not k.startswith("_")]) - (preserved + zeroed)
+    if reset:
+        print(f"\n[sync] Summary: {zeroed} zeroed, {removed} stale removed.")
+    else:
+        print(f"\n[sync] Summary: {preserved} preserved, {added} added, {removed} stale removed.")
 
     with open(odds_path, "w", encoding="utf-8") as f:
         json.dump(new_data, f, indent=2, ensure_ascii=False)
@@ -185,6 +197,7 @@ def sync(schedule_path: str = "tests/sample_games.json",
 
 
 if __name__ == "__main__":
-    schedule = sys.argv[1] if len(sys.argv) > 1 else "tests/sample_games.json"
-    output   = sys.argv[2] if len(sys.argv) > 2 else "winner_odds.json"
-    sync(schedule, output)
+    schedule  = sys.argv[1] if len(sys.argv) > 1 else "tests/sample_games.json"
+    output    = sys.argv[2] if len(sys.argv) > 2 else "winner_odds.json"
+    force_reset = "--reset" in sys.argv
+    sync(schedule, output, reset=force_reset)

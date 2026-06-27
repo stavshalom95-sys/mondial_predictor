@@ -44,7 +44,7 @@ jobs:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: |
           SCHEDULE="${{ github.event.inputs.schedule_path || 'tests/sample_games.json' }}"
-          python scripts/sync_winner_odds.py "$SCHEDULE" winner_odds.json
+          python scripts/sync_winner_odds.py "$SCHEDULE" winner_odds.json --reset
 
       - name: Commit and push updated winner_odds.json
         run: |

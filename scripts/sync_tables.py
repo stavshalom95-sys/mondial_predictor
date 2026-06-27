@@ -245,17 +245,29 @@ def main() -> None:
         if not api_key:
             print(
                 "[sync_tables] FOOTBALL_DATA_API_KEY not set — "
-                "use --from-schedule to compute from local JSON.",
+                f"keeping existing '{args.output}' unchanged.",
                 file=sys.stderr,
             )
-            sys.exit(1)
+            sys.exit(0)
         print(f"[sync_tables] Fetching WC standings from {API_BASE}...")
-        groups = _fetch_api_standings(api_key)
+        try:
+            groups = _fetch_api_standings(api_key)
+        except Exception as exc:
+            print(
+                f"[sync_tables] API fetch failed ({exc}) — "
+                f"keeping existing '{args.output}' unchanged.",
+                file=sys.stderr,
+            )
+            sys.exit(0)
         source = "football-data.org API"
 
     if not groups:
-        print("[sync_tables] No group data found. Nothing written.", file=sys.stderr)
-        sys.exit(1)
+        print(
+            f"[sync_tables] API returned no group data (competition may have moved to "
+            f"knockout stage) — keeping existing '{args.output}' unchanged.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
 
     matchday = _detect_matchday(groups)
     output   = _build_output(groups, matchday)

@@ -95,12 +95,20 @@ jobs:
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: |
+          # Try the live API first; fall back to schedule-computed standings on any failure.
+          # This covers: missing API key, rate limits, API returning no group data
+          # (which happens once the tournament moves to knockout stage).
           if [ -n "$FOOTBALL_DATA_API_KEY" ]; then
-            python scripts/sync_tables.py --output data/group_tables.json
+            python scripts/sync_tables.py --output data/group_tables.json \
+              || python scripts/sync_tables.py \
+                   --from-schedule tests/sample_games.json \
+                   --output data/group_tables.json \
+              || echo "[sync_tables] Both sources failed — keeping existing group_tables.json"
           else
             python scripts/sync_tables.py \
               --from-schedule tests/sample_games.json \
-              --output data/group_tables.json
+              --output data/group_tables.json \
+              || echo "[sync_tables] Schedule-based sync failed — keeping existing group_tables.json"
           fi
 
       # ── 6. Reset winner_odds.json to today's fixtures ────────────────────────

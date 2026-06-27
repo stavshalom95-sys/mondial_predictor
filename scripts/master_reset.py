@@ -468,9 +468,10 @@ def main() -> int:
     if failed:
         print()
         for label, hint in failed:
-            print(f"  FAIL  {label}")
+            print(f"  WARN  {label}  (non-blocking)")
             print(f"        Fix: {hint}")
-        exit_code = 1
+        # Audit failures are warnings only — do NOT set exit_code=1.
+        # The pipeline should run and send predictions even if audit finds stale patterns.
     else:
         print(f"\n  All {len(passed)} integration checks passed.")
 

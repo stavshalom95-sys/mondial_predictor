@@ -84,7 +84,10 @@ jobs:
         if: github.event.inputs.dry_run != 'true'
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
-        run: python scripts/fetch_schedule.py --output tests/sample_games.json
+        run: |
+          # Graceful: if API fails, keep the existing cached schedule.
+          python scripts/fetch_schedule.py --output tests/sample_games.json \
+            || echo "[fetch_schedule] Script exited non-zero — using cached tests/sample_games.json"
 
       # ── 5. Sync group tables (rotation / motivation scores) ──────────────────
       # Writes data/group_tables.json with live standings + qualification_status.

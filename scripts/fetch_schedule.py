@@ -128,11 +128,32 @@ def main() -> None:
 
     api_key = os.environ.get("FOOTBALL_DATA_API_KEY", "")
     if not api_key:
-        print("ERROR: FOOTBALL_DATA_API_KEY environment variable is not set.", file=sys.stderr)
+        if os.path.exists(args.output):
+            print(f"[fetch_schedule] FOOTBALL_DATA_API_KEY not set — keeping existing {args.output}.")
+            sys.exit(0)
+        print("ERROR: FOOTBALL_DATA_API_KEY not set and no cached schedule found.", file=sys.stderr)
         sys.exit(1)
 
     print(f"Fetching WC 2026 schedule from {API_BASE}...")
-    matches = fetch_wc_matches(api_key)
+    try:
+        matches = fetch_wc_matches(api_key)
+    except Exception as exc:
+        if os.path.exists(args.output):
+            print(
+                f"[fetch_schedule] API error ({exc}) — keeping existing {args.output}.",
+                file=sys.stderr,
+            )
+            sys.exit(0)
+        print(f"ERROR: API fetch failed and no cached schedule: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    if not matches:
+        if os.path.exists(args.output):
+            print(
+                f"[fetch_schedule] API returned 0 matches — keeping existing {args.output}.",
+                file=sys.stderr,
+            )
+            sys.exit(0)
 
     # Ensure output directory exists
     output_dir = os.path.dirname(args.output)

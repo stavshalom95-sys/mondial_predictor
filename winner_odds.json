@@ -1,73 +1,5 @@
 {
-  "_note": "Reset (forced blank) by sync_winner_odds.py on 2026-06-27T07:29:39Z. Fill in decimal odds before the daily pipeline runs.",
-  "Uruguay vs Spain": {
-    "winner": {
-      "home": 0.0,
-      "draw": 0.0,
-      "away": 0.0
-    },
-    "sum_goals": {
-      "0-1": 0.0,
-      "2-3": 0.0,
-      "+4": 0.0
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "Cape Verde Islands vs Saudi Arabia": {
-    "winner": {
-      "home": 0.0,
-      "draw": 0.0,
-      "away": 0.0
-    },
-    "sum_goals": {
-      "0-1": 0.0,
-      "2-3": 0.0,
-      "+4": 0.0
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "New Zealand vs Belgium": {
-    "winner": {
-      "home": 0.0,
-      "draw": 0.0,
-      "away": 0.0
-    },
-    "sum_goals": {
-      "0-1": 0.0,
-      "2-3": 0.0,
-      "+4": 0.0
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "Egypt vs Iran": {
-    "winner": {
-      "home": 0.0,
-      "draw": 0.0,
-      "away": 0.0
-    },
-    "sum_goals": {
-      "0-1": 0.0,
-      "2-3": 0.0,
-      "+4": 0.0
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
+  "_note": "Reset (forced blank) by sync_winner_odds.py on 2026-06-27T07:32:47Z. Fill in decimal odds before the daily pipeline runs.",
   "Panama vs England": {
     "winner": {
       "home": 0.0,
@@ -120,6 +52,57 @@
     }
   },
   "Congo DR vs Uzbekistan": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Jordan vs Argentina": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Algeria vs Austria": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "South Africa vs Canada": {
     "winner": {
       "home": 0.0,
       "draw": 0.0,

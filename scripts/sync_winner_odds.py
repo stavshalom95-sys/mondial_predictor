@@ -55,12 +55,17 @@ def _parse_schedule(schedule_path: str) -> list[dict]:
 
 def _todays_matches(raw_games: list[dict]) -> list[tuple[str, str]]:
     """
-    Return (home_name, away_name) pairs for matches scheduled today (UTC).
-    Includes matches that START at any point during today (midnight → 23:59 UTC).
+    Return (home_name, away_name) pairs for upcoming unplayed matches.
+
+    Rules:
+      • Skip matches already kicked off (start_time <= now) — status field
+        is unreliable since fetch_schedule.py only updates it once per day.
+      • Include matches starting within the next 48 hours, so tomorrow's
+        fixtures appear when today's games have already kicked off.
+      • Also skip status == "final" as a belt-and-suspenders guard.
     """
-    now         = datetime.now(timezone.utc)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_end   = today_start + timedelta(hours=24)
+    now    = datetime.now(timezone.utc)
+    cutoff = now + timedelta(hours=48)
 
     result: list[tuple[str, str]] = []
 
@@ -77,7 +82,8 @@ def _todays_matches(raw_games: list[dict]) -> list[tuple[str, str]]:
         except (ValueError, TypeError):
             continue
 
-        if not (today_start <= start_time < today_end):
+        # Only upcoming matches: kick-off must be strictly in the future
+        if not (now < start_time <= cutoff):
             continue
 
         teams    = g.get("teams", {})

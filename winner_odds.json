@@ -53,14 +53,14 @@
   },
   "Netherlands vs Morocco": {
     "winner": {
-      "home": 0.0,
-      "draw": 0.0,
-      "away": 0.0
+      "home": 2.05,
+      "draw": 3.1,
+      "away": 3.55
     },
     "sum_goals": {
-      "0-1": 0.0,
-      "2-3": 0.0,
-      "+4": 0.0
+      "0-1": 2.7,
+      "2-3": 1.9,
+      "+4": 3.6
     },
     "corners_range": {
       "0-8": 0.0,

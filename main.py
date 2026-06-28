@@ -573,8 +573,11 @@ def run_daily_pipeline(
                 _pr_mdl = apply_fdr_modifier(_pr_mdl, mu_home=_pr_fdr[0], mu_away=_pr_fdr[1])
                 _pr_lh, _pr_la = _pr_mdl.lambda_home, _pr_mdl.lambda_away
 
-            # Motivation (pass completed matches for FIFA 2026 tiebreaker analysis)
-            _pr_motiv = build_match_motivation(match.home_team, match.away_team, _group_tables, combined_results)
+            # Motivation (KO stage → all multipliers are 1.0, no rotation logic)
+            _pr_motiv = build_match_motivation(
+                match.home_team, match.away_team, _group_tables, combined_results,
+                is_knockout=(_pr_stage != TournamentStage.GROUP_STAGE),
+            )
             _pr_lh = round(_pr_lh * _pr_motiv.home.lambda_multiplier, 3)
             _pr_la = round(_pr_la * _pr_motiv.away.lambda_multiplier, 3)
             print(f"[prior]   λ  home={_pr_lh}  away={_pr_la}")
@@ -785,9 +788,10 @@ def run_daily_pipeline(
         # also reused unchanged by the AI ensemble prompt later in the loop.
         match_ctx = fetch_match_context(match.home_team, match.away_team, api_key=rapidapi_key)
 
-        # ── Tournament Motivation (rotation-trap λ adjustment + FIFA 2026 tiebreaker) ──
+        # ── Tournament Motivation (group-stage only — KO always runs at full intensity) ──
         _match_motivation = build_match_motivation(
-            match.home_team, match.away_team, _group_tables, combined_results
+            match.home_team, match.away_team, _group_tables, combined_results,
+            is_knockout=(stage != TournamentStage.GROUP_STAGE),
         )
         if not _match_motivation.is_trivial():
             _old_h, _old_a = lam_h, lam_a

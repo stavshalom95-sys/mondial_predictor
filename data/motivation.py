@@ -38,6 +38,8 @@ MOTIVATION_MULTIPLIER: dict[str, float] = {
     "tiebreaker_h2h_live":      1.10,  # today's match IS the direct H2H tiebreaker (same pts)
     "tiebreaker_gd_live":       1.05,  # equal pts, rival plays elsewhere — GD fight today
     "third_place_bubble":       1.07,  # finished 3rd in group, in top-8 best-third bubble
+    # ── Knockout stage ────────────────────────────────────────────────────
+    "knockout":                 1.00,  # KO stage: every team plays full strength, no rotation
 }
 
 _CONTEXT_LABEL: dict[str, str] = {
@@ -53,6 +55,8 @@ _CONTEXT_LABEL: dict[str, str] = {
     "tiebreaker_h2h_live":      "Direct H2H tiebreaker match — both teams level on points, every goal counts",
     "tiebreaker_gd_live":       "Level on points with group rival — goal difference tiebreaker active today",
     "third_place_bubble":       "Finished 3rd — in the 'best 8 third-place' bubble for Round of 32",
+    # ── Knockout stage ────────────────────────────────────────────────────
+    "knockout":                 "",    # no label — λ multiplier is 1.0, no warning needed
 }
 
 
@@ -308,6 +312,8 @@ def build_match_motivation(
     away_team: str,
     tables: dict,
     completed_matches: list[dict] | None = None,
+    *,
+    is_knockout: bool = False,
 ) -> MatchMotivation:
     """
     Build MatchMotivation for a given match from the loaded group tables.
@@ -318,11 +324,34 @@ def build_match_motivation(
     tables               : loaded group_tables.json dict
     completed_matches    : list of finished match dicts for H2H tiebreaker analysis.
                            Pass combined_results from the pipeline for best accuracy.
+    is_knockout          : True for Round of 32 / 16 / QF / SF / Final.
+                           Bypasses all group-stage logic (rotation risk, bubble
+                           rankings, tiebreakers) — every team is at maximum
+                           intensity (λ multiplier = 1.0, no rotation expected).
 
     When no table data is available for a team, motivation multiplier = 1.0
     and context_label = "" — so the pipeline continues normally.
     """
     completed_matches = completed_matches or []
+
+    # ── Knockout stage fast-path ──────────────────────────────────────────────
+    # Group tables, rotation risk, and bubble logic are all irrelevant once the
+    # knockout round starts.  Every remaining team plays maximum-intensity,
+    # full-strength football.  Skip all the group-table machinery entirely.
+    if is_knockout:
+        def _ko_team(name: str) -> TeamMotivation:
+            return TeamMotivation(
+                team_name=name, group=None, position=0,
+                points=0, played=0,
+                qualification_status="knockout",
+                lambda_multiplier=1.0,
+                context_label="",
+            )
+        return MatchMotivation(
+            home=_ko_team(home_team),
+            away=_ko_team(away_team),
+            tiebreaker_context="",
+        )
 
     def _make(team_name: str) -> TeamMotivation:
         entry = get_team_entry(team_name, tables)

@@ -245,6 +245,9 @@ def reset_winner_odds(
         a_key     = g.get("away", "")
         h_name    = _team_name(g, h_key)
         a_name    = _team_name(g, a_key)
+        # Skip fixtures where team names are not yet resolved (KO bracket TBD)
+        if not h_name or not a_name:
+            continue
         match_key = f"{h_name} vs {a_name}"
 
         if g.get("status") == "final":

@@ -196,6 +196,10 @@ class DailyPick:
     poisson_p_draw: Optional[float] = None
     poisson_p_away: Optional[float] = None
     why_bullets:    Optional[list[str]] = None  # 3-5 bullets explaining the prediction
+    # ── Stage flags ──────────────────────────────────────────────────────────
+    is_knockout:    bool = False   # True for R32/R16/QF/SF/Final
+    # KO dual-track: competition pick (365Scores) always has a winner;
+    # betting Kelly operates on 90-min odds where draw IS a valid outcome.
 
 
 def format_daily_message(
@@ -297,7 +301,12 @@ def format_daily_message(
                 _fs.home_goals, _fs.away_goals,
             )
 
-        lines.append(f"   ⚽ *Final Prediction: {pick_desc}*")
+        if pick.is_knockout:
+            # KO dual-track: competition (365Scores) and betting serve different rules
+            lines.append(f"   🏆 *365Scores: {pick_desc}* _(ניצחון כולל הארכות / פנדלים)_")
+            lines.append(f"   🎰 *הימור 90 דקות:* תוצאה רגולציה — תיקו = תיקו בהימור")
+        else:
+            lines.append(f"   ⚽ *Final Prediction: {pick_desc}*")
         lines.append(f"   אסטרטגיה: {rec.strategy.value}")
 
         # ── Why section ───────────────────────────────────────────────────────

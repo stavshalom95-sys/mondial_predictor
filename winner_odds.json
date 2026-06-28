@@ -1,5 +1,5 @@
 {
-  "_note": "Synced by sync_winner_odds.py on 2026-06-28T09:02:25Z. Filled odds are preserved; blanks need to be filled before the pipeline runs.",
+  "_note": "Reset by master_reset.py on 2026-06-28T09:19:10Z. Fill in decimal odds before the daily pipeline runs.",
   "South Africa vs Canada": {
     "winner": {
       "home": 5.7,
@@ -51,21 +51,8 @@
       "12+": 0.0
     }
   },
-  "Netherlands vs Morocco": {
-    "winner": {
-      "home": 2.05,
-      "draw": 3.1,
-      "away": 3.55
-    },
-    "sum_goals": {
-      "0-1": 2.7,
-      "2-3": 1.9,
-      "+4": 3.6
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  }
+  "_played_today": [
+    "Jordan vs Argentina",
+    "Algeria vs Austria"
+  ]
 }

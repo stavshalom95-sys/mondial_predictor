@@ -51,6 +51,7 @@ from data.context_fetcher import fetch_match_context
 from data.backup_scraper import fetch_match_context_espn
 from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats
+from data.opta_priors import build_opta_context, get_whatsapp_sentiment_note, opta_tiebreak
 from core.bias_corrector import build_bias_corrector
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket, build_probability_ticket, build_confidence_value_ticket, ConfidenceTicket
@@ -1197,6 +1198,28 @@ def run_daily_pipeline(
                 f"⚽ צפי {_exp_g:.1f} גולים — Over 2.5: {_p_ov:.0%} | Under 2.5: {_p_un:.0%}{_ou_extra}"
             )
 
+        # ── Opta supercomputer integration ───────────────────────────────────
+        _opta_ctx  = build_opta_context(match.home_team, match.away_team)
+        _opta_note = get_whatsapp_sentiment_note(
+            match.home_team, match.away_team, sim.p_home, sim.p_away
+        )
+        _opta_tb   = opta_tiebreak(
+            match.home_team, match.away_team,
+            sim.p_home, sim.p_draw, sim.p_away,
+        )
+        if _opta_tb:
+            _tb_ph, _tb_pd, _tb_pa = _opta_tb
+            print(
+                f"[opta] Tiebreak applied: p_home {sim.p_home:.1%}→{_tb_ph:.1%} "
+                f"p_away {sim.p_away:.1%}→{_tb_pa:.1%}"
+            )
+        else:
+            _tb_ph, _tb_pd, _tb_pa = sim.p_home, sim.p_draw, sim.p_away
+
+        _tc_section = _match_motivation.to_ai_section()
+        if _opta_ctx:
+            _tc_section = _opta_ctx + ("\n\n" + _tc_section if _tc_section.strip() else "")
+
         ai_pick_prob = None
         ai_reasoning = None
         ensemble_pick = enhance(
@@ -1207,7 +1230,7 @@ def run_daily_pipeline(
             context_section            = _merged_context,
             value_bet_edge             = _active_edge,
             value_bet_outcome          = sim_value_bet or "",
-            tournament_context_section = _match_motivation.to_ai_section(),
+            tournament_context_section = _tc_section,
         )
         if ensemble_pick:
             ai_pick_prob  = ensemble_pick.to_score_prob(model)
@@ -1236,7 +1259,13 @@ def run_daily_pipeline(
             value_bets              = value_bets if value_bets else None,
             market_data             = markets,
             sg_value_bet            = sg_value_bet,
-            tournament_context_lines = (_match_motivation.to_whatsapp_lines() or None) if _show_context else None,
+            tournament_context_lines = (
+                (_match_motivation.to_whatsapp_lines() or []) +
+                ([_opta_note] if _opta_note else []) +
+                (["🔭 Opta tiebreak applied — simulation was indecisive"] if _opta_tb else [])
+            ) or None if _show_context else (
+                ([_opta_note] if _opta_note else None)
+            ),
             logic_chain    = _logic_chain,
             why_bullets    = _why_bullets or None,
             # Simulation fields — drive final prediction in WhatsApp

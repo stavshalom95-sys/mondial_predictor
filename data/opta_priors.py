@@ -50,6 +50,8 @@ _ALIAS: dict[str, str] = {
     "cote divoire":         "ivory coast",
     "democratic republic of congo": "congo dr",
     "dr congo":             "congo dr",
+    "cabo verde":           "cape verde islands",
+    "cape verde":           "cape verde islands",
 }
 
 

@@ -1,5 +1,5 @@
 {
-  "_note": "KO Day 1 — 2026-06-28. Odds restored. master_reset.py preserves non-zero entries; sync_winner_odds.py patched to do the same.",
+  "_note": "Synced by sync_winner_odds.py on 2026-06-28T09:02:25Z. Filled odds are preserved; blanks need to be filled before the pipeline runs.",
   "South Africa vs Canada": {
     "winner": {
       "home": 5.7,

@@ -53,27 +53,29 @@ def _parse_schedule(schedule_path: str) -> list[dict]:
     return raw.get("games", raw.get("matches", []))
 
 
-def _todays_matches(raw_games: list[dict]) -> list[tuple[str, str]]:
+def _candidate_matches(
+    raw_games: list[dict],
+    now: datetime,
+) -> list[tuple[str, str, datetime, str]]:
     """
-    Return (home_name, away_name) pairs for upcoming unplayed matches.
+    Return ALL matches within a ±48-hour window as
+    (home_name, away_name, start_time, status) tuples.
 
-    Rules:
-      • Skip matches already kicked off (start_time <= now) — status field
-        is unreliable since fetch_schedule.py only updates it once per day.
-      • Include matches starting within the next 48 hours, so tomorrow's
-        fixtures appear when today's games have already kicked off.
-      • Also skip status == "final" as a belt-and-suspenders guard.
+    The wider window means the main sync() loop receives EVERY candidate and
+    can apply the explicit 3-case decision tree:
+        CASE 1 — past/finished  → remove stale entry (never preserve)
+        CASE 2 — upcoming/live  → preserve if odds > 0, else blank
+        CASE 3 — new fixture    → add blank placeholder
+
+    Using the broader window instead of a hard future-only filter ensures
+    the logic is visible in the calling code, not hidden in this function.
     """
-    now    = datetime.now(timezone.utc)
-    cutoff = now + timedelta(hours=48)
+    cutoff_future = now + timedelta(hours=48)
+    cutoff_past   = now - timedelta(hours=24)   # discard very old fixtures
 
-    result: list[tuple[str, str]] = []
+    result: list[tuple[str, str, datetime, str]] = []
 
     for g in raw_games:
-        status = g.get("status", "scheduled")
-        if status == "final":
-            continue
-
         start_raw = g.get("start_time", "")
         try:
             start_time = datetime.fromisoformat(start_raw)
@@ -82,16 +84,18 @@ def _todays_matches(raw_games: list[dict]) -> list[tuple[str, str]]:
         except (ValueError, TypeError):
             continue
 
-        # Only upcoming matches: kick-off must be strictly in the future
-        if not (now < start_time <= cutoff):
+        # Outside the window entirely — skip (yesterday's early games, far future)
+        if not (cutoff_past <= start_time <= cutoff_future):
             continue
 
-        teams    = g.get("teams", {})
-        home_key = g.get("home", "")
-        away_key = g.get("away", "")
+        teams     = g.get("teams", {})
+        home_key  = g.get("home", "")
+        away_key  = g.get("away", "")
         home_name = teams.get(home_key, {}).get("name", home_key)
         away_name = teams.get(away_key, {}).get("name", away_key)
-        result.append((home_name, away_name))
+        status    = g.get("status", "scheduled")
+
+        result.append((home_name, away_name, start_time, status))
 
     return result
 
@@ -148,36 +152,34 @@ def sync(schedule_path: str = "tests/sample_games.json",
 
     print(f"[sync] Reading schedule from '{schedule_path}'...")
     raw_games = _parse_schedule(schedule_path)
-    today_pairs = _todays_matches(raw_games)
 
-    if not today_pairs:
-        print("[sync] No unfinished matches found for today (UTC). winner_odds.json not modified.")
+    now = datetime.now(timezone.utc)
+    candidates = _candidate_matches(raw_games, now)
+
+    if not candidates:
+        print("[sync] No matches found in the ±48h window. winner_odds.json not modified.")
         return
-
-    print(f"[sync] Today's matches ({len(today_pairs)}):")
-    for h, a in today_pairs:
-        print(f"  {h} vs {a}")
 
     existing = _load_existing(odds_path)
 
-    # Build new dict: blank all entries (reset mode) or preserve matching ones
     new_data: dict = {}
-
-    from datetime import datetime, timezone as _tz
     new_data["_note"] = (
-        f"Reset {'(forced blank)' if reset else '(preserved)'} "
-        f"by sync_winner_odds.py on {datetime.now(_tz.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}. "
-        "Fill in decimal odds before the daily pipeline runs."
+        f"Synced by sync_winner_odds.py on {now.strftime('%Y-%m-%dT%H:%M:%SZ')}. "
+        "Filled odds are preserved; blanks need to be filled before the pipeline runs."
     )
 
     preserved = 0
     added     = 0
     zeroed    = 0
+    stale     = 0
 
-    for home, away in today_pairs:
+    for home, away, start_time, status in candidates:
+        if not home or not away:
+            continue   # KO bracket TBD — skip
+
         canonical_key = _key(home, away)
 
-        # Always look for an existing filled entry first — never overwrite real odds.
+        # ── Look up any existing entry for this match ─────────────────────
         existing_entry = None
         for k, v in existing.items():
             if k.startswith("_"):
@@ -186,28 +188,40 @@ def sync(schedule_path: str = "tests/sample_games.json",
                 existing_entry = v
                 break
 
+        # ── CASE 1: match already played / in the past ────────────────────
+        # Condition: status=="final"  OR  kick-off time has already passed.
+        # Do NOT preserve odds for finished games — they are stale data.
+        # The entry is simply omitted from new_data (effectively removed).
+        is_past = (status == "final") or (start_time <= now)
+        if is_past:
+            stale += 1
+            label = "final" if status == "final" else f"started {start_time.strftime('%H:%M UTC')}"
+            print(f"[sync] STALE      {canonical_key}  ({label} — removed from file)")
+            continue   # skip: do not write this entry to new_data
+
+        # ── CASE 2: upcoming match with filled odds ───────────────────────
+        # Preserve regardless of --reset; real odds must never be wiped.
         if existing_entry is not None and _has_nonzero_odds(existing_entry):
-            # Filled odds: preserve regardless of --reset flag.
             new_data[canonical_key] = existing_entry
             preserved += 1
-            print(f"[sync] PRESERVED  {canonical_key}  (odds already filled — not overwritten)")
-        elif reset:
-            # --reset + no filled odds: write/keep blank placeholders.
-            new_data[canonical_key] = _blank_entry()
+            print(f"[sync] PRESERVED  {canonical_key}  (odds filled — not overwritten)")
+            continue
+
+        # ── CASE 3: upcoming match with no filled odds ────────────────────
+        # --reset: explicitly zero out (idempotent since it's already 0.0).
+        # no flag: write blank placeholder so the user knows to fill it.
+        new_data[canonical_key] = _blank_entry()
+        if reset:
             zeroed += 1
-            print(f"[sync] RESET      {canonical_key}  (odds were 0.0 — fill in before run!)")
-        elif existing_entry is not None:
-            # Existing 0.0 entry — keep it (user may be about to fill it).
-            new_data[canonical_key] = existing_entry
-            preserved += 1
-            print(f"[sync] PRESERVED  {canonical_key}  (keeping existing 0.0 placeholder)")
+            print(f"[sync] RESET      {canonical_key}  (odds 0.0 — fill in before run!)")
         else:
-            new_data[canonical_key] = _blank_entry()
             added += 1
             print(f"[sync] ADDED      {canonical_key}  (new placeholder — fill in before run!)")
 
-    removed = len([k for k in existing if not k.startswith("_")]) - (preserved + zeroed)
-    print(f"\n[sync] Summary: {preserved} preserved, {added} added, {zeroed} zeroed, {removed} stale removed.")
+    print(
+        f"\n[sync] Summary: {preserved} preserved, {added} added, "
+        f"{zeroed} zeroed, {stale} stale removed."
+    )
 
     with open(odds_path, "w", encoding="utf-8") as f:
         json.dump(new_data, f, indent=2, ensure_ascii=False)

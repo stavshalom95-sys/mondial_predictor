@@ -613,8 +613,18 @@ def run_daily_pipeline(
             except Exception:
                 pass
 
-            # Why bullets (no market-edge section since no odds)
-            _pr_bullets: list[str] = ["⚠️ אין מחירים — תחזית מבוססת מודל בלבד"]
+            # Why bullets — first bullet reflects data availability
+            _pr_wo_entry = find_match_odds(match.home_team, match.away_team, _winner_odds_cache)
+            _pr_has_book  = (
+                _pr_wo_entry is not None and
+                ((_pr_wo_entry.get("odds_home") or 0) > 0 or
+                 (_pr_wo_entry.get("odds_away") or 0) > 0)
+            )
+            _pr_bullets: list[str] = [
+                "📊 Prior model (Odds API unavailable) — EV computed from provided sportsbook odds"
+                if _pr_has_book else
+                "⚠️ אין מחירים — תחזית מבוססת מודל בלבד"
+            ]
             _pr_ratio = _pr_lh / _pr_la if _pr_la > 0.01 else 1.0
             _pr_lstr  = f"λ H={_pr_lh:.1f} / A={_pr_la:.1f}"
             if _pr_ratio >= 1.6:

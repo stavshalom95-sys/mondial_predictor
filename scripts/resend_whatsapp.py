@@ -126,7 +126,7 @@ def main() -> int:
             desc = _score_desc(h, a, sh, sa)
             if is_ko:
                 lines.append(f"   🏆 *365Scores: {desc}* _(incl. extra time / penalties)_")
-                lines.append(f"   🎰 *90-min Market:* Draw is a Draw")
+                lines.append(f"   🎰 *90-min bet: {desc}* _(if 90 min ends in draw → bet settles as draw)_")
             else:
                 lines.append(f"   ⚽ *Final Prediction: {desc}*")
 

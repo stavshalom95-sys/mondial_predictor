@@ -305,9 +305,13 @@ def format_daily_message(
             )
 
         if pick.is_knockout:
-            # KO dual-track: competition (365Scores) and betting serve different rules
+            # KO dual-track: competition (365Scores) and betting serve different rules.
+            # Both lines show the SAME predicted score.  The difference is in
+            # how a 90-minute draw is handled: 365Scores continues to ET/pens
+            # (so a draw pick is always wrong), while the sportsbook settles
+            # the 90-min result immediately (draw = draw).
             lines.append(f"   🏆 *365Scores: {pick_desc}* _(incl. extra time / penalties)_")
-            lines.append(f"   🎰 *90-min Market:* Draw is a Draw")
+            lines.append(f"   🎰 *90-min bet: {pick_desc}* _(if 90 min ends in draw → bet settles as draw)_")
         else:
             lines.append(f"   ⚽ *Final Prediction: {pick_desc}*")
 

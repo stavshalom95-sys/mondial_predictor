@@ -143,6 +143,24 @@ jobs:
           [ "${{ github.event.inputs.dry_run || 'false' }}" = "true" ] && DRY_FLAG="--dry-run"
           python main.py tests/sample_games.json $FORCE_FLAG $DRY_FLAG
 
+      # ── 7b. Resend if WhatsApp failed (fallback) ─────────────────────────
+      # Reads morning_picks.json and retries send. Green-API instance state
+      # is checked and an ::error:: annotation is emitted on failure so the
+      # CI job is visibly marked as failed on the GitHub Actions summary page.
+      - name: Verify and resend WhatsApp if needed
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          GREEN_API_INSTANCE_ID:    ${{ secrets.GREEN_API_INSTANCE_ID }}
+          GREEN_API_TOKEN:          ${{ secrets.GREEN_API_TOKEN }}
+          WHATSAPP_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_RECIPIENT_PHONE }}
+        run: |
+          # Only retry when Green-API creds are configured.
+          if [ -z "$GREEN_API_INSTANCE_ID" ]; then
+            echo "::warning::GREEN_API_INSTANCE_ID not set — WhatsApp disabled for this run."
+            exit 0
+          fi
+          python scripts/resend_whatsapp.py --picks-path data/morning_picks.json
+
       # ── 8. Auto-commit all updated data back to the repository ───────────────
       # Commits every file the pipeline may have touched in one atomic push:
       #   data/               — morning_picks.json, history.json, group_tables.json,

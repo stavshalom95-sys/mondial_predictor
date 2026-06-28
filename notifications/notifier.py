@@ -542,10 +542,39 @@ def send_whatsapp_message(
     api_token       = api_token       or os.environ.get("GREEN_API_TOKEN")
     recipient_phone = recipient_phone or os.environ.get("WHATSAPP_RECIPIENT_PHONE")
 
-    if not all([instance_id, api_token, recipient_phone]):
-        print("[notifier] WhatsApp credentials missing — printing message to terminal:\n")
+    missing = [v for v, val in [
+        ("GREEN_API_INSTANCE_ID",    instance_id),
+        ("GREEN_API_TOKEN",          api_token),
+        ("WHATSAPP_RECIPIENT_PHONE", recipient_phone),
+    ] if not val]
+    if missing:
+        print(f"[notifier] WhatsApp credentials missing ({', '.join(missing)}) — message NOT sent.")
+        print("[notifier] Message content:\n")
         print(message)
         return False
+
+    # ── Pre-flight: check Green-API instance state ──────────────────────────
+    try:
+        state_url  = (
+            f"https://api.green-api.com/waInstance{instance_id}"
+            f"/getStateInstance/{api_token}"
+        )
+        state_resp = requests.get(state_url, timeout=10)
+        if state_resp.ok:
+            state = state_resp.json().get("stateInstance", "unknown")
+            print(f"[notifier] Green-API instance state: {state}")
+            if state != "authorized":
+                print(
+                    f"[notifier] ERROR: Green-API instance is '{state}' — cannot send WhatsApp.\n"
+                    f"  Fix: console.green-api.com → Instances → {instance_id} → Scan QR."
+                )
+                # Emit GitHub Actions error annotation so the CI job is flagged
+                print(f"::error::Green-API instance '{state}' — WhatsApp not authorized. Re-scan QR at console.green-api.com")
+                return False
+        else:
+            print(f"[notifier] Green-API state check HTTP {state_resp.status_code} — proceeding anyway.")
+    except Exception as exc:
+        print(f"[notifier] Green-API state check failed ({exc}) — proceeding anyway.")
 
     url = (
         f"https://api.green-api.com/waInstance{instance_id}"
@@ -569,7 +598,8 @@ def send_whatsapp_message(
         except Exception as exc:
             print(f"[notifier] WhatsApp send failed (attempt {_attempt}/3): {exc}")
 
-    # All attempts exhausted — print to stdout so the pick is not lost
+    # All 3 attempts exhausted — emit GitHub Actions error annotation
+    print("::error::WhatsApp delivery failed after 3 attempts — check Green-API logs at console.green-api.com")
     print("[notifier] All 3 send attempts failed. Message content:")
     print(message)
     return False

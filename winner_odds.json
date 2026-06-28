@@ -1,107 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-27T08:28:29Z. Fill in decimal odds before the daily pipeline runs.",
-  "Panama vs England": {
-    "winner": {
-      "home": 14,
-      "draw": 7,
-      "away": 1.15
-    },
-    "sum_goals": {
-      "0-1": 5.6,
-      "2-3": 2.15,
-      "+4": 1.9
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "Croatia vs Ghana": {
-    "winner": {
-      "home": 1.85,
-      "draw": 3.05,
-      "away": 4.6
-    },
-    "sum_goals": {
-      "0-1": 2.65,
-      "2-3": 1.9,
-      "+4": 3.7
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "Colombia vs Portugal": {
-    "winner": {
-      "home": 3.3,
-      "draw": 3.55,
-      "away": 2
-    },
-    "sum_goals": {
-      "0-1": 3.7,
-      "2-3": 1.95,
-      "+4": 2.5
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "Congo DR vs Uzbekistan": {
-    "winner": {
-      "home": 1.6,
-      "draw": 4.2,
-      "away": 4.5
-    },
-    "sum_goals": {
-      "0-1": 2.9,
-      "2-3": 1.9,
-      "+4": 3.3
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "Jordan vs Argentina": {
-    "winner": {
-      "home": 16,
-      "draw": 8.6,
-      "away": 1.1
-    },
-    "sum_goals": {
-      "0-1": 4.9,
-      "2-3": 2.05,
-      "+4": 2.1
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "Algeria vs Austria": {
-    "winner": {
-      "home": 3.7,
-      "draw": 2.15,
-      "away": 2.8
-    },
-    "sum_goals": {
-      "0-1": 2.05,
-      "2-3": 1.95,
-      "+4": 5.7
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
+  "_note": "Reset by master_reset.py on 2026-06-28T07:43:20Z. Fill in decimal odds before the daily pipeline runs.",
   "South Africa vs Canada": {
     "winner": {
       "home": 5,
@@ -119,10 +17,42 @@
       "12+": 0.0
     }
   },
+  "Brazil vs Japan": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Germany vs Paraguay": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
   "_played_today": [
-    "Uruguay vs Spain",
-    "Cape Verde Islands vs Saudi Arabia",
-    "New Zealand vs Belgium",
-    "Egypt vs Iran"
+    "Jordan vs Argentina",
+    "Algeria vs Austria"
   ]
 }

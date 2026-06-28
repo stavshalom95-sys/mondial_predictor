@@ -1453,7 +1453,7 @@
   },
   {
     "id": "537413",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-27T21:00:00Z",
     "home": "PAN",
@@ -1469,13 +1469,13 @@
       }
     },
     "score": {
-      "PAN": null,
-      "ENG": null
+      "PAN": 0,
+      "ENG": 2
     }
   },
   {
     "id": "537414",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-27T21:00:00Z",
     "home": "CRO",
@@ -1491,13 +1491,13 @@
       }
     },
     "score": {
-      "CRO": null,
-      "GHA": null
+      "CRO": 2,
+      "GHA": 1
     }
   },
   {
     "id": "537407",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-27T23:30:00Z",
     "home": "COL",
@@ -1513,13 +1513,13 @@
       }
     },
     "score": {
-      "COL": null,
-      "POR": null
+      "COL": 0,
+      "POR": 0
     }
   },
   {
     "id": "537408",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-27T23:30:00Z",
     "home": "COD",
@@ -1535,13 +1535,13 @@
       }
     },
     "score": {
-      "COD": null,
-      "UZB": null
+      "COD": 3,
+      "UZB": 1
     }
   },
   {
     "id": "537401",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-28T02:00:00Z",
     "home": "JOR",
@@ -1557,13 +1557,13 @@
       }
     },
     "score": {
-      "JOR": null,
-      "ARG": null
+      "JOR": 1,
+      "ARG": 3
     }
   },
   {
     "id": "537402",
-    "status": "scheduled",
+    "status": "final",
     "stage": "group_stage",
     "start_time": "2026-06-28T02:00:00Z",
     "home": "ALG",
@@ -1579,8 +1579,8 @@
       }
     },
     "score": {
-      "ALG": null,
-      "AUT": null
+      "ALG": 3,
+      "AUT": 3
     }
   },
   {
@@ -1633,20 +1633,20 @@
     "stage": "round_of_32",
     "start_time": "2026-06-29T20:30:00Z",
     "home": "GER",
-    "away": null,
+    "away": "PAR",
     "teams": {
       "GER": {
         "name": "Germany",
         "abbreviation": "GER"
       },
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "PAR": {
+        "name": "Paraguay",
+        "abbreviation": "PAR"
       }
     },
     "score": {
       "GER": null,
-      "null": null
+      "PAR": null
     }
   },
   {
@@ -1677,20 +1677,20 @@
     "stage": "round_of_32",
     "start_time": "2026-06-30T17:00:00Z",
     "home": "CIV",
-    "away": null,
+    "away": "NOR",
     "teams": {
       "CIV": {
         "name": "Ivory Coast",
         "abbreviation": "CIV"
       },
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "NOR": {
+        "name": "Norway",
+        "abbreviation": "NOR"
       }
     },
     "score": {
       "CIV": null,
-      "null": null
+      "NOR": null
     }
   },
   {
@@ -1698,16 +1698,21 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-06-30T21:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "FRA",
+    "away": "SWE",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "FRA": {
+        "name": "France",
+        "abbreviation": "FRA"
+      },
+      "SWE": {
+        "name": "Sweden",
+        "abbreviation": "SWE"
       }
     },
     "score": {
-      "null": null
+      "FRA": null,
+      "SWE": null
     }
   },
   {
@@ -1716,20 +1721,20 @@
     "stage": "round_of_32",
     "start_time": "2026-07-01T01:00:00Z",
     "home": "MEX",
-    "away": null,
+    "away": "ECU",
     "teams": {
       "MEX": {
         "name": "Mexico",
         "abbreviation": "MEX"
       },
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "ECU": {
+        "name": "Ecuador",
+        "abbreviation": "ECU"
       }
     },
     "score": {
       "MEX": null,
-      "null": null
+      "ECU": null
     }
   },
   {
@@ -1737,16 +1742,21 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-01T16:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "ENG",
+    "away": "COD",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "ENG": {
+        "name": "England",
+        "abbreviation": "ENG"
+      },
+      "COD": {
+        "name": "Congo DR",
+        "abbreviation": "COD"
       }
     },
     "score": {
-      "null": null
+      "ENG": null,
+      "COD": null
     }
   },
   {
@@ -1754,16 +1764,21 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-01T20:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "BEL",
+    "away": "SEN",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "BEL": {
+        "name": "Belgium",
+        "abbreviation": "BEL"
+      },
+      "SEN": {
+        "name": "Senegal",
+        "abbreviation": "SEN"
       }
     },
     "score": {
-      "null": null
+      "BEL": null,
+      "SEN": null
     }
   },
   {
@@ -1793,16 +1808,21 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-02T19:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "ESP",
+    "away": "AUT",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "ESP": {
+        "name": "Spain",
+        "abbreviation": "ESP"
+      },
+      "AUT": {
+        "name": "Austria",
+        "abbreviation": "AUT"
       }
     },
     "score": {
-      "null": null
+      "ESP": null,
+      "AUT": null
     }
   },
   {
@@ -1810,16 +1830,21 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-02T23:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "POR",
+    "away": "CRO",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "POR": {
+        "name": "Portugal",
+        "abbreviation": "POR"
+      },
+      "CRO": {
+        "name": "Croatia",
+        "abbreviation": "CRO"
       }
     },
     "score": {
-      "null": null
+      "POR": null,
+      "CRO": null
     }
   },
   {
@@ -1828,20 +1853,20 @@
     "stage": "round_of_32",
     "start_time": "2026-07-03T03:00:00Z",
     "home": "SUI",
-    "away": null,
+    "away": "ALG",
     "teams": {
       "SUI": {
         "name": "Switzerland",
         "abbreviation": "SUI"
       },
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "ALG": {
+        "name": "Algeria",
+        "abbreviation": "ALG"
       }
     },
     "score": {
       "SUI": null,
-      "null": null
+      "ALG": null
     }
   },
   {
@@ -1850,20 +1875,20 @@
     "stage": "round_of_32",
     "start_time": "2026-07-03T18:00:00Z",
     "home": "AUS",
-    "away": null,
+    "away": "EGY",
     "teams": {
       "AUS": {
         "name": "Australia",
         "abbreviation": "AUS"
       },
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "EGY": {
+        "name": "Egypt",
+        "abbreviation": "EGY"
       }
     },
     "score": {
       "AUS": null,
-      "null": null
+      "EGY": null
     }
   },
   {
@@ -1872,20 +1897,20 @@
     "stage": "round_of_32",
     "start_time": "2026-07-03T22:00:00Z",
     "home": "ARG",
-    "away": null,
+    "away": "CPV",
     "teams": {
       "ARG": {
         "name": "Argentina",
         "abbreviation": "ARG"
       },
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "CPV": {
+        "name": "Cape Verde Islands",
+        "abbreviation": "CPV"
       }
     },
     "score": {
       "ARG": null,
-      "null": null
+      "CPV": null
     }
   },
   {
@@ -1893,16 +1918,21 @@
     "status": "scheduled",
     "stage": "round_of_32",
     "start_time": "2026-07-04T01:30:00Z",
-    "home": null,
-    "away": null,
+    "home": "COL",
+    "away": "GHA",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "COL": {
+        "name": "Colombia",
+        "abbreviation": "COL"
+      },
+      "GHA": {
+        "name": "Ghana",
+        "abbreviation": "GHA"
       }
     },
     "score": {
-      "null": null
+      "COL": null,
+      "GHA": null
     }
   },
   {

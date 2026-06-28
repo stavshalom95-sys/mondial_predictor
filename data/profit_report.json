@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-06-27T13:32:14Z",
+  "generated_at": "2026-06-28T10:37:55Z",
   "bankroll": 100.0,
   "min_prob": 0.5,
   "ev_min": 0.1,
   "ds_min": 70.0,
-  "wc_matches": 28,
+  "wc_matches": 34,
   "sniper_bets": [],
   "skipped": [],
   "total_stake": 0,
@@ -12,40 +12,40 @@
   "combo_suggestion": {
     "legs": [
       {
-        "match": "Algeria vs Austria",
-        "outcome": "Home Win",
-        "odds": 3.7,
-        "prob": 0.49755,
-        "implied": 0.27027027027027023,
-        "edge": 0.22727972972972976,
-        "ev": 0.840935,
-        "ds": 81.1
-      },
-      {
         "match": "South Africa vs Canada",
         "outcome": "Home Win",
-        "odds": 5,
-        "prob": 0.40805,
-        "implied": 0.2,
-        "edge": 0.20805,
-        "ev": 1.0402500000000003,
-        "ds": 75.5
+        "odds": 5.7,
+        "prob": 0.4212,
+        "implied": 0.17543859649122806,
+        "edge": 0.24576140350877196,
+        "ev": 1.40084,
+        "ds": 76.3
       },
       {
-        "match": "Panama vs England",
-        "outcome": "Draw",
-        "odds": 7,
-        "prob": 0.3355,
-        "implied": 0.14285714285714285,
-        "edge": 0.19264285714285717,
-        "ev": 1.3485,
-        "ds": 71.0
+        "match": "Germany vs Paraguay",
+        "outcome": "Away Win",
+        "odds": 7.8,
+        "prob": 0.2881,
+        "implied": 0.12820512820512822,
+        "edge": 0.1598948717948718,
+        "ev": 1.2471800000000002,
+        "ds": 68.0
+      },
+      {
+        "match": "Brazil vs Japan",
+        "outcome": "Home Win",
+        "odds": 1.6,
+        "prob": 0.57315,
+        "implied": 0.625,
+        "edge": -0.05184999999999995,
+        "ev": -0.08295999999999992,
+        "ds": 35.8
       }
     ],
-    "combined_prob": 0.0681,
-    "combined_odds": 129.5,
-    "combined_ev": 7.8209,
-    "combo_stake": 1.5,
+    "combined_prob": 0.0696,
+    "combined_odds": 71.14,
+    "combined_ev": 3.9475,
+    "combo_stake": 1.4,
     "is_value": true
   }
 }

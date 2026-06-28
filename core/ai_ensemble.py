@@ -28,9 +28,11 @@ from core.poisson_engine import PoissonMatchModel, ScoreProb
 # ── Optional dependency checks ───────────────────────────────────────────────
 try:
     import anthropic as _anthropic
+    import httpx as _httpx  # transitive dep of anthropic — always present when SDK is
     _SDK_AVAILABLE = True
 except ImportError:
     _SDK_AVAILABLE = False
+    _httpx = None  # type: ignore
 
 try:
     import instructor as _instructor
@@ -40,6 +42,16 @@ except ImportError:
     _INSTRUCTOR_AVAILABLE = False
 
 _MODEL = "claude-opus-4-6"
+
+# ── AI offline reason (set on each call; empty = ran OK or transient error) ──
+_AI_OFFLINE_REASON: str = ""
+
+
+def get_ai_offline_reason() -> str:
+    """Return why the AI ensemble was skipped on the last enhance() call.
+    Empty string means it either ran successfully or failed transiently (timeout/rate-limit).
+    Non-empty means a permanent config issue: missing SDK or missing API key."""
+    return _AI_OFFLINE_REASON
 
 _SYSTEM_PROMPT = """\
 You are an expert football analyst assisting in a World Cup prediction competition.
@@ -170,12 +182,17 @@ def enhance(
     raw Anthropic SDK otherwise. Returns None on any failure — caller falls
     back to Poisson #1.
     """
+    global _AI_OFFLINE_REASON
+    _AI_OFFLINE_REASON = ""  # reset each call
+
     if not _SDK_AVAILABLE:
+        _AI_OFFLINE_REASON = "anthropic SDK not installed"
         print("[ensemble] 'anthropic' package not installed — skipping AI ensemble.")
         return None
 
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
+        _AI_OFFLINE_REASON = "ANTHROPIC_API_KEY not set"
         print("[ensemble] ANTHROPIC_API_KEY not set — skipping AI ensemble.")
         return None
 
@@ -195,7 +212,12 @@ def enhance(
     try:
         # ── Path A: instructor — Pydantic + auto-retry (preferred) ───────────
         if _INSTRUCTOR_AVAILABLE:
-            client = _instructor.from_anthropic(_anthropic.Anthropic(api_key=api_key))
+            client = _instructor.from_anthropic(
+                _anthropic.Anthropic(
+                    api_key=api_key,
+                    http_client=_httpx.Client(timeout=30.0),
+                )
+            )
             raw    = client.messages.create(
                 model          = _MODEL,
                 max_tokens     = 1024,
@@ -216,7 +238,10 @@ def enhance(
         else:
             import json
             print("[ensemble] instructor not installed — using raw SDK fallback.")
-            client   = _anthropic.Anthropic(api_key=api_key)
+            client = _anthropic.Anthropic(
+                api_key=api_key,
+                http_client=_httpx.Client(timeout=30.0),
+            )
             response = client.messages.create(
                 model    = _MODEL,
                 max_tokens = 1024,

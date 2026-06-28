@@ -46,7 +46,7 @@ from data.tournament_state import MY_CURRENT_STATE
 from notifications.notifier import DailyPick, format_daily_message, format_lineup_alert, send_whatsapp_message, TOTAL_BANKROLL, DAILY_BUDGET_CAP, LOW_PROB_BUDGET_CAP
 
 from config.scoring_rules import SCORING, TournamentStage
-from core.ai_ensemble import enhance
+from core.ai_ensemble import enhance, get_ai_offline_reason
 from data.context_fetcher import fetch_match_context
 from data.backup_scraper import fetch_match_context_espn
 from data.results_fetcher import fetch_yesterday_results
@@ -1213,6 +1213,10 @@ def run_daily_pipeline(
             ai_pick_prob  = ensemble_pick.to_score_prob(model)
             # Prepend data source tag so WhatsApp shows provenance of AI analysis
             ai_reasoning  = f"[{_src_label}] {ensemble_pick.reasoning}"
+        else:
+            _offline = get_ai_offline_reason()
+            if _offline:
+                ai_reasoning = f"🤖 AI layer offline ({_offline}) — running on baseline Poisson"
 
         # Tournament context only relevant from matchday 3 onwards or in knockout rounds.
         # Rounds 1 & 2: all teams are motivated — suppress to keep notification clean.

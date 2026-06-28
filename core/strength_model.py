@@ -71,13 +71,14 @@ def dynamic_blend_weight(n_matches: int) -> float:
 
 _FIFA_PRIOR: dict[str, float] = {
     # ── Elite: FIFA top 10  (>1.50 g/game) ───────────────────────────────
-    "france":                   1.65,
+    # Priors updated 2026-06-28 after group stage observations.
+    "france":                   1.72,   # obs 3.5 g/game (4 vs Norway, strong tournament)
     "argentina":                1.60,
     "brazil":                   1.60,
-    "england":                  1.55,
-    "germany":                  1.55,
+    "england":                  1.48,   # obs: 0-0 draws, struggling to score (was 1.55)
+    "germany":                  1.44,   # obs: lost to Ecuador 1-2, below expectations (was 1.55)
     "spain":                    1.55,
-    "norway":                   1.55,   # Haaland elevates attack ceiling
+    "norway":                   1.48,   # obs: lost 1-4 to France, conceding heavily (was 1.55)
     "netherlands":              1.50,
     "portugal":                 1.50,
     "belgium":                  1.45,
@@ -86,28 +87,28 @@ _FIFA_PRIOR: dict[str, float] = {
     "croatia":                  1.40,
     "uruguay":                  1.35,
     "colombia":                 1.35,
-    "usa":                      1.35,
+    "usa":                      1.30,   # obs: lost 2-3 to Turkey (was 1.35)
     "mexico":                   1.35,
-    "japan":                    1.35,
+    "japan":                    1.32,   # obs: drew 1-1 vs Sweden, slightly below (was 1.35)
     "canada":                   1.30,
     "korea republic":           1.30,
     "switzerland":              1.30,
     "austria":                  1.25,
-    "sweden":                   1.25,
+    "sweden":                   1.28,   # obs: held Japan 1-1, performing at prior (was 1.25)
     "morocco":                  1.25,
 
     # ── Mid-tier: FIFA 31–55  (1.05–1.24 g/game) ─────────────────────────
-    "ecuador":                  1.20,
+    "ecuador":                  1.26,   # obs: beat Germany 2-1, stronger than expected (was 1.20)
     "scotland":                 1.15,
-    "senegal":                  1.15,
+    "senegal":                  1.28,   # obs: 5-0 vs Iraq, 7 goals in 2 games (was 1.15)
     "egypt":                    1.15,
     "côte d'ivoire":            1.15,
     "australia":                1.15,
     "ir iran":                  1.10,
-    "türkiye":                  1.10,
+    "türkiye":                  1.28,   # obs: beat USA 3-2, clearly underrated (was 1.10)
     "czechia":                  1.10,
     "ghana":                    1.05,
-    "south africa":             1.05,
+    "south africa":             1.12,   # obs: beat South Korea, stronger than expected (was 1.05)
     "algeria":                  1.05,
     "congo dr":                 1.05,
 
@@ -124,7 +125,7 @@ _FIFA_PRIOR: dict[str, float] = {
     "qatar":                    0.90,
 
     # ── Weak: FIFA 91+  (<0.90 g/game) ───────────────────────────────────
-    "iraq":                     0.88,
+    "iraq":                     0.70,   # obs: 0 goals in 2 games, 8 conceded (was 0.88)
     "curaçao":                  0.85,
     "haiti":                    0.85,
 }

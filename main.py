@@ -55,7 +55,7 @@ from core.bias_corrector import build_bias_corrector
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket, build_probability_ticket, build_confidence_value_ticket, ConfidenceTicket
 from core.simulator import simulate
-from core.strength_model import build_strength_model, MIN_BLEND, BLEND_WEIGHT, dynamic_blend_weight, _norm as _sm_norm
+from core.strength_model import build_strength_model, save_wc_priors, load_wc_priors, MIN_BLEND, BLEND_WEIGHT, dynamic_blend_weight, _norm as _sm_norm
 from core.calibration import build_calibrator
 from core.market_calculator import calculate_all_markets
 from data.winner_odds_loader import enrich_picks, get_all_odds, find_match_odds
@@ -65,6 +65,7 @@ from data.stats_collector import build_form_cache, FORM_BLEND_WEIGHT
 _DATA_DIR            = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _MORNING_PICKS_PATH  = os.path.join(_DATA_DIR, "morning_picks.json")
 _LAST_RUN_PATH       = os.path.join(_DATA_DIR, "last_run.json")
+_WC_PRIORS_PATH      = os.path.join(_DATA_DIR, "wc_priors.json")
 _EV_LOG_PATH         = os.path.join(_DATA_DIR, "ev_log.json")
 _WINNER_ODDS_PATH    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "winner_odds.json")
 _GROUP_TABLES_PATH   = os.path.join(_DATA_DIR, "group_tables.json")
@@ -352,8 +353,13 @@ def run_daily_pipeline(
 
     combined_results = schedule_results
 
+    # Load accumulated WC priors from previous runs (empty dict on first run)
+    _wc_priors = load_wc_priors(_WC_PRIORS_PATH)
+    if _wc_priors:
+        print(f"[pipeline] Loaded {len(_wc_priors)} team priors from wc_priors.json")
+
     # Build strength model from completed WC matches (returns None if < MIN_MATCHES)
-    strength_model = build_strength_model(combined_results)
+    strength_model = build_strength_model(combined_results, external_priors=_wc_priors or None)
     if strength_model:
         print(strength_model.summary())
 
@@ -1337,6 +1343,9 @@ def run_daily_pipeline(
     if not dry_run:
         save_morning_picks(morning_data)
         _save_last_run(picks_generated=len(picks))
+        # Persist learned team posteriors so the next run starts with
+        # tournament-informed priors rather than static FIFA estimates.
+        save_wc_priors(combined_results, _WC_PRIORS_PATH)
     return message
 
 

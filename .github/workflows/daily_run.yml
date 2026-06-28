@@ -143,24 +143,6 @@ jobs:
           [ "${{ github.event.inputs.dry_run || 'false' }}" = "true" ] && DRY_FLAG="--dry-run"
           python main.py tests/sample_games.json $FORCE_FLAG $DRY_FLAG
 
-      # ── 7b. Resend if WhatsApp failed (fallback) ─────────────────────────
-      # Reads morning_picks.json and retries send. Green-API instance state
-      # is checked and an ::error:: annotation is emitted on failure so the
-      # CI job is visibly marked as failed on the GitHub Actions summary page.
-      - name: Verify and resend WhatsApp if needed
-        if: github.event.inputs.dry_run != 'true'
-        env:
-          GREEN_API_INSTANCE_ID:    ${{ secrets.GREEN_API_INSTANCE_ID }}
-          GREEN_API_TOKEN:          ${{ secrets.GREEN_API_TOKEN }}
-          WHATSAPP_RECIPIENT_PHONE: ${{ secrets.WHATSAPP_RECIPIENT_PHONE }}
-        run: |
-          # Only retry when Green-API creds are configured.
-          if [ -z "$GREEN_API_INSTANCE_ID" ]; then
-            echo "::warning::GREEN_API_INSTANCE_ID not set — WhatsApp disabled for this run."
-            exit 0
-          fi
-          python scripts/resend_whatsapp.py --picks-path data/morning_picks.json
-
       # ── 8. Auto-commit all updated data back to the repository ───────────────
       # Commits every file the pipeline may have touched in one atomic push:
       #   data/               — morning_picks.json, history.json, group_tables.json,
@@ -168,8 +150,9 @@ jobs:
       #   winner_odds.json    — reset by master_reset.py to today's match keys
       #   tests/sample_games.json — refreshed by fetch_schedule.py
       #
-      # git diff --staged --quiet: no-op when nothing changed (idempotent).
-      # [skip ci] prevents this commit from triggering a new workflow run.
+      # git pull --rebase before push: integrates any commits (e.g. code pushes
+      # from local dev) that landed after this job's checkout, preventing the
+      # "! [rejected] fetch first" error when HEAD has advanced on the remote.
       - name: Auto-commit all updated data files
         if: github.event.inputs.dry_run != 'true'
         run: |
@@ -184,18 +167,16 @@ jobs:
             echo "Nothing changed — skipping commit."
           else
             git commit -m "chore: update picks and history [skip ci]"
+            git pull --rebase origin main
             git push
             echo "Pushed updated data to repository."
           fi
 
       # ── 9. Keepalive — prevent GitHub from disabling the cron schedule ───────
-      # GitHub auto-disables scheduled workflows after 60 days of repository
-      # inactivity.  Bot commits tagged [skip ci] do NOT reset the inactivity
-      # timer, but a push event (even of a tiny file) does.
-      # This step runs on EVERY execution (if: always()) — including failures,
-      # dry-runs, and early exits — so the 60-day clock is always reset.
+      # Runs only on successful non-dry-run executions (not always()) to avoid
+      # push races when the main data commit in step 8 already pushed moments ago.
       - name: Keepalive
-        if: always()
+        if: success() && github.event.inputs.dry_run != 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -203,6 +184,10 @@ jobs:
           echo "Last keepalive: $(date -u '+%Y-%m-%dT%H:%M:%SZ')  run=${{ github.run_id }}" \
             > .github/keepalive.txt
           git add .github/keepalive.txt
-          git diff --staged --quiet || \
+          if git diff --staged --quiet; then
+            echo "Keepalive: no change needed."
+          else
             git commit -m "chore: keepalive $(date -u '+%Y-%m-%d') [skip ci]"
-          git push
+            git pull --rebase origin main
+            git push
+          fi

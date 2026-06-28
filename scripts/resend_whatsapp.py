@@ -86,39 +86,53 @@ def main() -> int:
     n     = len(picks)
     print(f"[resend] Loaded {n} pick(s) for {today} from {args.picks_path}")
 
-    # Rebuild a compact text message from the raw pick dicts
-    # (simpler than reconstructing full DailyPick objects)
+    def _score_desc(h: str, a: str, sh: int, sa: int) -> str:
+        """Match notifier._describe_score() — LTR-safe, team names explicit."""
+        if sh > sa:
+            return f"{h} wins {sh}-{sa}"
+        elif sa > sh:
+            return f"{a} wins {sa}-{sh}"
+        else:
+            return f"Draw {sh}-{sa}"
+
     lines = [
-        f"*[RESEND] תחזית מונדיאל שטראוס — {today}*",
+        f"⚽ *תחזית מונדיאל שטראוס — {today}*",
         "",
     ]
+
     for p in picks:
-        h = p.get("home_team", "?")
-        a = p.get("away_team", "?")
-        sh = p.get("final_home_goals")
-        sa = p.get("final_away_goals")
-        p_h = p.get("sim_p_home", 0)
-        p_d = p.get("sim_p_draw", 0)
-        p_a = p.get("sim_p_away", 0)
+        h     = p.get("home_team", "?")
+        a     = p.get("away_team", "?")
+        sh    = p.get("final_home_goals")
+        sa    = p.get("final_away_goals")
+        p_h   = p.get("sim_p_home",   0)
+        p_d   = p.get("sim_p_draw",   0)
+        p_a   = p.get("sim_p_away",   0)
+        lh    = p.get("lambda_home")
+        la    = p.get("lambda_away")
         is_ko = p.get("is_knockout", False)
         stage = p.get("stage", "")
 
-        direction = "ניצחון ביתי" if (sh is not None and sa is not None and sh > sa) else \
-                    "תיקו"         if (sh is not None and sa is not None and sh == sa) else \
-                    "ניצחון אורח"
+        lines.append(f"🔵 *{h} vs {a}*  [{stage}]")
+        lines.append(f"   📊 Sim (10k): H={p_h:.0%}  D={p_d:.0%}  A={p_a:.0%}")
 
-        lines.append(f"*{h} נגד {a}*  [{stage}]")
-        lines.append(f"   Sim: H={p_h:.0%}  D={p_d:.0%}  A={p_a:.0%}")
+        # xG / model depth
+        if lh is not None and la is not None:
+            xg = lh + la
+            lines.append(f"   🔬 xG: {h} λ={lh:.2f} / {a} λ={la:.2f} → {xg:.1f} exp. goals")
 
+        # Pick line(s)
         if sh is not None and sa is not None:
+            desc = _score_desc(h, a, sh, sa)
             if is_ko:
-                lines.append(f"   🏆 *365Scores: {sh}-{sa} ({direction})* _(כולל הארכות/פנדלים)_")
-                lines.append(f"   🎰 *הימור 90 דקות:* תיקו = תיקו בהימור")
+                lines.append(f"   🏆 *365Scores: {desc}* _(incl. extra time / penalties)_")
+                lines.append(f"   🎰 *90-min Market:* Draw is a Draw")
             else:
-                lines.append(f"   ⚽ *ניחוש: {sh}-{sa} ({direction})*")
+                lines.append(f"   ⚽ *Final Prediction: {desc}*")
+
         lines.append("")
 
-    lines.append("_[RESEND — שנשלח מחדש ע\"י Mondial Predictor]_")
+    lines.append("_נשלח אוטומטית ע\"י Mondial Predictor_")
     message = "\n".join(lines)
 
     if args.dry_run:

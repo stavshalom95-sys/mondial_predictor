@@ -196,6 +196,9 @@ class DailyPick:
     poisson_p_draw: Optional[float] = None
     poisson_p_away: Optional[float] = None
     why_bullets:    Optional[list[str]] = None  # 3-5 bullets explaining the prediction
+    # ── Model depth ──────────────────────────────────────────────────────────
+    lambda_home:    Optional[float] = None   # Poisson attack rate (home)
+    lambda_away:    Optional[float] = None   # Poisson attack rate (away)
     # ── Stage flags ──────────────────────────────────────────────────────────
     is_knockout:    bool = False   # True for R32/R16/QF/SF/Final
     # KO dual-track: competition pick (365Scores) always has a winner;
@@ -303,10 +306,18 @@ def format_daily_message(
 
         if pick.is_knockout:
             # KO dual-track: competition (365Scores) and betting serve different rules
-            lines.append(f"   🏆 *365Scores: {pick_desc}* _(ניצחון כולל הארכות / פנדלים)_")
-            lines.append(f"   🎰 *הימור 90 דקות:* תוצאה רגולציה — תיקו = תיקו בהימור")
+            lines.append(f"   🏆 *365Scores: {pick_desc}* _(incl. extra time / penalties)_")
+            lines.append(f"   🎰 *90-min Market:* Draw is a Draw")
         else:
             lines.append(f"   ⚽ *Final Prediction: {pick_desc}*")
+
+        # Model depth — always show λ so the reader can verify simulation ran
+        if pick.lambda_home is not None and pick.lambda_away is not None:
+            _xg = pick.lambda_home + pick.lambda_away
+            lines.append(
+                f"   🔬 xG: {pick.home_team} λ={pick.lambda_home:.2f} / "
+                f"{pick.away_team} λ={pick.lambda_away:.2f} → {_xg:.1f} exp. goals"
+            )
         lines.append(f"   אסטרטגיה: {rec.strategy.value}")
 
         # ── Why section ───────────────────────────────────────────────────────

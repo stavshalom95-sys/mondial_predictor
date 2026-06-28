@@ -677,6 +677,8 @@ def run_daily_pipeline(
                 poisson_p_home = round(_pr_sim.poisson_p_home, 4),
                 poisson_p_draw = round(_pr_sim.poisson_p_draw, 4),
                 poisson_p_away = round(_pr_sim.poisson_p_away, 4),
+                lambda_home    = round(_pr_lh, 3),
+                lambda_away    = round(_pr_la, 3),
                 is_knockout    = (_pr_stage != TournamentStage.GROUP_STAGE),
             ))
             morning_data.append({
@@ -1232,6 +1234,8 @@ def run_daily_pipeline(
             poisson_p_home  = round(sim.poisson_p_home,  4),
             poisson_p_draw  = round(sim.poisson_p_draw,  4),
             poisson_p_away  = round(sim.poisson_p_away,  4),
+            lambda_home     = round(model.lambda_home,   3),
+            lambda_away     = round(model.lambda_away,   3),
             is_knockout     = _is_knockout,
         ))
         morning_data.append({

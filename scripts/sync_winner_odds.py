@@ -105,6 +105,15 @@ def _blank_entry() -> dict:
     }
 
 
+def _has_nonzero_odds(entry: dict) -> bool:
+    """Return True if ANY numeric odds value in the entry is > 0.0."""
+    for sub in entry.values():
+        if isinstance(sub, dict):
+            if any(isinstance(v, (int, float)) and v > 0.0 for v in sub.values()):
+                return True
+    return False
+
+
 def _load_existing(odds_path: str) -> dict:
     """Load existing winner_odds.json (new dict format). Returns {} if absent."""
     try:
@@ -168,34 +177,37 @@ def sync(schedule_path: str = "tests/sample_games.json",
     for home, away in today_pairs:
         canonical_key = _key(home, away)
 
-        if reset:
+        # Always look for an existing filled entry first — never overwrite real odds.
+        existing_entry = None
+        for k, v in existing.items():
+            if k.startswith("_"):
+                continue
+            if _keys_match(k, home, away):
+                existing_entry = v
+                break
+
+        if existing_entry is not None and _has_nonzero_odds(existing_entry):
+            # Filled odds: preserve regardless of --reset flag.
+            new_data[canonical_key] = existing_entry
+            preserved += 1
+            print(f"[sync] PRESERVED  {canonical_key}  (odds already filled — not overwritten)")
+        elif reset:
+            # --reset + no filled odds: write/keep blank placeholders.
             new_data[canonical_key] = _blank_entry()
             zeroed += 1
-            print(f"[sync] RESET      {canonical_key}  (odds zeroed — fill in before run!)")
+            print(f"[sync] RESET      {canonical_key}  (odds were 0.0 — fill in before run!)")
+        elif existing_entry is not None:
+            # Existing 0.0 entry — keep it (user may be about to fill it).
+            new_data[canonical_key] = existing_entry
+            preserved += 1
+            print(f"[sync] PRESERVED  {canonical_key}  (keeping existing 0.0 placeholder)")
         else:
-            # Try to find an existing entry that matches this match
-            existing_entry = None
-            for k, v in existing.items():
-                if k.startswith("_"):
-                    continue
-                if _keys_match(k, home, away):
-                    existing_entry = v
-                    break
-
-            if existing_entry is not None:
-                new_data[canonical_key] = existing_entry
-                preserved += 1
-                print(f"[sync] PRESERVED  {canonical_key}")
-            else:
-                new_data[canonical_key] = _blank_entry()
-                added += 1
-                print(f"[sync] ADDED      {canonical_key}  (placeholder odds — fill in before run!)")
+            new_data[canonical_key] = _blank_entry()
+            added += 1
+            print(f"[sync] ADDED      {canonical_key}  (new placeholder — fill in before run!)")
 
     removed = len([k for k in existing if not k.startswith("_")]) - (preserved + zeroed)
-    if reset:
-        print(f"\n[sync] Summary: {zeroed} zeroed, {removed} stale removed.")
-    else:
-        print(f"\n[sync] Summary: {preserved} preserved, {added} added, {removed} stale removed.")
+    print(f"\n[sync] Summary: {preserved} preserved, {added} added, {zeroed} zeroed, {removed} stale removed.")
 
     with open(odds_path, "w", encoding="utf-8") as f:
         json.dump(new_data, f, indent=2, ensure_ascii=False)

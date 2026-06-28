@@ -1,13 +1,5 @@
 {
-  "_note": "KO Day 1 — 2026-06-28. Fill decimal odds for Brazil vs Japan and Germany vs Paraguay before pipeline runs.",
-  "_played_today": [
-    "Jordan vs Argentina",
-    "Algeria vs Austria",
-    "Panama vs England",
-    "Croatia vs Ghana",
-    "Colombia vs Portugal",
-    "Congo DR vs Uzbekistan"
-  ],
+  "_note": "Reset by master_reset.py on 2026-06-28T08:17:03Z. Fill in decimal odds before the daily pipeline runs.",
   "South Africa vs Canada": {
     "winner": {
       "home": 5.7,
@@ -58,5 +50,9 @@
       "9-11": 0.0,
       "12+": 0.0
     }
-  }
+  },
+  "_played_today": [
+    "Jordan vs Argentina",
+    "Algeria vs Austria"
+  ]
 }

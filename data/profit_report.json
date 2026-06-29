@@ -1,51 +1,63 @@
 {
-  "generated_at": "2026-06-28T10:37:55Z",
+  "generated_at": "2026-06-29T12:44:14Z",
   "bankroll": 100.0,
   "min_prob": 0.5,
   "ev_min": 0.1,
   "ds_min": 70.0,
-  "wc_matches": 34,
-  "sniper_bets": [],
+  "wc_matches": 35,
+  "sniper_bets": [
+    {
+      "match": "Ivory Coast vs Norway",
+      "outcome": "Home Win",
+      "odds": 3.5,
+      "sim_prob": 0.5394,
+      "implied": 0.2857142857142857,
+      "edge": 0.2536857142857143,
+      "ev": 0.8878999999999999,
+      "ds": 83.7,
+      "stake": 8.9
+    }
+  ],
   "skipped": [],
-  "total_stake": 0,
-  "bet_count": 0,
+  "total_stake": 8.9,
+  "bet_count": 1,
   "combo_suggestion": {
     "legs": [
       {
-        "match": "South Africa vs Canada",
+        "match": "Ivory Coast vs Norway",
         "outcome": "Home Win",
-        "odds": 5.7,
-        "prob": 0.4212,
-        "implied": 0.17543859649122806,
-        "edge": 0.24576140350877196,
-        "ev": 1.40084,
-        "ds": 76.3
+        "odds": 3.5,
+        "prob": 0.5394,
+        "implied": 0.2857142857142857,
+        "edge": 0.2536857142857143,
+        "ev": 0.8878999999999999,
+        "ds": 83.7
       },
       {
         "match": "Germany vs Paraguay",
         "outcome": "Away Win",
         "odds": 7.8,
-        "prob": 0.2881,
+        "prob": 0.2882,
         "implied": 0.12820512820512822,
-        "edge": 0.1598948717948718,
-        "ev": 1.2471800000000002,
+        "edge": 0.1599948717948718,
+        "ev": 1.24796,
         "ds": 68.0
       },
       {
-        "match": "Brazil vs Japan",
-        "outcome": "Home Win",
-        "odds": 1.6,
-        "prob": 0.57315,
-        "implied": 0.625,
-        "edge": -0.05184999999999995,
-        "ev": -0.08295999999999992,
-        "ds": 35.8
+        "match": "Netherlands vs Morocco",
+        "outcome": "Away Win",
+        "odds": 3.6,
+        "prob": 0.34155,
+        "implied": 0.2777777777777778,
+        "edge": 0.06377222222222223,
+        "ev": 0.22958000000000012,
+        "ds": 54.1
       }
     ],
-    "combined_prob": 0.0696,
-    "combined_odds": 71.14,
-    "combined_ev": 3.9475,
-    "combo_stake": 1.4,
+    "combined_prob": 0.0531,
+    "combined_odds": 98.28,
+    "combined_ev": 4.2182,
+    "combo_stake": 1.1,
     "is_value": true
   }
 }

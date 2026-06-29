@@ -1607,7 +1607,7 @@
   },
   {
     "id": "537423",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-06-29T17:00:00Z",
     "home": "BRA",
@@ -1623,8 +1623,8 @@
       }
     },
     "score": {
-      "BRA": null,
-      "JPN": null
+      "BRA": 2,
+      "JPN": 1
     }
   },
   {

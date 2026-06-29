@@ -691,5 +691,28 @@
     "market_p_home": 0.1592,
     "market_p_draw": 0.2625,
     "market_p_away": 0.5782
+  },
+  {
+    "date": "2026-06-29",
+    "home_team": "Brazil",
+    "away_team": "Japan",
+    "stage": "32 האחרונות",
+    "predicted_home": 2,
+    "predicted_away": 1,
+    "actual_home": 2,
+    "actual_away": 1,
+    "exact_match": true,
+    "correct_result": true,
+    "points_earned": 5,
+    "points_possible": 5,
+    "bet_won": false,
+    "pnl_nis": -20.0,
+    "predicted_by": "poisson_only",
+    "sim_p_home": 0.592,
+    "sim_p_draw": 0.2051,
+    "sim_p_away": 0.2029,
+    "market_p_home": 0.5597,
+    "market_p_draw": 0.2612,
+    "market_p_away": 0.1791
   }
 ]

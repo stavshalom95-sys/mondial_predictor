@@ -1,22 +1,5 @@
 {
-  "_note": "Synced by sync_winner_odds.py on 2026-06-29T10:30:28Z. Filled odds are preserved; blanks need to be filled before the pipeline runs.",
-  "Brazil vs Japan": {
-    "winner": {
-      "home": 1.6,
-      "draw": 3.75,
-      "away": 5.15
-    },
-    "sum_goals": {
-      "0-1": 3.05,
-      "2-3": 1.9,
-      "+4": 3.1
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
+  "_note": "Reset by master_reset.py on 2026-06-29T19:14:31Z. Fill in decimal odds before the daily pipeline runs.",
   "Germany vs Paraguay": {
     "winner": {
       "home": 1.35,
@@ -85,21 +68,7 @@
       "12+": 0.0
     }
   },
-  "Mexico vs Ecuador": {
-    "winner": {
-      "home": 2.15,
-      "draw": 2.85,
-      "away": 3.65
-    },
-    "sum_goals": {
-      "0-1": 2.15,
-      "2-3": 1.95,
-      "+4": 5
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  }
+  "_played_today": [
+    "Brazil vs Japan"
+  ]
 }

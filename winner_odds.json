@@ -1,22 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-28T13:38:20Z. Fill in decimal odds before the daily pipeline runs.",
-  "South Africa vs Canada": {
-    "winner": {
-      "home": 5.7,
-      "draw": 3.5,
-      "away": 1.6
-    },
-    "sum_goals": {
-      "0-1": 2.95,
-      "2-3": 1.85,
-      "+4": 3.4
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
+  "_note": "Reset by master_reset.py on 2026-06-29T09:23:09Z. Fill in decimal odds before the daily pipeline runs.",
   "Brazil vs Japan": {
     "winner": {
       "home": 1.6,
@@ -51,8 +34,55 @@
       "12+": 0.0
     }
   },
-  "_played_today": [
-    "Jordan vs Argentina",
-    "Algeria vs Austria"
-  ]
+  "Netherlands vs Morocco": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Ivory Coast vs Norway": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "France vs Sweden": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  }
 }

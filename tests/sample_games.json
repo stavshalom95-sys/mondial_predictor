@@ -1585,7 +1585,7 @@
   },
   {
     "id": "537417",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-06-28T19:00:00Z",
     "home": "RSA",
@@ -1601,8 +1601,8 @@
       }
     },
     "score": {
-      "RSA": null,
-      "CAN": null
+      "RSA": 0,
+      "CAN": 1
     }
   },
   {
@@ -1940,15 +1940,20 @@
     "status": "scheduled",
     "stage": "round_of_16",
     "start_time": "2026-07-04T17:00:00Z",
-    "home": null,
+    "home": "CAN",
     "away": null,
     "teams": {
+      "CAN": {
+        "name": "Canada",
+        "abbreviation": "CAN"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "CAN": null,
       "null": null
     }
   },

@@ -1,21 +1,13 @@
 """
-scripts/profit_engine.py — Sniper Protocol Profit Engine
+scripts/profit_engine.py — Local betting analysis tool (Sniper Protocol deprecated)
 
-Reads winner_odds.json from repo root, builds strength model from data/history.json,
-runs Monte Carlo simulation (20k draws), and applies the Sniper Protocol filter.
+Reads winner_odds.json, builds a strength model from history.json,
+runs 20k Monte Carlo simulations, and prints EV / edge analysis to stdout.
 
-Sniper Protocol:
-  Gate 1: prob >= MIN_PROB  (default 50%) — no longshots
-  Gate 2: EV   >= EV_MIN   (default 10%)
-  Gate 3: DS   >= DS_MIN   (default 70)
-
-Decision Score formula (0–100):
-  DS = 100 × (0.50 × min(prob/0.80,1) + 0.30 × min(edge/0.15,1) + 0.20 × min(ev/0.20,1))
-
-Stake sizing: Quarter-Kelly × bankroll (NO external APIs called).
+No external APIs called. No WhatsApp output. Local diagnostic use only.
 
 Usage:
-  python scripts/profit_engine.py [--bankroll 100] [--min-prob 0.50] [--ev-min 0.10] [--ds-min 70] [--output data/profit_report.json] [--notify]
+  python scripts/profit_engine.py [--bankroll 100] [--output data/profit_report.json]
 """
 from __future__ import annotations
 
@@ -29,124 +21,13 @@ sys.path.insert(0, _ROOT)
 from core.strength_model import build_strength_model
 from core.simulator import simulate
 
-# ── Defaults (Sniper Protocol v3) ─────────────────────────────────────────────
-_BANKROLL  = 100.0
-_KF        = 0.25    # quarter-Kelly
-_MIN_PROB  = 0.50    # Gate 1: minimum model probability — no longshots
-_EV_MIN    = 0.10    # Gate 2: minimum EV
-_DS_MIN    = 70.0    # Gate 3: minimum Decision Score
-
-
-def decision_score(prob: float, edge: float, ev: float) -> float:
-    """Composite 0–100 score weighting probability, edge, and EV."""
-    s_prob = min(prob / 0.80, 1.0)
-    s_edge = min(edge / 0.15, 1.0) if edge > 0 else 0.0
-    s_ev   = min(ev   / 0.20, 1.0) if ev   > 0 else 0.0
-    return round(100 * (0.50 * s_prob + 0.30 * s_edge + 0.20 * s_ev), 1)
-
-
-def combo_suggestion(candidates: list[dict], bankroll: float) -> dict | None:
-    """
-    Select top 3 candidates by DS score (one per match — no mutually-exclusive legs),
-    compute combined parlay probability/odds/EV, and return the result.
-
-    Returns None when fewer than 3 distinct matches are available.
-    The 'is_value' flag is True only when combined EV > 0.
-
-    Parlay math:
-      combined_prob = p1 × p2 × p3
-      combined_odds = o1 × o2 × o3
-      combined_ev   = combined_prob × combined_odds − 1
-      combo_stake   = max(combined_ev / (combined_odds − 1), 0) × ¼-Kelly × bankroll
-    """
-    if not candidates:
-        return None
-
-    # Best outcome per match, sorted by DS descending
-    seen: set[str] = set()
-    top3: list[dict] = []
-    for c in sorted(candidates, key=lambda x: x["ds"], reverse=True):
-        if c["match"] not in seen:
-            top3.append(c)
-            seen.add(c["match"])
-        if len(top3) == 3:
-            break
-
-    if len(top3) < 3:
-        return None
-
-    combined_prob = 1.0
-    combined_odds = 1.0
-    for leg in top3:
-        combined_prob *= leg["prob"]
-        combined_odds *= leg["odds"]
-
-    combined_ev = combined_prob * combined_odds - 1.0
-    net         = combined_odds - 1.0
-    kf_full     = max(combined_ev / net, 0.0) if net > 0 else 0.0
-    combo_stake = round(kf_full * _KF * bankroll, 1)
-
-    return {
-        "legs":          top3,
-        "combined_prob": round(combined_prob, 4),
-        "combined_odds": round(combined_odds, 2),
-        "combined_ev":   round(combined_ev,   4),
-        "combo_stake":   combo_stake,
-        "is_value":      combined_ev > 0.0,
-    }
-
-
-def _format_whatsapp(sniper_bets: list[dict], combo: dict | None, bankroll: float) -> str:
-    """Format sniper bets + combo suggestion as a WhatsApp-ready message."""
-    from datetime import date
-    today = date.today().strftime("%d/%m/%Y")
-    lines = [
-        f"🎯 *Sniper Protocol — {today}*",
-        f"_Bankroll: {bankroll:.0f} NIS | ¼-Kelly_",
-        "",
-    ]
-
-    if sniper_bets:
-        lines.append(f"✅ *{len(sniper_bets)} Sniper Bet(s):*")
-        for b in sniper_bets:
-            lines.append(f"  • {b['match']}")
-            lines.append(f"    → *{b['outcome']}* @ {b['odds']:.2f}")
-            lines.append(f"    Model {b['sim_prob']:.0%} vs Mkt {b['implied']:.0%} | "
-                         f"Edge {b['edge']:+.0%} | EV {b['ev']:+.0%} | DS {b['ds']:.0f}")
-            lines.append(f"    💰 Stake: *{b['stake']:.1f} NIS*")
-            lines.append("")
-    else:
-        lines.append("❌ *No sniper bets today* — no outcome cleared all 3 gates.")
-        lines.append("")
-
-    # Combo section
-    lines.append("🎰 *Combo Suggestion (Top 3 by DS):*")
-    if combo is None:
-        lines.append("  ⏭ Not enough matches for a 3-leg combo.")
-    else:
-        for i, leg in enumerate(combo["legs"], 1):
-            lines.append(f"  Leg {i}: {leg['match']}")
-            lines.append(f"          → *{leg['outcome']}* @ {leg['odds']:.2f}  (DS {leg['ds']:.0f})")
-        lines.append("")
-        lines.append(f"  Combined odds: *{combo['combined_odds']:.2f}*")
-        lines.append(f"  Combined prob: {combo['combined_prob']:.1%}")
-        lines.append(f"  Combined EV:   {combo['combined_ev']:+.1%}")
-        if combo["is_value"]:
-            lines.append(f"  ✅ *POSITIVE EV COMBO!*")
-            lines.append(f"  💰 Combo stake: *{combo['combo_stake']:.1f} NIS*")
-        else:
-            lines.append("  ❌ Negative EV — skip or reduce stake.")
-
-    return "\n".join(lines)
+_BANKROLL = 100.0
+_KF       = 0.25    # quarter-Kelly
 
 
 def run(
-    bankroll:          float = _BANKROLL,
-    min_prob:          float = _MIN_PROB,
-    ev_min:            float = _EV_MIN,
-    ds_min:            float = _DS_MIN,
-    output_path:       str   = "",
-    send_notification: bool  = False,
+    bankroll:    float = _BANKROLL,
+    output_path: str   = "",
 ) -> None:
     # ── Build strength model from tournament history ───────────────────────────
     history_path = os.path.join(_ROOT, "data", "history.json")
@@ -173,7 +54,6 @@ def run(
 
     sm = build_strength_model(results)
     if sm is None:
-        # Fallback: seed with 3 neutral dummy matches so model initialises
         sm = build_strength_model([
             {"home_team": "__A", "away_team": "__B", "home_goals": 1, "away_goals": 1},
             {"home_team": "__C", "away_team": "__D", "home_goals": 2, "away_goals": 0},
@@ -191,18 +71,16 @@ def run(
     matches = {k: v for k, v in odds_data.items()
                if k not in SKIP_KEYS and isinstance(v, dict)}
 
-    # ── Header ─────────────────────────────────────────────────────────────────
     print()
     print("=" * 65)
-    print("  🎯  PROFIT ENGINE — DAILY BETTING PLAN")
+    print("  BETTING ANALYSIS — EV & EDGE BREAKDOWN")
     print("=" * 65)
-    print(f"  Bankroll: {bankroll:.0f} NIS  |  ¼-Kelly  |  Prob≥{min_prob:.0%}  EV≥{ev_min:.0%}  DS≥{ds_min:.0f}")
-    print(f"  ⚡ No external APIs called — internal model + history only")
+    print(f"  Bankroll: {bankroll:.0f} NIS  |  ¼-Kelly sizing")
+    print(f"  No external APIs called — internal model + history only")
     print("=" * 65)
 
-    sniper_bets:    list[dict] = []
-    all_candidates: list[dict] = []   # every evaluated outcome, for combo logic
-    skipped:        list[str]  = []
+    all_results: list[dict] = []
+    skipped:     list[str]  = []
 
     for match_label, markets in matches.items():
         winner    = markets.get("winner", {})
@@ -223,10 +101,9 @@ def run(
         lam_h, lam_a = sm.lambdas(home_team, away_team)
         sim_r = simulate(lam_h, lam_a, n_sims=20_000)
 
-        print(f"\n📋 {match_label}")
+        print(f"\n{match_label}")
         print(f"   λ  home={lam_h:.2f}  away={lam_a:.2f}")
-        print(f"   Sim  H={sim_r.p_home:.1%}  D={sim_r.p_draw:.1%}  A={sim_r.p_away:.1%}  "
-              f"(n={sim_r.n_sims:,}  |  no API)")
+        print(f"   Sim  H={sim_r.p_home:.1%}  D={sim_r.p_draw:.1%}  A={sim_r.p_away:.1%}")
 
         for label, prob, dec_odds in [
             ("Home Win", sim_r.p_home, home_odds),
@@ -239,11 +116,14 @@ def run(
             edge    = prob - implied
             ev      = prob * dec_odds - 1.0
             net     = dec_odds - 1.0
-            ds      = decision_score(prob, edge, ev)
             kf_full = max(ev / net, 0.0) if net > 0 else 0.0
             stake   = round(kf_full * _KF * bankroll, 1)
 
-            all_candidates.append({
+            marker = "+" if ev > 0 and prob >= 0.50 else " "
+            print(f"   [{marker}] {label:<10} | odds={dec_odds:.2f} | sim={prob:.1%} mkt={implied:.1%} "
+                  f"edge={edge:+.1%} EV={ev:+.1%} → stake={stake:.1f} NIS")
+
+            all_results.append({
                 "match":   match_label,
                 "outcome": label,
                 "odds":    dec_odds,
@@ -251,122 +131,33 @@ def run(
                 "implied": implied,
                 "edge":    edge,
                 "ev":      ev,
-                "ds":      ds,
+                "stake":   stake,
             })
 
-            below_prob = prob < min_prob
-            passes     = not below_prob and ev >= ev_min and ds >= ds_min
-            if below_prob:
-                marker = "🚫"   # prob gate failed — longshot filtered out
-            elif passes:
-                marker = "🔥"
-            else:
-                marker = "  "
-            print(f"   {marker} {label:<10} | odds={dec_odds:.2f} | sim={prob:.1%} mkt={implied:.1%} "
-                  f"edge={edge:+.1%} EV={ev:+.1%} DS={ds:.0f} → stake={stake:.1f} NIS"
-                  + (" [prob<50%]" if below_prob else ""))
-
-            if passes:
-                sniper_bets.append({
-                    "match":    match_label,
-                    "outcome":  label,
-                    "odds":     dec_odds,
-                    "sim_prob": prob,
-                    "implied":  implied,
-                    "edge":     edge,
-                    "ev":       ev,
-                    "ds":       ds,
-                    "stake":    stake,
-                })
-
-    # ── Summary ────────────────────────────────────────────────────────────────
     print()
     print("=" * 65)
     if skipped:
-        print(f"  ⏭  SKIPPED (no odds): {', '.join(skipped)}")
-
-    if not sniper_bets:
-        print(f"  ❌  NO SNIPER BETS — no bet clears Prob≥{min_prob:.0%} + EV≥{ev_min:.0%} + DS≥{ds_min:.0f}")
-    else:
-        total_stake = sum(b["stake"] for b in sniper_bets)
-        print(f"  🎯  SNIPER BETS: {len(sniper_bets)} found  |  total stake: {total_stake:.1f} NIS")
-        print("-" * 65)
-        for b in sniper_bets:
-            print(f"  ✅  {b['match']}  →  {b['outcome']}")
-            print(f"      Odds {b['odds']:.2f}  |  Model {b['sim_prob']:.1%}  vs Market {b['implied']:.1%}")
-            print(f"      Edge {b['edge']:+.1%}  |  EV {b['ev']:+.1%}  |  DS {b['ds']:.0f}")
-            print(f"      💰  Stake: {b['stake']:.1f} NIS  (¼-Kelly × {bankroll:.0f} NIS)")
-            print()
-
-    # ── Combo Suggestion ───────────────────────────────────────────────────────
-    combo = combo_suggestion(all_candidates, bankroll)
-    print()
-    print("=" * 65)
-    print("  🎰  COMBO SUGGESTION (Top 3 by DS — one leg per match)")
-    print("-" * 65)
-    if combo is None:
-        print("  ⏭  Not enough matches to build a 3-leg combo.")
-    else:
-        for i, leg in enumerate(combo["legs"], 1):
-            print(f"  Leg {i}: {leg['match']}")
-            print(f"         → {leg['outcome']:<10}  DS={leg['ds']:.0f}  "
-                  f"odds={leg['odds']:.2f}  sim={leg['prob']:.1%}")
-        print("-" * 65)
-        print(f"  Combined prob:  {combo['combined_prob']:.2%}")
-        print(f"  Combined odds:  {combo['combined_odds']:.2f}")
-        print(f"  Combined EV:    {combo['combined_ev']:+.1%}")
-        if combo["is_value"]:
-            print(f"  ✅  COMBO FLAGGED — positive EV!")
-            print(f"  💰  Combo stake: {combo['combo_stake']:.1f} NIS  (¼-Kelly × {bankroll:.0f} NIS)")
-        else:
-            print("  ❌  NOT flagged — combined EV is negative (house edge wins the parlay)")
-
-    print()
-    print("=" * 65)
-    print("  ✅  Analysis complete — zero external API calls made")
+        print(f"  Skipped (no odds): {', '.join(skipped)}")
+    print("  Analysis complete")
     print("=" * 65)
 
-    # ── WhatsApp notification ──────────────────────────────────────────────────
-    if send_notification:
-        msg = _format_whatsapp(sniper_bets, combo, bankroll)
-        from notifications.notifier import send_whatsapp_message
-        send_whatsapp_message(msg)
-
-    # ── Write JSON report if requested ────────────────────────────────────────
     if output_path:
         report = {
-            "generated_at":     datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "bankroll":         bankroll,
-            "min_prob":         min_prob,
-            "ev_min":           ev_min,
-            "ds_min":           ds_min,
-            "wc_matches":       sm.n_matches if sm else 0,
-            "sniper_bets":      sniper_bets,
-            "skipped":          skipped,
-            "total_stake":      round(sum(b["stake"] for b in sniper_bets), 1),
-            "bet_count":        len(sniper_bets),
-            "combo_suggestion": combo,
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "bankroll":     bankroll,
+            "wc_matches":   sm.n_matches if sm else 0,
+            "results":      all_results,
+            "skipped":      skipped,
         }
         os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
-        print(f"\n  📄  Report written to: {output_path}")
+        print(f"\n  Report written to: {output_path}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Sniper Protocol Profit Engine")
-    parser.add_argument("--bankroll",  type=float, default=_BANKROLL)
-    parser.add_argument("--min-prob",  type=float, default=_MIN_PROB, help="Min model probability (default 0.50)")
-    parser.add_argument("--ev-min",    type=float, default=_EV_MIN)
-    parser.add_argument("--ds-min",    type=float, default=_DS_MIN)
-    parser.add_argument("--output",    type=str,   default="", help="Path to write JSON report")
-    parser.add_argument("--notify",    action="store_true", help="Send results via WhatsApp (requires GREEN_API env vars)")
+    parser = argparse.ArgumentParser(description="Betting EV analysis (local diagnostic)")
+    parser.add_argument("--bankroll", type=float, default=_BANKROLL)
+    parser.add_argument("--output",   type=str,   default="", help="Path to write JSON report")
     args = parser.parse_args()
-    run(
-        bankroll           = args.bankroll,
-        min_prob           = args.min_prob,
-        ev_min             = args.ev_min,
-        ds_min             = args.ds_min,
-        output_path        = args.output,
-        send_notification  = args.notify,
-    )
+    run(bankroll=args.bankroll, output_path=args.output)

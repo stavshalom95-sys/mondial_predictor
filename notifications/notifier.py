@@ -366,17 +366,108 @@ def format_daily_message(
                 lines.append("   _Betting strategy = 90 min FT only (bookmaker standard)_")
             lines.append("   ────────────────────────────")
 
-        # Fallback score line — only if correct_score_pick was not available
+        # ── Simulation block (primary output) ────────────────────────────────
+        has_sim = pick.sim_score_home is not None and pick.sim_score_away is not None
+        if pick.poisson_p_home is not None:
+            lines.append(
+                f"   📊 Poisson: H={pick.poisson_p_home:.0%}  "
+                f"D={pick.poisson_p_draw:.0%}  A={pick.poisson_p_away:.0%}"
+            )
+        if pick.sim_p_home is not None:
+            lines.append(
+                f"   🎲 Sim (10k): H={pick.sim_p_home:.0%}  "
+                f"D={pick.sim_p_draw:.0%}  A={pick.sim_p_away:.0%}"
+            )
+
+        # Score display is handled by the Friends League (365Scores) block above.
+        # Fallback: only show if correct_score_pick was not available.
         if pick.correct_score_pick is None:
-            has_sim = pick.sim_score_home is not None and pick.sim_score_away is not None
             if has_sim:
-                _fd = _describe_score(pick.home_team, pick.away_team,
-                                      pick.sim_score_home, pick.sim_score_away)
+                pick_desc = _describe_score(
+                    pick.home_team, pick.away_team,
+                    pick.sim_score_home, pick.sim_score_away,
+                )
             else:
                 _fs = pick.ai_pick if pick.ai_pick else rec.recommended_pick
-                _fd = _describe_score(pick.home_team, pick.away_team,
-                                      _fs.home_goals, _fs.away_goals)
-            lines.append(f"   ⚽ *Final Prediction: {_fd}*")
+                pick_desc = _describe_score(
+                    pick.home_team, pick.away_team,
+                    _fs.home_goals, _fs.away_goals,
+                )
+            lines.append(f"   ⚽ *Final Prediction: {pick_desc}*")
+
+        # Model depth — always show λ so the reader can verify simulation ran
+        if pick.lambda_home is not None and pick.lambda_away is not None:
+            _xg = pick.lambda_home + pick.lambda_away
+            lines.append(
+                f"   🔬 xG: {pick.home_team} λ={pick.lambda_home:.2f} / "
+                f"{pick.away_team} λ={pick.lambda_away:.2f} → {_xg:.1f} exp. goals"
+            )
+        lines.append(f"   אסטרטגיה: {rec.strategy.value}")
+
+        # ── Why section ───────────────────────────────────────────────────────
+        if pick.why_bullets:
+            lines.append("   📌 *למה?*")
+            for _b in pick.why_bullets:
+                lines.append(f"      {_b}")
+
+        # ── Supplementary context (ESPN / RapidAPI reasoning) ────────────────
+        if pick.ai_reasoning:
+            lines.append(f"   💡 Context: {pick.ai_reasoning}")
+        # 📐 Chain removed — internal calculation steps not needed in output
+
+        if rec.strategy == Strategy.CONTRARIAN:
+            safe = rec.alternative_safe_pick
+            consensus_desc = _describe_score(
+                pick.home_team, pick.away_team,
+                safe.home_goals, safe.away_goals,
+            )
+            lines.append(f"   (קונצנזוס היה: {consensus_desc})")
+
+        # ── Tournament context (rotation / motivation) ────────────────────
+        if pick.tournament_context_lines:
+            for _tcl in pick.tournament_context_lines:
+                lines.append(_tcl)
+
+        # ── Sub-markets block ─────────────────────────────────────────────
+        if pick.market_data is not None:
+            m = pick.market_data
+
+            # Outcome probabilities from goal_diff distribution
+            gd    = m.goal_diff
+            p_h   = round(sum(v for k, v in gd.items() if k > 0), 3)
+            p_d   = round(gd.get(0, 0.0), 3)
+            p_a   = round(sum(v for k, v in gd.items() if k < 0), 3)
+            if p_h >= p_d and p_h >= p_a:
+                winner_label, winner_pct = pick.home_team, p_h
+            elif p_d >= p_h and p_d >= p_a:
+                winner_label, winner_pct = "Draw", p_d
+            else:
+                winner_label, winner_pct = pick.away_team, p_a
+
+            # Sum-goals 3-way bracket
+            sg = m.sum_goals if hasattr(m, "sum_goals") else {}
+
+            # Asian handicap -1.5 for home team
+            ah = next((h for h in m.handicaps if h.get("handicap") == -1.5), None)
+
+            btts = m.btts
+
+            lines.append("   📊 *Markets:*")
+            lines.append(f"      🏆 Winner: {winner_label} ({winner_pct:.1%})")
+            if sg:
+                _sg_badge = f" 🔥 VALUE ({pick.sg_value_bet})" if pick.sg_value_bet else ""
+                lines.append(
+                    f"      📈 Goals: 0-1 ({sg.get('0-1', 0):.0%})"
+                    f" | 2-3 ({sg.get('2-3', 0):.0%})"
+                    f" | 4+ ({sg.get('+4', 0):.0%}){_sg_badge}"
+                )
+            if ah:
+                lines.append(
+                    f"      ⚖️  AH (-1.5): {pick.home_team} covers "
+                    f"({ah['p_home_covers']:.1%})"
+                )
+            if btts:
+                lines.append(f"      ⚽ BTTS: Yes ({btts['p_yes']:.1%})")
 
         lines.append("")
 

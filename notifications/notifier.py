@@ -333,7 +333,7 @@ def format_daily_message(
             lines.append(f"   📝 {_score_reasoning(_cp)}")
             lines.append(f"   {_s_icon} *Bet: {_strat_note}*")
             if _is_ko:
-                lines.append("   ⏱ _Friends League = 120 min / final result (incl. ET/pens)_")
+                lines.append("   ⏱ _Friends League = score after 120 min (ET included)_")
                 lines.append("   _Betting strategy = 90 min FT only (bookmaker standard)_")
             lines.append("   ────────────────────────────")
 

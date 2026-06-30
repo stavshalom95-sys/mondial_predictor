@@ -122,16 +122,15 @@ def _score_label(
     a: int,
     is_low_scoring: bool,
     is_balanced: bool,
-    et_suffix: str = "",      # "AET" | "pens" | "" (group stage)
-    pen_winner: str = "",     # populated when et_suffix == "pens"
+    et_suffix: str = "",   # "AET" | "draw_aet" | "" (group stage)
 ) -> str:
-    # Knockout penalty shootout — score stays the same, winner decided on pens
-    if et_suffix == "pens":
-        return f"{pen_winner} wins {h}-{a} (pens) — penalty shootout"
+    # Draw after full 120 minutes (ET ends level — goes to pens in real life,
+    # but the Friends League prediction is the score at 120 min: a draw)
+    if et_suffix == "draw_aet":
+        return f"Draw {h}-{h} — tight finish AET"
 
-    # Regular or AET decisive result
+    # Group-stage draw (et_suffix == "")
     if h == a:
-        # Can only reach here for group-stage draws (et_suffix == "")
         if is_balanced:
             tone = "balanced stalemate"
         elif is_low_scoring:
@@ -140,6 +139,7 @@ def _score_label(
             tone = "tight contest"
         return f"Draw {h}-{h} — {tone}"
 
+    # Decisive result (90-min or ET)
     winner = home_team if h > a else away_team
     margin = abs(h - a)
     if margin == 1:
@@ -169,9 +169,12 @@ def _et_outcome(
     Uses Poisson P(score ≥ 1 in 30 min) with a fatigue/caginess scale factor
     (_ET_LAMBDA_SCALE ≈ 0.25).  Three possible ET outcomes:
 
-      • Home only scores  → (base_h+1, base_a, "AET", p_home_only)
-      • Away only scores  → (base_h, base_a+1, "AET", p_away_only)
-      • Both or neither   → (base_h, base_a,   "pens", p_pens)
+      • Home only scores  → (base_h+1, base_a,   "AET",      p_home_only)
+      • Away only scores  → (base_h,   base_a+1, "AET",      p_away_only)
+      • Both or neither   → (base_h,   base_a,   "draw_aet", p_draw_aet)
+
+    "draw_aet" means the score after 120 min is still level — the Friends League
+    prediction is that draw score, period.  No penalty winner is calculated.
 
     Returns the most probable outcome as (final_h, final_a, suffix, branch_prob).
     """
@@ -182,12 +185,12 @@ def _et_outcome(
 
     p_home_only = p_h * (1.0 - p_a)
     p_away_only = (1.0 - p_h) * p_a
-    p_pens      = 1.0 - p_home_only - p_away_only  # both score or neither
+    p_draw_aet  = 1.0 - p_home_only - p_away_only  # both score or neither → still level
 
     options = [
-        (base_h + 1, base_a,     "AET",  p_home_only),
-        (base_h,     base_a + 1, "AET",  p_away_only),
-        (base_h,     base_a,     "pens", p_pens),
+        (base_h + 1, base_a,     "AET",      p_home_only),
+        (base_h,     base_a + 1, "AET",      p_away_only),
+        (base_h,     base_a,     "draw_aet", p_draw_aet),
     ]
     return max(options, key=lambda x: x[3])
 
@@ -368,14 +371,11 @@ def predict(
 
     # ── Extra-time resolution (Friends League KO only) ────────────────────────
     # Betting strategy always uses 90-min probabilities — no change below.
-    et_suffix  = ""
-    pen_winner = ""
+    et_suffix = ""
     if is_knockout and sh == sa:
         et_h, et_a, et_suffix, et_branch_prob = _et_outcome(lh_eff, la_eff, sh, sa)
         sp = round(sp * et_branch_prob, 4)   # P(FT draw) × P(ET branch)
         sh, sa = et_h, et_a
-        if et_suffix == "pens":
-            pen_winner = home_team if lh_eff >= la_eff else away_team
 
     # ── Prior inflation ───────────────────────────────────────────────────────
     prior_inflation = False
@@ -420,7 +420,7 @@ def predict(
         score_label     = _score_label(
             home_team, away_team, sh, sa,
             is_low_scoring, is_balanced,
-            et_suffix=et_suffix, pen_winner=pen_winner,
+            et_suffix=et_suffix,
         ),
         confidence      = confidence,
         strategy        = strategy,

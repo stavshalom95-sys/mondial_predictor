@@ -1401,6 +1401,23 @@ def run_daily_pipeline(
             _no_odds_lines.append(f"  ⏳ {_nm.home_team} vs {_nm.away_team}  [{_ko_str}]")
         message += "\n".join(_no_odds_lines)
 
+    # ── Submission validation gate ────────────────────────────────────────────
+    # Re-simulate every pick from its final lambdas and assert the stored score
+    # equals the Poisson modal.  Any divergence is logged loudly and appended to
+    # the WhatsApp message so it is impossible to miss.
+    _validation_errors = _validate_morning_picks(morning_data)
+    if _validation_errors:
+        print(f"[VALIDATION] WARNING — {len(_validation_errors)} pick(s) diverge from Poisson modal:")
+        for _ve in _validation_errors:
+            print(f"[VALIDATION]{_ve}")
+        message += (
+            "\n\n*[VALIDATION ALERT]* submitted score != model modal:\n" +
+            "\n".join(_validation_errors) +
+            "\nCheck pipeline logs — override was applied or a bug crept back in."
+        )
+    else:
+        print(f"[VALIDATION] All {len(morning_data)} pick(s) match Poisson modal — pipeline clean.")
+
     if send_notification:
         send_whatsapp_message(message)
     else:
@@ -1415,6 +1432,39 @@ def run_daily_pipeline(
         # tournament-informed priors rather than static FIFA estimates.
         save_wc_priors(combined_results, _WC_PRIORS_PATH)
     return message
+
+
+# ---------------------------------------------------------------------------
+# Submission validation gate
+# ---------------------------------------------------------------------------
+
+def _validate_morning_picks(morning_data: list[dict]) -> list[str]:
+    """
+    Re-simulate each pick from final_lambda_home/away and verify the stored
+    final_home_goals/final_away_goals matches the Poisson modal.
+
+    Returns a list of human-readable divergence strings.  Empty list = all clear.
+
+    This catches any code regression where a submitted score silently diverges
+    from the model output — the failure mode that produced 3 wrong picks on
+    2026-06-30 before the KO-boost and Math-First overrides were removed.
+    """
+    errors: list[str] = []
+    for rec in morning_data:
+        lh = rec.get("final_lambda_home") or rec.get("lambda_home")
+        la = rec.get("final_lambda_away") or rec.get("lambda_away")
+        if lh is None or la is None:
+            continue
+        modal_h, modal_a = simulate(lh, la).score_grid.most_likely_score()
+        stored_h = rec.get("final_home_goals")
+        stored_a = rec.get("final_away_goals")
+        if (stored_h, stored_a) != (modal_h, modal_a):
+            errors.append(
+                f"  {rec['home_team']} vs {rec['away_team']}: "
+                f"submitted {stored_h}-{stored_a} != modal {modal_h}-{modal_a} "
+                f"(lam={lh:.3f}/{la:.3f})"
+            )
+    return errors
 
 
 # ---------------------------------------------------------------------------

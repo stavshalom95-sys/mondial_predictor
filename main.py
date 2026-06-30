@@ -694,8 +694,10 @@ def run_daily_pipeline(
                 "home_team":     match.home_team,
                 "away_team":     match.away_team,
                 "stage":         _pr_stage.value,
-                "lambda_home":   _pr_lh,
-                "lambda_away":   _pr_la,
+                "lambda_home":       _pr_lh,   # prior path: market-cal absent; these ARE the final λ
+                "lambda_away":       _pr_la,
+                "final_lambda_home": _pr_lh,
+                "final_lambda_away": _pr_la,
                 "final_home_goals": _pr_sh,
                 "final_away_goals": _pr_sa,
                 "sim_p_home":    round(_pr_sim.p_home, 4),
@@ -885,18 +887,13 @@ def run_daily_pipeline(
         else:
             print(f"[api-stats] Context unavailable — stats adjustment skipped")
 
-        # ── Knockout stage intensity boost ───────────────────────────────────
-        # Knockout matches tend toward higher-intensity, end-to-end play.
-        # Group motivation system returns 'unknown' (×1.0) for knockout teams
-        # since they are no longer tracked in group_tables.json — apply a fixed
-        # 1.20× boost to both λ values to compensate for that gap.
+        # KO intensity boost REMOVED (Measurement-First protocol June 2026).
+        # Market odds already price knockout intensity — uncalibrated ×1.20 produced
+        # inflated modal scores (e.g. France 4-1 instead of true modal 2-0).
         if stage != TournamentStage.GROUP_STAGE:
-            _ko_boost = 1.20
-            lam_h = round(lam_h * _ko_boost, 3)
-            lam_a = round(lam_a * _ko_boost, 3)
             print(
-                f"[motivation] Knockout stage ({stage.value}) intensity ×{_ko_boost:.2f}: "
-                f"lam_h={lam_h}  lam_a={lam_a}"
+                f"[motivation] Knockout stage ({stage.value}) — no λ boost applied "
+                f"(market-calibrated baseline: lam_h={lam_h}  lam_a={lam_a})"
             )
 
         # ── Logic chain (visible in WhatsApp — shows which factors moved λ) ──
@@ -923,8 +920,6 @@ def run_daily_pipeline(
             _chain_steps.append(f"Motiv×{_motiv_mult:.2f}")
         if _stats_tag:
             _chain_steps.append(_stats_tag)
-        if stage != TournamentStage.GROUP_STAGE:
-            _chain_steps.append("KO×1.20")
         _chain_steps.append(f"→ {lam_h:.2f}/{lam_a:.2f}")
 
         _total_h_pct = (_pct(_lam_h_market, lam_h) or "+0%")
@@ -1289,8 +1284,10 @@ def run_daily_pipeline(
             "home_team":        match.home_team,
             "away_team":        match.away_team,
             "stage":            stage.value,
-            "lambda_home":      model.lambda_home,
-            "lambda_away":      model.lambda_away,
+            "lambda_home":       model.lambda_home,   # market-calibrated baseline (before adjustments)
+            "lambda_away":       model.lambda_away,
+            "final_lambda_home": lam_h,              # actual λ used for simulation (after all adjustments)
+            "final_lambda_away": lam_a,
             "final_home_goals": _sim_h,   # simulation-derived score (was: AI pick or strategy advisor)
             "final_away_goals": _sim_a,
             "sim_p_home":       round(sim.p_home,       4),

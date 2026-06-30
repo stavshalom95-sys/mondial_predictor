@@ -201,6 +201,7 @@ class DailyPick:
     lambda_away:    Optional[float] = None   # Poisson attack rate (away)
     # ── Stage flags ──────────────────────────────────────────────────────────
     is_knockout:    bool = False   # True for R32/R16/QF/SF/Final
+    prior_only:     bool = False   # True when no live bookmaker odds — priors only
     # KO dual-track: competition pick (365Scores) always has a winner;
     # betting Kelly operates on 90-min odds where draw IS a valid outcome.
 
@@ -277,6 +278,11 @@ def format_daily_message(
         away_label = _with_flag(pick.away_team)
 
         lines.append(f"{icon} *{home_label} נגד {away_label}*")
+
+        # ── Prior-only warning banner ─────────────────────────────────────────
+        if pick.prior_only:
+            lines.append("   ⚠️ *PRIOR-ONLY — אין מחירי שוק זמינים*")
+            lines.append("   *תחזית מבוססת ידע קודם בלבד. הפחת היקף הימור ב-50% לפחות.*")
 
         # ── Simulation block (primary output) ────────────────────────────────
         has_sim = pick.sim_score_home is not None and pick.sim_score_away is not None
@@ -500,6 +506,8 @@ def format_daily_message(
         lines.append(f"   💰 Recommended stake: {conf_ticket.stake_nis:.0f} ₪")
         lines.append(f"   🏆 Potential return: {conf_ticket.stake_nis * conf_ticket.combined_odds:.0f} ₪")
         lines.append("")
+    lines.append("🔔 *תזכורת: הפעל Lineup Check ידנית 60 דקות לפני הקיקאוף!*")
+    lines.append("   GitHub → Actions → _Lineup Check_ → Run workflow")
     lines.append('_נשלח אוטומטית ע"י Mondial Predictor_')
     return "\n".join(lines)
 

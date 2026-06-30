@@ -20,7 +20,7 @@ from typing import Optional
 _PRIORS_PATH = os.path.join(os.path.dirname(__file__), "opta_priors.json")
 
 # Gap threshold: flag to Claude when our model deviates > this from Opta-implied strength
-SENTIMENT_GAP_THRESHOLD = 0.15   # 15 percentage points
+SENTIMENT_GAP_THRESHOLD = 0.10   # 10 pp — tightened from 15pp after Germany/Netherlands misses
 
 # Tiebreaker threshold: if |p_home - p_away| < this, Opta breaks the tie
 TIEBREAKER_THRESHOLD = 0.02       # 2 pp — effectively equal simulation output
@@ -126,6 +126,8 @@ def build_opta_context(home_team: str, away_team: str) -> str:
             parts.append(f"reach semi {e['semi']:.1f}%")
         if e.get("qf"):
             parts.append(f"reach QF {e['qf']:.1f}%")
+        if e.get("r16"):
+            parts.append(f"reach R16 {e['r16']:.1f}%")
         return f"  {name}: " + (" | ".join(parts) if parts else "data partially available")
 
     lines.append(_fmt(home_team, h))
@@ -183,13 +185,19 @@ def detect_sentiment_gap(
     opta_favoured = away_team if gap > 0 else home_team
     gap_pct = abs(gap) * 100
 
+    # Surface R16% for the Opta-favoured team as a knockout-resilience signal
+    opta_fav_entry = a if opta_favoured == away_team else h
+    r16_note = ""
+    if opta_fav_entry and opta_fav_entry.get("r16"):
+        r16_note = f" Opta R16 survival: {opta_fav_entry['r16']:.1f}%."
+
     return (
         f"⚠️ Market Sentiment Gap ({gap_pct:.0f}pp): Our Poisson model favours "
         f"*{direction}* more than the Opta supercomputer. "
         f"Opta implies *{opta_favoured}* is the stronger team on a tournament-wide basis "
         f"({opta_favoured} {opta_a_win if opta_favoured == away_team else opta_h_win:.1f}% "
-        f"vs {direction} {opta_h_win if direction == home_team else opta_a_win:.1f}% to win tournament). "
-        f"Consider whether lineup, context, or stage explains this deviation."
+        f"vs {direction} {opta_h_win if direction == home_team else opta_a_win:.1f}% to win tournament)."
+        f"{r16_note} Consider whether lineup, context, or stage explains this deviation."
     )
 
 

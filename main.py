@@ -51,7 +51,7 @@ from data.context_fetcher import fetch_match_context
 from data.backup_scraper import fetch_match_context_espn
 from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats
-from data.opta_priors import build_opta_context, get_whatsapp_sentiment_note, opta_tiebreak
+from data.opta_priors import build_opta_context, get_whatsapp_sentiment_note, opta_tiebreak, get_team_opta
 from core.bias_corrector import build_bias_corrector
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket, build_probability_ticket, build_confidence_value_ticket, ConfidenceTicket
@@ -372,6 +372,25 @@ def run_daily_pipeline(
     if _wc_priors:
         print(f"[pipeline] Loaded {len(_wc_priors)} team priors from wc_priors.json")
 
+    # R3 — Prior decay: teams with inflated historical priors not confirmed by Opta's
+    # 25k simulations are shrunk toward the mean. Applies to teams where wc_prior > 2.0
+    # but Opta tournament win% < 6% (i.e. "big name, underwhelming 2026 form").
+    # Protected: France, Argentina, Spain, England, Brazil (Opta win >= 6%).
+    _PRIOR_DECAY_FLOOR = 2.0    # priors above this are "legacy elite" candidates
+    _PRIOR_DECAY_GATE  = 6.0    # Opta win% below this → prior is stale
+    _PRIOR_DECAY       = 0.88   # reduce by 12%
+    if _wc_priors:
+        for _pt, _pv in list(_wc_priors.items()):
+            if _pv > _PRIOR_DECAY_FLOOR:
+                _opta_entry = get_team_opta(_pt)
+                _opta_win   = _opta_entry.get("win", 0) if _opta_entry else 0
+                if _opta_win < _PRIOR_DECAY_GATE:
+                    _wc_priors[_pt] = round(_pv * _PRIOR_DECAY, 4)
+                    print(
+                        f"[pipeline] R3 prior decay: {_pt} {_pv:.4f} → {_wc_priors[_pt]:.4f}"
+                        f" (Opta win={_opta_win}% < {_PRIOR_DECAY_GATE}%)"
+                    )
+
     # Build strength model from completed WC matches (returns None if < MIN_MATCHES)
     strength_model = build_strength_model(combined_results, external_priors=_wc_priors or None)
     if strength_model:
@@ -691,6 +710,7 @@ def run_daily_pipeline(
                 lambda_home    = round(_pr_lh, 3),
                 lambda_away    = round(_pr_la, 3),
                 is_knockout    = (_pr_stage != TournamentStage.GROUP_STAGE),
+                prior_only     = True,
             ))
             morning_data.append({
                 "date":          date.today().isoformat(),

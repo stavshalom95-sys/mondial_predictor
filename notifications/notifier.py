@@ -25,8 +25,8 @@ except ImportError:
 # ── Budget configuration ──────────────────────────────────────────────────────
 # Edit these two values to match your situation.
 TOTAL_BANKROLL      = 10_000   # NIS — your full betting bankroll
-DAILY_BUDGET_CAP    =    100   # NIS — cap for high-confidence bets (model prob ≥ 40%)
-LOW_PROB_BUDGET_CAP =     20   # NIS — cap for low-confidence bets (model prob < 40%)
+DAILY_BUDGET_CAP    =     25   # NIS — cap for ALL bets (Measurement-First protocol June 2026)
+LOW_PROB_BUDGET_CAP =     25   # NIS — same cap applies (Measurement-First protocol)
 
 
 # ---------------------------------------------------------------------------
@@ -220,12 +220,7 @@ def _score_reasoning(cp) -> str:
     if getattr(cp, "source", "") == "blended":
         signals.append("external xG model")
     if getattr(cp, "ou_signal", "Neutral") == "Under 2.5":
-        signals.append("low O2.5 signal")
-    note = getattr(cp, "strategy_note", "")
-    if "draw resilience" in note or "underdog xG" in note:
-        signals.append("draw resilience")
-    if "draw risk" in note:
-        signals.append("high draw probability")
+        signals.append("O2.5 low")
     if getattr(cp, "prior_inflation", False):
         signals.append("prior inflation vs market")
 
@@ -235,13 +230,13 @@ def _score_reasoning(cp) -> str:
     away = getattr(cp, "away_team", "")
 
     if sh == sa:
-        base = "High probability of low-scoring draw"
+        base = "Draw most likely scoreline"
     else:
         winner = home if sh > sa else away
-        base = f"{winner} expected to control the match"
+        base = f"{winner} predicted to win"
 
     if signals:
-        return base + " — " + ", ".join(signals[:3]) + "."
+        return base + " — " + ", ".join(signals) + "."
     return base + "."
 
 
@@ -356,14 +351,10 @@ def format_daily_message(
             _strat     = getattr(_cp, "strategy", "")
             _strat_note = getattr(_cp, "strategy_note", _strat)
             _s_icon = {"Safe Bet": "✅", "Reduced Stake": "⚠️", "Stay Away": "🚫"}.get(_strat, "•")
-            _is_ko = getattr(_cp, "is_knockout", False)
             lines.append("   ────────────────────────────")
             lines.append(f"   {_c_icon} *Friends League (365Scores): {_sh}-{_sa}* ({_sp:.1%})")
             lines.append(f"   📝 {_score_reasoning(_cp)}")
             lines.append(f"   {_s_icon} *Bet: {_strat_note}*")
-            if _is_ko:
-                lines.append("   ⏱ _Friends League = score after 120 min (ET included)_")
-                lines.append("   _Betting strategy = 90 min FT only (bookmaker standard)_")
             lines.append("   ────────────────────────────")
 
         # ── Simulation block (primary output) ────────────────────────────────
@@ -581,6 +572,24 @@ def format_daily_message(
         lines.append("")
     lines.append("🔔 *תזכורת: הפעל Lineup Check ידנית 60 דקות לפני הקיקאוף!*")
     lines.append("   GitHub → Actions → _Lineup Check_ → Run workflow")
+
+    # ── Calibration tracking table (Measurement-First protocol) ──────────────
+    # Records sim_p vs market_p for every predicted match so we can compute
+    # Brier score and model-vs-market alpha once results arrive.
+    cal_rows = [
+        p for p in picks
+        if p.sim_p_home is not None and p.poisson_p_home is not None
+    ]
+    if cal_rows:
+        lines.append("")
+        lines.append("📐 *Calibration Log (Model vs Market)*")
+        lines.append("   _Match | Sim H/D/A | Market H/D/A | Outcome_")
+        for p in cal_rows:
+            _mh = f"{p.sim_p_home:.0%}/{p.sim_p_draw:.0%}/{p.sim_p_away:.0%}"
+            _mk = f"{p.poisson_p_home:.0%}/{p.poisson_p_draw:.0%}/{p.poisson_p_away:.0%}"
+            _lbl = f"{p.home_team[:3].upper()} v {p.away_team[:3].upper()}"
+            lines.append(f"   {_lbl} | Sim {_mh} | Pois {_mk} | ⏳")
+
     lines.append('_נשלח אוטומטית ע"י Mondial Predictor_')
     return "\n".join(lines)
 

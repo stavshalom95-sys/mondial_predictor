@@ -267,55 +267,13 @@ def _competition_score_pick(
     stage: "TournamentStage",
 ) -> tuple[int, int]:
     """
-    Return the score to submit as the competition prediction.
+    Track A — Competition pick: always the Poisson modal score.
 
-    Normal mode: modal score — maximises P(exact) + P(correct_direction).
-    Variance mode: second-most-likely score in the SAME 1X2 direction, activated when
-      BOTH conditions hold:
-        1. Ratio trigger  — deficit > 25 % of remaining max points (stage-aware).
-        2. Flatness gate  — P(modal) − P(alt) < 3 pp.
-
-    Knockout override (365Scores rule):
-        The competition scores KO matches based on the FINAL winner (including
-        ET and penalties), NOT the 90-min result.  A draw prediction is always
-        wrong in KO because there is always a winner.  When the selected pick
-        would be a draw, this function replaces it with the most probable
-        DECISIVE score from the top_scores grid.
-
-        Note: betting/Kelly uses raw 90-min probabilities where draws ARE a
-        valid outcome — that logic is unaffected by this function.
+    Variance mode and KO override SUSPENDED (Measurement-First protocol June 2026).
+    Returning the highest P(exact score) scoreline with no additional overrides
+    until we have enough calibration data to validate alternative strategies.
     """
-    _VARIANCE_RATIO = 0.25   # deficit / max_remaining_pts threshold
-    _FLATNESS_GATE  = 0.03   # max allowed probability gap modal→alt (3 pp)
-    _IS_KNOCKOUT    = (stage != TournamentStage.GROUP_STAGE)
-
-    modal_h, modal_a = sim.score_grid.most_likely_score()
-
-    # Stage-aware max remaining points (exact-score value × matches left)
-    pts_exact  = SCORING.get(stage, SCORING[TournamentStage.GROUP_STAGE])["exact"]
-    max_remain = max(1, matches_remaining) * pts_exact
-
-    # Select pick (normal or variance mode)
-    if (gap / max_remain) <= _VARIANCE_RATIO:
-        pick_h, pick_a = modal_h, modal_a
-    else:
-        # Flatness gate: search for a same-direction alt within the probability band
-        modal_p   = sim.score_grid.probs[modal_h][modal_a]
-        modal_dir = "1" if modal_h > modal_a else ("X" if modal_h == modal_a else "2")
-        pick_h, pick_a = modal_h, modal_a  # default
-        for h, a, p in sim.score_grid.top_scores(8)[1:]:
-            cand_dir = "1" if h > a else ("X" if h == a else "2")
-            if cand_dir == modal_dir and (modal_p - p) < _FLATNESS_GATE:
-                pick_h, pick_a = h, a
-                break
-
-    # KO override: replace any draw with the most likely decisive score
-    if _IS_KNOCKOUT and pick_h == pick_a:
-        for h, a, _ in sim.score_grid.top_scores(25):
-            if h != a:
-                return h, a
-
-    return pick_h, pick_a
+    return sim.score_grid.most_likely_score()
 
 
 # ---------------------------------------------------------------------------
@@ -1354,7 +1312,7 @@ def run_daily_pipeline(
             "kelly_value_bet_stake":  round(_kvb_stake, 2) if _kvb_stake else None,
             "variance_mode": (_sim_h != _modal_h or _sim_a != _modal_a),
             "is_knockout":   _is_knockout,
-            "predicted_by": "ai_override" if (ensemble_pick and ensemble_pick.overrode_poisson) else "poisson_only",
+            "predicted_by": "poisson_only",   # AI is audit-only — does not change the pick
         })
 
     if not picks:

@@ -169,17 +169,11 @@ def recommend(
     ev_safe        = _expected_value(safe_pick, model, stage)
     ev_contrarian  = _expected_value(contrarian_pick, model, stage)
 
-    # Decision
-    if context.point_gap <= 0:
-        # Leading or tied — protect the lead
-        chosen_strategy = Strategy.SAFE
-        recommended     = safe_pick
-    elif context.gap_per_match <= adjusted_threshold:
-        chosen_strategy = Strategy.SAFE
-        recommended     = safe_pick
-    else:
-        chosen_strategy = Strategy.CONTRARIAN
-        recommended     = contrarian_pick
+    # Decision — Contrarian logic suspended (Measurement-First protocol June 2026).
+    # Always pick the modal (consensus) score until we have enough calibration data
+    # to validate whether contrarian picks improve expected score in this 10-person pool.
+    chosen_strategy = Strategy.SAFE
+    recommended     = safe_pick
 
     exact_pts     = SCORING[stage]["exact"]
     direction_pts = SCORING[stage]["direction"]

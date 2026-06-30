@@ -77,8 +77,11 @@ def fetch_standings() -> Optional[dict]:
         return None
 
     my_points:     Optional[int] = None
+    my_rank:       Optional[int] = None
     leader_points: Optional[int] = None
     leader_name:   str           = ""
+    second_points: Optional[int] = None
+    second_name:   str           = ""
 
     for member in members:
         name = str(member.get("name", "")).strip()
@@ -90,14 +93,23 @@ def fetch_standings() -> Optional[dict]:
         except (TypeError, ValueError):
             continue  # skip malformed entries
 
-        # My points
+        # My points and rank
         if name.lower() == MY_PARTICIPANT_NAME.lower():
             my_points = points
+            try:
+                my_rank = int(raw_rank)
+            except (TypeError, ValueError):
+                pass
 
         # Leader = member with rank "1" (most robust — handles mid-tournament overtakes)
         if str(raw_rank) == "1":
             leader_points = points
             leader_name   = name
+
+        # Second place = member with rank "2"
+        if str(raw_rank) == "2":
+            second_points = points
+            second_name   = name
 
     # Fallback: if rank "1" wasn't found, pick the member with the highest score
     if leader_points is None:
@@ -120,11 +132,14 @@ def fetch_standings() -> Optional[dict]:
         return None
 
     gap = leader_points - my_points
-    print(f"[standings] Live: {MY_PARTICIPANT_NAME}={my_points}pts | "
+    print(f"[standings] Live: {MY_PARTICIPANT_NAME}={my_points}pts (rank {my_rank}) | "
           f"leader: {leader_name}={leader_points}pts | gap={gap}")
 
     return {
-        "my_points":     my_points,
-        "leader_points": leader_points,
-        "leader_name":   leader_name,
+        "my_points":      my_points,
+        "my_rank":        my_rank or 0,
+        "leader_points":  leader_points,
+        "leader_name":    leader_name,
+        "second_points":  second_points or 0,
+        "second_name":    second_name,
     }

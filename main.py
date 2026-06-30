@@ -483,9 +483,12 @@ def run_daily_pipeline(
     else:
         live_standings = fetch_standings()
         if live_standings:
-            MY_CURRENT_STATE["my_points"]     = live_standings["my_points"]
-            MY_CURRENT_STATE["leader_points"] = live_standings["leader_points"]
-            MY_CURRENT_STATE["leader_name"]   = live_standings["leader_name"]
+            MY_CURRENT_STATE["my_points"]      = live_standings["my_points"]
+            MY_CURRENT_STATE["leader_points"]  = live_standings["leader_points"]
+            MY_CURRENT_STATE["leader_name"]    = live_standings["leader_name"]
+            MY_CURRENT_STATE["my_rank"]        = live_standings.get("my_rank", 0)
+            MY_CURRENT_STATE["second_name"]    = live_standings.get("second_name", "")
+            MY_CURRENT_STATE["second_points"]  = live_standings.get("second_points", 0)
             _standings_source = "live"
         else:
             print("[pipeline] Using hardcoded standings from tournament_state.py (365Scores sync unavailable).")
@@ -502,6 +505,10 @@ def run_daily_pipeline(
         leader_points     = MY_CURRENT_STATE["leader_points"],
         matches_remaining = remaining,
         standings_source  = _standings_source,
+        leader_name       = MY_CURRENT_STATE.get("leader_name", ""),
+        my_rank           = MY_CURRENT_STATE.get("my_rank", 0),
+        second_name       = MY_CURRENT_STATE.get("second_name", ""),
+        second_points     = MY_CURRENT_STATE.get("second_points", 0),
     )
     _gap = max(0, context.leader_points - context.my_points)
 

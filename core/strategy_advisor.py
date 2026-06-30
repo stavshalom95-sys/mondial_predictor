@@ -44,6 +44,10 @@ class TournamentContext:
     matches_remaining: int          # overridden at runtime by data_pipeline
     current_stage:     TournamentStage = TournamentStage.GROUP_STAGE
     standings_source:  str             = "fallback"  # "live" | "fallback"
+    leader_name:       str             = ""           # name of current leader
+    my_rank:           int             = 0            # my rank in the group (0 = unknown)
+    second_name:       str             = ""           # 2nd-place participant name
+    second_points:     int             = 0            # 2nd-place score (used when I lead)
 
     @property
     def point_gap(self) -> int:

@@ -128,6 +128,13 @@ _FLAGS: dict[str, str] = {
 }
 
 
+def _ordinal(n: int) -> str:
+    """Return English ordinal string: 1 → '1st', 2 → '2nd', 3 → '3rd', 4+ → 'Nth'."""
+    if 11 <= (n % 100) <= 13:
+        return f"{n}th"
+    return {1: f"{n}st", 2: f"{n}nd", 3: f"{n}rd"}.get(n % 10, f"{n}th")
+
+
 def _flag(team_name: str) -> str:
     """Return the flag emoji for a team, or empty string if unknown."""
     return _FLAGS.get(team_name.lower(), "")
@@ -267,9 +274,31 @@ def format_daily_message(
     ]
     if getattr(context, "standings_source", "fallback") == "fallback":
         lines.append("⚠️ _דירוגים: נתוני גיבוי (365Scores לא זמין) — פער עשוי להיות לא מעודכן_")
+
+    # ── Leaderboard status line ───────────────────────────────────────────────
+    _my_rank       = getattr(context, "my_rank", 0)
+    _leader_name   = getattr(context, "leader_name", "")
+    _second_name   = getattr(context, "second_name", "")
+    _second_points = getattr(context, "second_points", 0)
+    _am_leading    = context.point_gap <= 0   # leader_points - my_points <= 0
+
+    if _am_leading:
+        _gap_ahead = context.my_points - _second_points if _second_points else 0
+        if _second_name and _gap_ahead > 0:
+            _lb = f"🥇 *Leaderboard: 1st Place* | Gap: +{_gap_ahead} pts ahead of {_second_name}"
+        elif _second_name and _gap_ahead == 0:
+            _lb = f"🥇 *Leaderboard: 1st Place* | Tied with {_second_name} in 2nd"
+        else:
+            _lb = f"🥇 *Leaderboard: 1st Place* | {context.my_points} pts"
+    else:
+        _rank_str   = _ordinal(_my_rank) if _my_rank else "?"
+        _gap_behind = context.point_gap   # already leader_points - my_points > 0
+        _behind_who = _leader_name or "leader"
+        _lb = f"📊 *Leaderboard: {_rank_str} Place* | Gap: {_gap_behind} pts behind {_behind_who}"
+
     lines += [
-        f"📊 מצב נוכחי: {context.my_points} נק' (אתה) | {context.leader_points} נק' (מוביל)",
-        f"📉 פער: {context.point_gap} נק' | {context.matches_remaining} משחקים נותרו",
+        f"   {context.my_points} pts (you) | {context.matches_remaining} matches remaining",
+        _lb,
         "",
     ]
 
@@ -329,7 +358,7 @@ def format_daily_message(
             _s_icon = {"Safe Bet": "✅", "Reduced Stake": "⚠️", "Stay Away": "🚫"}.get(_strat, "•")
             _is_ko = getattr(_cp, "is_knockout", False)
             lines.append("   ────────────────────────────")
-            lines.append(f"   {_c_icon} *Friends League: {_sh}-{_sa}* ({_sp:.1%})")
+            lines.append(f"   {_c_icon} *Friends League (365Scores): {_sh}-{_sa}* ({_sp:.1%})")
             lines.append(f"   📝 {_score_reasoning(_cp)}")
             lines.append(f"   {_s_icon} *Bet: {_strat_note}*")
             if _is_ko:
@@ -363,15 +392,9 @@ def format_daily_message(
                 _fs.home_goals, _fs.away_goals,
             )
 
-        if pick.is_knockout:
-            # KO dual-track: competition (365Scores) and betting serve different rules.
-            # Both lines show the SAME predicted score.  The difference is in
-            # how a 90-minute draw is handled: 365Scores continues to ET/pens
-            # (so a draw pick is always wrong), while the sportsbook settles
-            # the 90-min result immediately (draw = draw).
-            lines.append(f"   🏆 *365Scores: {pick_desc}* _(incl. extra time / penalties)_")
-            lines.append(f"   🎰 *90-min bet: {pick_desc}* _(if 90 min ends in draw → bet settles as draw)_")
-        else:
+        # Score display is handled by the Friends League (365Scores) block above.
+        # Fallback: only show if correct_score_pick was not available.
+        if pick.correct_score_pick is None:
             lines.append(f"   ⚽ *Final Prediction: {pick_desc}*")
 
         # Model depth — always show λ so the reader can verify simulation ran

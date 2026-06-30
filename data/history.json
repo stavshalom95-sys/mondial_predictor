@@ -760,5 +760,28 @@
     "market_p_home": 0.4168,
     "market_p_draw": 0.307,
     "market_p_away": 0.2763
+  },
+  {
+    "date": "2026-06-30",
+    "home_team": "Ivory Coast",
+    "away_team": "Norway",
+    "stage": "32 האחרונות",
+    "predicted_home": 1,
+    "predicted_away": 1,
+    "actual_home": 1,
+    "actual_away": 2,
+    "exact_match": false,
+    "correct_result": false,
+    "points_earned": 0,
+    "points_possible": 5,
+    "bet_won": true,
+    "pnl_nis": 29.0,
+    "predicted_by": "poisson_only",
+    "sim_p_home": 0.2187,
+    "sim_p_draw": 0.216,
+    "sim_p_away": 0.5653,
+    "market_p_home": 0.2734,
+    "market_p_draw": 0.2773,
+    "market_p_away": 0.4493
   }
 ]

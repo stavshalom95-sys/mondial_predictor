@@ -1673,7 +1673,7 @@
   },
   {
     "id": "537424",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-06-30T17:00:00Z",
     "home": "CIV",
@@ -1689,8 +1689,8 @@
       }
     },
     "score": {
-      "CIV": null,
-      "NOR": null
+      "CIV": 1,
+      "NOR": 2
     }
   },
   {

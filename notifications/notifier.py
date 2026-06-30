@@ -512,6 +512,77 @@ def format_daily_message(
     return "\n".join(lines)
 
 
+def format_dual_track_section(picks: list) -> str:
+    """
+    Format the dual-track (Strategy + Correct Score) WhatsApp section.
+
+    `picks` is a list of CorrectScorePick instances from core.correct_score_predictor.
+    Imported lazily to avoid circular dependency — caller passes the list in.
+
+    Returns a ready-to-append string block (starts with a blank line).
+    """
+    if not picks:
+        return ""
+
+    _STRATEGY_ICON = {
+        "Safe Bet":      "✅",
+        "Reduced Stake": "⚠️",
+        "Stay Away":     "🚫",
+    }
+    _CONFIDENCE_ICON = {
+        "HIGH":   "🔥",
+        "MEDIUM": "📊",
+        "LOW":    "❄️",
+    }
+    _SOURCE_TAG = {
+        "blended":       "xG blend",
+        "internal_only": "Poisson only",
+    }
+
+    lines = [
+        "",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "📋 *DUAL-TRACK SUMMARY*",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    ]
+
+    for p in picks:
+        h_flag = _FLAGS.get(p.home_team.lower(), "")
+        a_flag = _FLAGS.get(p.away_team.lower(), "")
+        home_label = f"{h_flag} {p.home_team}".strip()
+        away_label = f"{a_flag} {p.away_team}".strip()
+        s_icon = _STRATEGY_ICON.get(p.strategy, "•")
+        c_icon = _CONFIDENCE_ICON.get(p.confidence, "•")
+        src    = _SOURCE_TAG.get(p.source, p.source)
+
+        lines.append(f"\n🎯 *{home_label} vs {away_label}*")
+
+        # Strategy line
+        lines.append(f"   {s_icon} *Strategy:* {p.strategy_note}")
+
+        # Kelly cap note
+        if p.kelly_cap < 1.0:
+            cap_str = "No bet" if p.kelly_cap == 0.0 else f"½ Kelly cap"
+            lines.append(f"      Kelly: *{cap_str}*")
+
+        # O/U signal
+        if p.ou_signal != "Neutral":
+            lines.append(f"      O/U signal: *{p.ou_signal}* ({'low-scoring match' if p.ou_signal == 'Under 2.5' else 'goals expected'})")
+
+        # Prior inflation flag
+        if p.prior_inflation:
+            lines.append(f"      ⚠️ Prior inflation detected vs external xG")
+
+        # Correct score
+        lines.append(
+            f"   {c_icon} *Score Pick:* {p.score_label}"
+            f"  [{p.score_prob:.1%} | {src}]"
+        )
+
+    lines.append("")
+    return "\n".join(lines)
+
+
 def format_lineup_alert(
     home_team: str,
     away_team: str,

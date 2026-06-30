@@ -52,6 +52,8 @@ from data.backup_scraper import fetch_match_context_espn
 from data.results_fetcher import fetch_yesterday_results
 from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats
 from data.opta_priors import build_opta_context, get_whatsapp_sentiment_note, opta_tiebreak, get_team_opta
+from core.correct_score_predictor import predict as predict_correct_score, get_external_xg, load_external_xg
+from notifications.notifier import format_dual_track_section
 from core.bias_corrector import build_bias_corrector
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket, build_probability_ticket, build_confidence_value_ticket, ConfidenceTicket
@@ -396,6 +398,10 @@ def run_daily_pipeline(
     if strength_model:
         print(strength_model.summary())
 
+    # Pre-load external xG data (data/external_xg.json — manually populated from images)
+    load_external_xg()
+    cs_picks: list = []   # CorrectScorePick per match, collected for dual-track WhatsApp section
+
     history          = load_history()
     perf_report: dict | None = None
 
@@ -711,6 +717,10 @@ def run_daily_pipeline(
                 lambda_away    = round(_pr_la, 3),
                 is_knockout    = (_pr_stage != TournamentStage.GROUP_STAGE),
                 prior_only     = True,
+            ))
+            cs_picks.append(predict_correct_score(
+                match.home_team, match.away_team, _pr_sim,
+                external_xg=get_external_xg(match.home_team, match.away_team),
             ))
             morning_data.append({
                 "date":          date.today().isoformat(),
@@ -1301,6 +1311,10 @@ def run_daily_pipeline(
             lambda_away     = round(model.lambda_away,   3),
             is_knockout     = _is_knockout,
         ))
+        cs_picks.append(predict_correct_score(
+            match.home_team, match.away_team, sim,
+            external_xg=get_external_xg(match.home_team, match.away_team),
+        ))
         morning_data.append({
             "date":             date.today().isoformat(),
             "home_team":        match.home_team,
@@ -1420,6 +1434,10 @@ def run_daily_pipeline(
             _ko_str = _nm.start_time_utc.strftime("%H:%M UTC")
             _no_odds_lines.append(f"  ⏳ {_nm.home_team} vs {_nm.away_team}  [{_ko_str}]")
         message += "\n".join(_no_odds_lines)
+
+    # ── Dual-track section (Strategy + Correct Score) ────────────────────────
+    if cs_picks:
+        message += format_dual_track_section(cs_picks)
 
     if send_notification:
         send_whatsapp_message(message)

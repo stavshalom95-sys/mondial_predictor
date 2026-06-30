@@ -1,0 +1,30 @@
+{
+  "_source": "External xG model (Spanish-language xG grid tool — manual entry from images)",
+  "_updated": "2026-06-30",
+  "_note": "Keys must match schedule team names exactly (home vs away). Update before each daily run.",
+
+  "France vs Sweden": {
+    "xg_home":     2.13,
+    "xg_away":     0.98,
+    "p_home":      0.61,
+    "p_draw":      0.21,
+    "p_away":      0.16,
+    "ou_over_2_5": 0.58
+  },
+  "Ivory Coast vs Norway": {
+    "xg_home":     0.93,
+    "xg_away":     1.43,
+    "p_home":      0.24,
+    "p_draw":      0.28,
+    "p_away":      0.48,
+    "ou_over_2_5": 0.42
+  },
+  "Mexico vs Ecuador": {
+    "xg_home":     0.81,
+    "xg_away":     0.83,
+    "p_home":      0.31,
+    "p_draw":      0.36,
+    "p_away":      0.33,
+    "ou_over_2_5": 0.23
+  }
+}

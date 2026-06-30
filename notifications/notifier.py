@@ -200,10 +200,42 @@ class DailyPick:
     lambda_home:    Optional[float] = None   # Poisson attack rate (home)
     lambda_away:    Optional[float] = None   # Poisson attack rate (away)
     # ── Stage flags ──────────────────────────────────────────────────────────
-    is_knockout:    bool = False   # True for R32/R16/QF/SF/Final
-    prior_only:     bool = False   # True when no live bookmaker odds — priors only
+    is_knockout:         bool = False   # True for R32/R16/QF/SF/Final
+    prior_only:          bool = False   # True when no live bookmaker odds — priors only
+    correct_score_pick:  Optional[object] = None  # CorrectScorePick from correct_score_predictor
     # KO dual-track: competition pick (365Scores) always has a winner;
     # betting Kelly operates on 90-min odds where draw IS a valid outcome.
+
+
+def _score_reasoning(cp) -> str:
+    """One-sentence WhatsApp explanation derived from a CorrectScorePick."""
+    signals: list[str] = []
+    if getattr(cp, "source", "") == "blended":
+        signals.append("external xG model")
+    if getattr(cp, "ou_signal", "Neutral") == "Under 2.5":
+        signals.append("low O2.5 signal")
+    note = getattr(cp, "strategy_note", "")
+    if "draw resilience" in note or "underdog xG" in note:
+        signals.append("draw resilience")
+    if "draw risk" in note:
+        signals.append("high draw probability")
+    if getattr(cp, "prior_inflation", False):
+        signals.append("prior inflation vs market")
+
+    sh   = getattr(cp, "score_home", 0)
+    sa   = getattr(cp, "score_away", 0)
+    home = getattr(cp, "home_team", "")
+    away = getattr(cp, "away_team", "")
+
+    if sh == sa:
+        base = "High probability of low-scoring draw"
+    else:
+        winner = home if sh > sa else away
+        base = f"{winner} expected to control the match"
+
+    if signals:
+        return base + " — " + ", ".join(signals[:3]) + "."
+    return base + "."
 
 
 def format_daily_message(
@@ -283,6 +315,23 @@ def format_daily_message(
         if pick.prior_only:
             lines.append("   ⚠️ *PRIOR-ONLY — אין מחירי שוק זמינים*")
             lines.append("   *תחזית מבוססת ידע קודם בלבד. הפחת היקף הימור ב-50% לפחות.*")
+
+        # ── Friends League + Bet Strategy (PROMINENT — shown first) ──────────
+        _cp = pick.correct_score_pick
+        if _cp is not None:
+            _sh    = getattr(_cp, "score_home", 0)
+            _sa    = getattr(_cp, "score_away", 0)
+            _sp    = getattr(_cp, "score_prob", 0.0)
+            _conf  = getattr(_cp, "confidence", "MEDIUM")
+            _c_icon = {"HIGH": "🔥", "MEDIUM": "📊", "LOW": "❄️"}.get(_conf, "📊")
+            _strat     = getattr(_cp, "strategy", "")
+            _strat_note = getattr(_cp, "strategy_note", _strat)
+            _s_icon = {"Safe Bet": "✅", "Reduced Stake": "⚠️", "Stay Away": "🚫"}.get(_strat, "•")
+            lines.append("   ────────────────────────────")
+            lines.append(f"   {_c_icon} *Friends League: {_sh}-{_sa}* ({_sp:.1%})")
+            lines.append(f"   📝 {_score_reasoning(_cp)}")
+            lines.append(f"   {_s_icon} *Bet: {_strat_note}*")
+            lines.append("   ────────────────────────────")
 
         # ── Simulation block (primary output) ────────────────────────────────
         has_sim = pick.sim_score_home is not None and pick.sim_score_away is not None

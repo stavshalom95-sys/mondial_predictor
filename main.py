@@ -722,6 +722,7 @@ def run_daily_pipeline(
                 match.home_team, match.away_team, _pr_sim,
                 external_xg=get_external_xg(match.home_team, match.away_team),
             ))
+            picks[-1].correct_score_pick = cs_picks[-1]
             morning_data.append({
                 "date":          date.today().isoformat(),
                 "home_team":     match.home_team,
@@ -1315,6 +1316,7 @@ def run_daily_pipeline(
             match.home_team, match.away_team, sim,
             external_xg=get_external_xg(match.home_team, match.away_team),
         ))
+        picks[-1].correct_score_pick = cs_picks[-1]
         morning_data.append({
             "date":             date.today().isoformat(),
             "home_team":        match.home_team,
@@ -1434,10 +1436,6 @@ def run_daily_pipeline(
             _ko_str = _nm.start_time_utc.strftime("%H:%M UTC")
             _no_odds_lines.append(f"  ⏳ {_nm.home_team} vs {_nm.away_team}  [{_ko_str}]")
         message += "\n".join(_no_odds_lines)
-
-    # ── Dual-track section (Strategy + Correct Score) ────────────────────────
-    if cs_picks:
-        message += format_dual_track_section(cs_picks)
 
     if send_notification:
         send_whatsapp_message(message)

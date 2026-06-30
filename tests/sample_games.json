@@ -1629,7 +1629,7 @@
   },
   {
     "id": "537415",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-06-29T20:30:00Z",
     "home": "GER",
@@ -1645,13 +1645,13 @@
       }
     },
     "score": {
-      "GER": null,
-      "PAR": null
+      "GER": 4,
+      "PAR": 5
     }
   },
   {
     "id": "537418",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-06-30T01:00:00Z",
     "home": "NED",
@@ -1667,8 +1667,8 @@
       }
     },
     "score": {
-      "NED": null,
-      "MAR": null
+      "NED": 3,
+      "MAR": 4
     }
   },
   {
@@ -1941,20 +1941,20 @@
     "stage": "round_of_16",
     "start_time": "2026-07-04T17:00:00Z",
     "home": "CAN",
-    "away": null,
+    "away": "MAR",
     "teams": {
       "CAN": {
         "name": "Canada",
         "abbreviation": "CAN"
       },
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "MAR": {
+        "name": "Morocco",
+        "abbreviation": "MAR"
       }
     },
     "score": {
       "CAN": null,
-      "null": null
+      "MAR": null
     }
   },
   {
@@ -1962,15 +1962,20 @@
     "status": "scheduled",
     "stage": "round_of_16",
     "start_time": "2026-07-04T21:00:00Z",
-    "home": null,
+    "home": "PAR",
     "away": null,
     "teams": {
+      "PAR": {
+        "name": "Paraguay",
+        "abbreviation": "PAR"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "PAR": null,
       "null": null
     }
   },
@@ -1979,15 +1984,20 @@
     "status": "scheduled",
     "stage": "round_of_16",
     "start_time": "2026-07-05T20:00:00Z",
-    "home": null,
+    "home": "BRA",
     "away": null,
     "teams": {
+      "BRA": {
+        "name": "Brazil",
+        "abbreviation": "BRA"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "BRA": null,
       "null": null
     }
   },

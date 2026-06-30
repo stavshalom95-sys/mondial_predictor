@@ -327,10 +327,14 @@ def format_daily_message(
             _strat     = getattr(_cp, "strategy", "")
             _strat_note = getattr(_cp, "strategy_note", _strat)
             _s_icon = {"Safe Bet": "✅", "Reduced Stake": "⚠️", "Stay Away": "🚫"}.get(_strat, "•")
+            _is_ko = getattr(_cp, "is_knockout", False)
             lines.append("   ────────────────────────────")
             lines.append(f"   {_c_icon} *Friends League: {_sh}-{_sa}* ({_sp:.1%})")
             lines.append(f"   📝 {_score_reasoning(_cp)}")
             lines.append(f"   {_s_icon} *Bet: {_strat_note}*")
+            if _is_ko:
+                lines.append("   ⏱ _Friends League = 120 min / final result (incl. ET/pens)_")
+                lines.append("   _Betting strategy = 90 min FT only (bookmaker standard)_")
             lines.append("   ────────────────────────────")
 
         # ── Simulation block (primary output) ────────────────────────────────

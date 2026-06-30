@@ -721,6 +721,7 @@ def run_daily_pipeline(
             cs_picks.append(predict_correct_score(
                 match.home_team, match.away_team, _pr_sim,
                 external_xg=get_external_xg(match.home_team, match.away_team),
+                is_knockout=(_pr_stage != TournamentStage.GROUP_STAGE),
             ))
             picks[-1].correct_score_pick = cs_picks[-1]
             morning_data.append({
@@ -1315,6 +1316,7 @@ def run_daily_pipeline(
         cs_picks.append(predict_correct_score(
             match.home_team, match.away_team, sim,
             external_xg=get_external_xg(match.home_team, match.away_team),
+            is_knockout=_is_knockout,
         ))
         picks[-1].correct_score_pick = cs_picks[-1]
         morning_data.append({

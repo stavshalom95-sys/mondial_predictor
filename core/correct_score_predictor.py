@@ -4,11 +4,17 @@ core/correct_score_predictor.py — Dual-track prediction engine.
 Professional Bet track (Strategy):
   Determines betting strategy — Safe Bet / Reduced Stake / Stay Away — by
   cross-referencing our internal Poisson model against optional external xG data.
+  Strategy is ALWAYS based on 90-minute full-time probabilities (bookmaker standard).
 
 Friends League track (Correct Score):
   Computes the most probable correct score using our Poisson score grid, blended
   40/60 with external xG lambdas when available.  When the external xG grid shows
   a clear modal score (e.g. 0-0 at 20%), that signal takes priority.
+
+  Knockout matches: when the 90-min modal score is a draw, extra time (30 min) is
+  simulated with a fatigue-reduced lambda scale (ET_LAMBDA_SCALE ≈ 0.25) to produce
+  a decisive final result (AET goal or penalty winner).  The Friends League prediction
+  therefore reflects the 120-min / full final result, not just 90 min.
 
 External xG data source:
   data/external_xg.json — manually populated from xG grid images before each run.
@@ -25,9 +31,10 @@ Strategy rules (post-mortem June 2026):
 from __future__ import annotations
 
 import json
+import math
 import os
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from core.simulator import simulate, SimResult
@@ -39,12 +46,16 @@ _EXTERNAL_XG_PATH = os.path.join(
 # Blend weight: 40% external, 60% internal Poisson
 EXTERNAL_BLEND = 0.40
 
-# Strategy thresholds
+# Strategy thresholds (90-min betting — unchanged)
 DRAW_STAY_AWAY      = 0.33   # draw% >= this → Stay Away
 DRAW_REDUCED_STAKE  = 0.25   # draw% >= this → Reduced Stake
 OU_UNDER_GATE       = 0.35   # O2.5 < this  → Under 2.5 + Reduced Stake
 PRIOR_INFLATION_GAP = 0.10   # our_fav - ext_fav > this → flag
 UNDERDOG_XG_GATE    = 0.80   # underdog xG >= this → draw resilience signal
+
+# Extra-time simulation constants (Friends League KO matches only)
+# 30 min ET with fatigue + defensive caginess → effective rate ≈ 25% of 90-min λ
+_ET_LAMBDA_SCALE = (30.0 / 90.0) * 0.75  # ≈ 0.25
 
 
 # ---------------------------------------------------------------------------
@@ -71,8 +82,8 @@ class CorrectScorePick:
     # ── Friends League ──────────────────────────────────────────────────────
     score_home:      int
     score_away:      int
-    score_prob:      float   # P(this exact score)
-    score_label:     str     # "France wins 2-0 — comfortable win"
+    score_prob:      float   # P(this exact score) — 90-min modal × ET branch prob for KO draws
+    score_label:     str     # "France wins 2-0 AET — narrow win"
     confidence:      str     # "HIGH" | "MEDIUM" | "LOW"
     # ── Professional Bet ────────────────────────────────────────────────────
     strategy:        str     # "Safe Bet" | "Reduced Stake" | "Stay Away"
@@ -82,6 +93,8 @@ class CorrectScorePick:
     ou_signal:       str     # "Over 2.5" | "Under 2.5" | "Neutral"
     prior_inflation: bool
     source:          str     # "blended" | "internal_only"
+    # ── Format metadata ─────────────────────────────────────────────────────
+    is_knockout:     bool = False   # True → Friends League pick accounts for 120 min / ET / pens
 
 
 # ---------------------------------------------------------------------------
@@ -109,8 +122,16 @@ def _score_label(
     a: int,
     is_low_scoring: bool,
     is_balanced: bool,
+    et_suffix: str = "",      # "AET" | "pens" | "" (group stage)
+    pen_winner: str = "",     # populated when et_suffix == "pens"
 ) -> str:
+    # Knockout penalty shootout — score stays the same, winner decided on pens
+    if et_suffix == "pens":
+        return f"{pen_winner} wins {h}-{a} (pens) — penalty shootout"
+
+    # Regular or AET decisive result
     if h == a:
+        # Can only reach here for group-stage draws (et_suffix == "")
         if is_balanced:
             tone = "balanced stalemate"
         elif is_low_scoring:
@@ -118,6 +139,7 @@ def _score_label(
         else:
             tone = "tight contest"
         return f"Draw {h}-{h} — {tone}"
+
     winner = home_team if h > a else away_team
     margin = abs(h - a)
     if margin == 1:
@@ -126,7 +148,48 @@ def _score_label(
         tone = "dominant"
     else:
         tone = "comfortable win"
-    return f"{winner} wins {max(h, a)}-{min(h, a)} — {tone}"
+
+    aet_tag = " AET" if et_suffix == "AET" else ""
+    return f"{winner} wins {max(h, a)}-{min(h, a)}{aet_tag} — {tone}"
+
+
+# ---------------------------------------------------------------------------
+# Extra-time simulation (knockout matches only)
+# ---------------------------------------------------------------------------
+
+def _et_outcome(
+    lh: float,
+    la: float,
+    base_h: int,
+    base_a: int,
+) -> tuple[int, int, str, float]:
+    """
+    Simulate extra time (30 min) for a knockout match that ends level after 90 min.
+
+    Uses Poisson P(score ≥ 1 in 30 min) with a fatigue/caginess scale factor
+    (_ET_LAMBDA_SCALE ≈ 0.25).  Three possible ET outcomes:
+
+      • Home only scores  → (base_h+1, base_a, "AET", p_home_only)
+      • Away only scores  → (base_h, base_a+1, "AET", p_away_only)
+      • Both or neither   → (base_h, base_a,   "pens", p_pens)
+
+    Returns the most probable outcome as (final_h, final_a, suffix, branch_prob).
+    """
+    lh_et = lh * _ET_LAMBDA_SCALE
+    la_et = la * _ET_LAMBDA_SCALE
+    p_h = 1.0 - math.exp(-lh_et)   # P(home scores ≥1 in ET)
+    p_a = 1.0 - math.exp(-la_et)   # P(away scores ≥1 in ET)
+
+    p_home_only = p_h * (1.0 - p_a)
+    p_away_only = (1.0 - p_h) * p_a
+    p_pens      = 1.0 - p_home_only - p_away_only  # both score or neither
+
+    options = [
+        (base_h + 1, base_a,     "AET",  p_home_only),
+        (base_h,     base_a + 1, "AET",  p_away_only),
+        (base_h,     base_a,     "pens", p_pens),
+    ]
+    return max(options, key=lambda x: x[3])
 
 
 # ---------------------------------------------------------------------------
@@ -253,6 +316,7 @@ def predict(
     away_team:    str,
     internal_sim: SimResult,
     external_xg:  Optional[ExternalXG] = None,
+    is_knockout:  bool = False,
 ) -> CorrectScorePick:
     """
     Produce a dual-track CorrectScorePick for one match.
@@ -266,21 +330,29 @@ def predict(
       - Score grid from internal simulation
       - Strategy from internal 1X2
       - Prior inflation check skipped
+
+    When is_knockout is True (R16/QF/SF/Final):
+      - Betting strategy is UNCHANGED — still 90-min full-time probabilities
+      - Friends League score: if 90-min modal is a draw, extra time is simulated
+        (30 min, λ scaled by _ET_LAMBDA_SCALE ≈ 0.25) to produce a decisive result.
+        If ET also ends level, the higher-λ team is predicted to win on penalties.
     """
     lh_int = internal_sim.score_grid.lambda_home
     la_int = internal_sim.score_grid.lambda_away
 
     # ── Score grid ────────────────────────────────────────────────────────────
     if external_xg is not None:
-        lh_bl = round(EXTERNAL_BLEND * external_xg.xg_home + (1 - EXTERNAL_BLEND) * lh_int, 3)
-        la_bl = round(EXTERNAL_BLEND * external_xg.xg_away + (1 - EXTERNAL_BLEND) * la_int, 3)
-        score_grid = simulate(lh_bl, la_bl).score_grid
+        lh_eff = round(EXTERNAL_BLEND * external_xg.xg_home + (1 - EXTERNAL_BLEND) * lh_int, 3)
+        la_eff = round(EXTERNAL_BLEND * external_xg.xg_away + (1 - EXTERNAL_BLEND) * la_int, 3)
+        score_grid = simulate(lh_eff, la_eff).score_grid
         p_home  = external_xg.p_home
         p_draw  = external_xg.p_draw
         p_away  = external_xg.p_away
         ou_over = external_xg.ou_over_2_5
         source  = "blended"
     else:
+        lh_eff  = lh_int
+        la_eff  = la_int
         score_grid = internal_sim.score_grid
         p_home  = internal_sim.p_home
         p_draw  = internal_sim.p_draw
@@ -288,11 +360,22 @@ def predict(
         ou_over = None
         source  = "internal_only"
 
-    # ── Modal score ───────────────────────────────────────────────────────────
+    # ── Modal 90-min score ────────────────────────────────────────────────────
     sh, sa, sp = score_grid.top_scores(1)[0]
 
     is_low_scoring = (lh_int + la_int) < 2.0 or (ou_over is not None and ou_over < 0.42)
     is_balanced    = abs(p_home - p_away) < 0.10
+
+    # ── Extra-time resolution (Friends League KO only) ────────────────────────
+    # Betting strategy always uses 90-min probabilities — no change below.
+    et_suffix  = ""
+    pen_winner = ""
+    if is_knockout and sh == sa:
+        et_h, et_a, et_suffix, et_branch_prob = _et_outcome(lh_eff, la_eff, sh, sa)
+        sp = round(sp * et_branch_prob, 4)   # P(FT draw) × P(ET branch)
+        sh, sa = et_h, et_a
+        if et_suffix == "pens":
+            pen_winner = home_team if lh_eff >= la_eff else away_team
 
     # ── Prior inflation ───────────────────────────────────────────────────────
     prior_inflation = False
@@ -311,7 +394,7 @@ def predict(
     else:
         ou_signal = "Neutral"
 
-    # ── Strategy ──────────────────────────────────────────────────────────────
+    # ── Strategy (90-min FT — bookmaker standard, never modified for KO) ──────
     strategy, strategy_note, kelly_cap = _determine_strategy(
         p_home, p_draw, p_away, ou_over, prior_inflation,
         home_team, away_team, external_xg,
@@ -334,7 +417,11 @@ def predict(
         score_home      = sh,
         score_away      = sa,
         score_prob      = round(sp, 4),
-        score_label     = _score_label(home_team, away_team, sh, sa, is_low_scoring, is_balanced),
+        score_label     = _score_label(
+            home_team, away_team, sh, sa,
+            is_low_scoring, is_balanced,
+            et_suffix=et_suffix, pen_winner=pen_winner,
+        ),
         confidence      = confidence,
         strategy        = strategy,
         strategy_note   = strategy_note,
@@ -342,4 +429,5 @@ def predict(
         ou_signal       = ou_signal,
         prior_inflation = prior_inflation,
         source          = source,
+        is_knockout     = is_knockout,
     )

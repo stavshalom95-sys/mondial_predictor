@@ -369,6 +369,19 @@ def predict(
     is_low_scoring = (lh_int + la_int) < 2.0 or (ou_over is not None and ou_over < 0.42)
     is_balanced    = abs(p_home - p_away) < 0.10
 
+    # ── Math-First: direction must agree with dominant 1X2 probability ────────
+    # If the Poisson modal score points the wrong way (e.g., 1-1 when p_home=62%),
+    # override to the highest-probability score in the dominant direction.
+    _dom_dir   = ("H" if p_home >= p_draw and p_home >= p_away else
+                  "D" if p_draw >  p_home and p_draw >= p_away else "A")
+    _modal_dir = "H" if sh > sa else ("D" if sh == sa else "A")
+    if _modal_dir != _dom_dir:
+        for _th, _ta, _tp in score_grid.top_scores(15):
+            _cand_dir = "H" if _th > _ta else ("D" if _th == _ta else "A")
+            if _cand_dir == _dom_dir:
+                sh, sa, sp = _th, _ta, _tp
+                break
+
     # ── Extra-time resolution (Friends League KO only) ────────────────────────
     # Betting strategy always uses 90-min probabilities — no change below.
     et_suffix = ""

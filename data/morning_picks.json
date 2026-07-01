@@ -10,17 +10,35 @@
     "final_lambda_away": 0.905,
     "final_home_goals": 1,
     "final_away_goals": 0,
-    "sim_p_home": 0.5222,
-    "sim_p_draw": 0.2556,
-    "sim_p_away": 0.2222,
+    "sim_p_home": 0.5266,
+    "sim_p_draw": 0.2523,
+    "sim_p_away": 0.2211,
+    "sim_top3": [
+      {
+        "h": 1,
+        "a": 1,
+        "p": 0.1364
+      },
+      {
+        "h": 1,
+        "a": 0,
+        "p": 0.1177
+      },
+      {
+        "h": 2,
+        "a": 0,
+        "p": 0.1029
+      }
+    ],
+    "pick_status": "override ΔEV=+0.492 ratio=0.86",
     "prior_only": true,
     "variance_mode": true,
     "is_knockout": true,
     "predicted_by": "prior_only",
-    "ev_home": -0.3473,
-    "ev_draw": 0.3291,
-    "ev_away": 1.4442,
-    "ev_winner": 1.4442,
+    "ev_home": -0.3417,
+    "ev_draw": 0.2615,
+    "ev_away": 1.5427,
+    "ev_winner": 1.5427,
     "ev_winner_outcome": "away",
     "ev_sg_01": null,
     "ev_sg_23": null,
@@ -34,19 +52,37 @@
     "lambda_home": 1.1753,
     "lambda_away": 0.826,
     "final_lambda_home": 2.082,
-    "final_lambda_away": 2.492,
+    "final_lambda_away": 2.412,
     "final_home_goals": 1,
     "final_away_goals": 2,
-    "sim_p_home": 0.3313,
-    "sim_p_draw": 0.1905,
-    "sim_p_away": 0.4782,
+    "sim_p_home": 0.3417,
+    "sim_p_draw": 0.2015,
+    "sim_p_away": 0.4568,
+    "sim_top3": [
+      {
+        "h": 2,
+        "a": 2,
+        "p": 0.0705
+      },
+      {
+        "h": 1,
+        "a": 2,
+        "p": 0.0678
+      },
+      {
+        "h": 1,
+        "a": 1,
+        "p": 0.0635
+      }
+    ],
+    "pick_status": "override ΔEV=+0.502 ratio=0.96",
     "market_p_home": 0.4399,
     "market_p_draw": 0.3019,
     "market_p_away": 0.2582,
     "sim_value_bet": "away",
-    "model_sg_01": 0.0506,
-    "model_sg_23": 0.2798,
-    "model_sg_4plus": 0.6696,
+    "model_sg_01": 0.0542,
+    "model_sg_23": 0.2896,
+    "model_sg_4plus": 0.6563,
     "home_motivation": "knockout",
     "away_motivation": "knockout",
     "home_lambda_multiplier": 1.0,
@@ -57,14 +93,14 @@
     "variance_mode": true,
     "is_knockout": true,
     "predicted_by": "poisson_only",
-    "ev_home": -0.2877,
-    "ev_draw": -0.4094,
-    "ev_away": 0.602,
-    "ev_winner": 0.602,
+    "ev_home": -0.2824,
+    "ev_draw": -0.3653,
+    "ev_away": 0.5531,
+    "ev_winner": 0.5531,
     "ev_winner_outcome": "away",
-    "ev_sg_01": -0.8558,
-    "ev_sg_23": -0.4684,
-    "ev_sg_4plus": 1.2097
+    "ev_sg_01": -0.8266,
+    "ev_sg_23": -0.4498,
+    "ev_sg_4plus": 0.9689
   },
   {
     "date": "2026-07-01",
@@ -77,18 +113,36 @@
     "final_lambda_away": 1.4,
     "final_home_goals": 2,
     "final_away_goals": 1,
-    "sim_p_home": 0.6457,
-    "sim_p_draw": 0.1676,
-    "sim_p_away": 0.1867,
+    "sim_p_home": 0.6423,
+    "sim_p_draw": 0.1775,
+    "sim_p_away": 0.1802,
+    "sim_top3": [
+      {
+        "h": 2,
+        "a": 1,
+        "p": 0.0853
+      },
+      {
+        "h": 3,
+        "a": 1,
+        "p": 0.076
+      },
+      {
+        "h": 1,
+        "a": 1,
+        "p": 0.0721
+      }
+    ],
+    "pick_status": "modal",
     "prior_only": true,
     "variance_mode": false,
     "is_knockout": true,
     "predicted_by": "prior_only",
-    "ev_home": null,
-    "ev_draw": null,
-    "ev_away": null,
-    "ev_winner": null,
-    "ev_winner_outcome": null,
+    "ev_home": -0.1329,
+    "ev_draw": -0.1835,
+    "ev_away": 0.2974,
+    "ev_winner": 0.2974,
+    "ev_winner_outcome": "away",
     "ev_sg_01": null,
     "ev_sg_23": null,
     "ev_sg_4plus": null
@@ -104,18 +158,36 @@
     "final_lambda_away": 0.906,
     "final_home_goals": 2,
     "final_away_goals": 0,
-    "sim_p_home": 0.5958,
-    "sim_p_draw": 0.2187,
-    "sim_p_away": 0.1855,
+    "sim_p_home": 0.6125,
+    "sim_p_draw": 0.2191,
+    "sim_p_away": 0.1684,
+    "sim_top3": [
+      {
+        "h": 1,
+        "a": 1,
+        "p": 0.1185
+      },
+      {
+        "h": 2,
+        "a": 0,
+        "p": 0.109
+      },
+      {
+        "h": 1,
+        "a": 0,
+        "p": 0.1022
+      }
+    ],
+    "pick_status": "override ΔEV=+0.758 ratio=0.92",
     "prior_only": true,
     "variance_mode": true,
     "is_knockout": true,
     "predicted_by": "prior_only",
-    "ev_home": null,
-    "ev_draw": null,
-    "ev_away": null,
-    "ev_winner": null,
-    "ev_winner_outcome": null,
+    "ev_home": -0.2037,
+    "ev_draw": 0.0517,
+    "ev_away": 0.4819,
+    "ev_winner": 0.4819,
+    "ev_winner_outcome": "away",
     "ev_sg_01": null,
     "ev_sg_23": null,
     "ev_sg_4plus": null
@@ -131,18 +203,36 @@
     "final_lambda_away": 0.973,
     "final_home_goals": 2,
     "final_away_goals": 0,
-    "sim_p_home": 0.6016,
-    "sim_p_draw": 0.2195,
-    "sim_p_away": 0.1789,
+    "sim_p_home": 0.6034,
+    "sim_p_draw": 0.22,
+    "sim_p_away": 0.1766,
+    "sim_top3": [
+      {
+        "h": 1,
+        "a": 1,
+        "p": 0.1151
+      },
+      {
+        "h": 2,
+        "a": 0,
+        "p": 0.1023
+      },
+      {
+        "h": 2,
+        "a": 1,
+        "p": 0.0995
+      }
+    ],
+    "pick_status": "override ΔEV=+0.728 ratio=0.89",
     "prior_only": true,
     "variance_mode": true,
     "is_knockout": true,
     "predicted_by": "prior_only",
-    "ev_home": null,
-    "ev_draw": null,
-    "ev_away": null,
-    "ev_winner": null,
-    "ev_winner_outcome": null,
+    "ev_home": 0.056,
+    "ev_draw": -0.263,
+    "ev_away": -0.1876,
+    "ev_winner": 0.056,
+    "ev_winner_outcome": "home",
     "ev_sg_01": null,
     "ev_sg_23": null,
     "ev_sg_4plus": null

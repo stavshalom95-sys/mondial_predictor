@@ -319,25 +319,30 @@ def _competition_score_pick(
             best_ev, best_h, best_a = e, h, a
 
     # Override only when both guardrails are satisfied
+    _pick_status = "modal"
     if (best_h, best_a) != (modal_h, modal_a):
         candidate_p = sim.score_grid.probs[best_h][best_a]
         prob_ratio  = candidate_p / modal_p if modal_p > 0 else 0
         ev_delta    = best_ev - ev_modal
         if prob_ratio >= OVERRIDE_MIN_PROB_RATIO and ev_delta >= OVERRIDE_MIN_EV_DELTA:
+            _pick_status = f"override ΔEV={ev_delta:+.3f} ratio={prob_ratio:.2f}"
             print(
                 f"[ev-pick] Override: {modal_h}-{modal_a}({modal_p:.1%}) "
                 f"-> {best_h}-{best_a}({candidate_p:.1%})  "
                 f"ΔEV={ev_delta:+.3f}  ratio={prob_ratio:.2f}"
             )
-            return best_h, best_a
+            return best_h, best_a, _pick_status
         else:
+            _pick_status = (
+                f"suppressed ΔEV={ev_delta:+.3f} ratio={prob_ratio:.2f}"
+            )
             print(
                 f"[ev-pick] Suppressed: {best_h}-{best_a}({candidate_p:.1%}) "
                 f"ratio={prob_ratio:.2f}(need≥{OVERRIDE_MIN_PROB_RATIO}) "
                 f"ΔEV={ev_delta:+.3f}(need≥{OVERRIDE_MIN_EV_DELTA})"
             )
 
-    return modal_h, modal_a
+    return modal_h, modal_a, _pick_status
 
 
 # ---------------------------------------------------------------------------
@@ -655,7 +660,8 @@ def run_daily_pipeline(
             _pr_model  = PoissonMatchModel(lambda_home=_pr_lh, lambda_away=_pr_la, _matrix=_pr_matrix)
             _pr_sim    = simulate(_pr_lh, _pr_la)
             _pr_modal_h, _pr_modal_a = _pr_sim.score_grid.most_likely_score()
-            _pr_sh, _pr_sa = _competition_score_pick(_pr_sim, _gap, context.matches_remaining, _pr_stage)
+            _pr_sh, _pr_sa, _pr_pick_status = _competition_score_pick(_pr_sim, _gap, context.matches_remaining, _pr_stage)
+            _pr_top3 = [{"h": h, "a": a, "p": round(p, 4)} for h, a, p in _pr_sim.score_grid.top_scores(3)]
 
             # Sub-markets (for O/U bullet)
             _pr_markets = None
@@ -746,6 +752,8 @@ def run_daily_pipeline(
                 lambda_away    = round(_pr_la, 3),
                 is_knockout    = (_pr_stage != TournamentStage.GROUP_STAGE),
                 prior_only     = True,
+                sim_top3       = _pr_top3,
+                pick_status    = _pr_pick_status,
             ))
             cs_picks.append(predict_correct_score(
                 match.home_team, match.away_team, _pr_sim,
@@ -767,10 +775,8 @@ def run_daily_pipeline(
                 "sim_p_home":    round(_pr_sim.p_home, 4),
                 "sim_p_draw":    round(_pr_sim.p_draw, 4),
                 "sim_p_away":    round(_pr_sim.p_away, 4),
-                "sim_top3": [
-                    {"h": h, "a": a, "p": round(p, 4)}
-                    for h, a, p in _pr_sim.score_grid.top_scores(3)
-                ],
+                "sim_top3":      _pr_top3,
+                "pick_status":   _pr_pick_status,
                 "prior_only":    True,
                 "variance_mode": (_pr_sh != _pr_modal_h or _pr_sa != _pr_modal_a),
                 "is_knockout":   (_pr_stage != TournamentStage.GROUP_STAGE),
@@ -997,7 +1003,8 @@ def run_daily_pipeline(
         # ── Monte Carlo Simulation (primary prediction engine) ───────────────
         sim = simulate(lam_h, lam_a)
         _modal_h, _modal_a = sim.score_grid.most_likely_score()
-        _sim_h, _sim_a = _competition_score_pick(sim, _gap, context.matches_remaining, stage)
+        _sim_h, _sim_a, _sim_pick_status = _competition_score_pick(sim, _gap, context.matches_remaining, stage)
+        _sim_top3 = [{"h": h, "a": a, "p": round(p, 4)} for h, a, p in sim.score_grid.top_scores(3)]
         _sim_score_pct  = sim.score_grid.probs[_sim_h][_sim_a]
         print(
             f"[sim] Poisson (analytical): "
@@ -1341,6 +1348,8 @@ def run_daily_pipeline(
             lambda_home     = round(model.lambda_home,   3),
             lambda_away     = round(model.lambda_away,   3),
             is_knockout     = _is_knockout,
+            sim_top3        = _sim_top3,
+            pick_status     = _sim_pick_status,
         ))
         cs_picks.append(predict_correct_score(
             match.home_team, match.away_team, sim,
@@ -1362,10 +1371,8 @@ def run_daily_pipeline(
             "sim_p_home":       round(sim.p_home,       4),
             "sim_p_draw":       round(sim.p_draw,       4),
             "sim_p_away":       round(sim.p_away,       4),
-            "sim_top3": [
-                {"h": h, "a": a, "p": round(p, 4)}
-                for h, a, p in sim.score_grid.top_scores(3)
-            ],
+            "sim_top3":         _sim_top3,
+            "pick_status":      _sim_pick_status,
             "market_p_home":    round(true_probs.home,  4),
             "market_p_draw":    round(true_probs.draw,  4),
             "market_p_away":    round(true_probs.away,  4),

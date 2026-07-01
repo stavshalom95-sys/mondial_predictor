@@ -203,6 +203,9 @@ class DailyPick:
     poisson_p_draw: Optional[float] = None
     poisson_p_away: Optional[float] = None
     why_bullets:    Optional[list[str]] = None  # 3-5 bullets explaining the prediction
+    # ── Score distribution ────────────────────────────────────────────────────
+    sim_top3:       Optional[list[dict]] = None  # [{"h":h,"a":a,"p":p}, ...] top-3 scores
+    pick_status:    Optional[str]        = None  # "modal" | "override ΔEV=..." | "suppressed ..."
     # ── Model depth ──────────────────────────────────────────────────────────
     lambda_home:    Optional[float] = None   # Poisson attack rate (home)
     lambda_away:    Optional[float] = None   # Poisson attack rate (away)
@@ -369,6 +372,21 @@ def format_daily_message(
                 f"   🎲 Sim (10k): H={pick.sim_p_home:.0%}  "
                 f"D={pick.sim_p_draw:.0%}  A={pick.sim_p_away:.0%}"
             )
+
+        # ── Score distribution (Top-3 + pick status) ─────────────────────────
+        if pick.sim_top3:
+            _t3 = "  ".join(
+                f"{s['h']}-{s['a']}({s['p']:.1%})" for s in pick.sim_top3
+            )
+            lines.append(f"   📊 Top-3: {_t3}")
+        if pick.pick_status:
+            if pick.pick_status == "modal":
+                _ps_icon, _ps_label = "✅", "Modal (highest P(exact))"
+            elif pick.pick_status.startswith("override"):
+                _ps_icon, _ps_label = "⚡", f"EV-override — {pick.pick_status[len('override '):]}"
+            else:
+                _ps_icon, _ps_label = "🔇", f"Suppressed — {pick.pick_status[len('suppressed '):]}"
+            lines.append(f"   {_ps_icon} Pick status: {_ps_label}")
 
         # Score display is handled by the Friends League (365Scores) block above.
         # Fallback: only show if correct_score_pick was not available.

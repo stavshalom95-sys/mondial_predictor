@@ -284,8 +284,9 @@ def _competition_score_pick(
     exact_pts     = SCORING[stage]["exact"]
     direction_pts = SCORING[stage]["direction"]
 
-    MIN_CANDIDATE_PROB_FLOOR = 0.10   # absolute P(exact) floor — no pick < 10%
-    OVERRIDE_MIN_EV_DELTA    = 0.30   # EV improvement must be clear and justified
+    MIN_CANDIDATE_PROB_FLOOR = 0.07   # absolute P(exact) floor — no pick < 7%
+    # Any positive ΔEV fires the override — aggressive exact-score mode (trailing)
+    # Only two suppression conditions: p < 7% floor, or candidate is genuinely worse (ΔEV ≤ 0)
 
     p_home = sim.p_home
     p_draw = sim.p_draw
@@ -299,7 +300,7 @@ def _competition_score_pick(
     modal_p  = sim.score_grid.probs[modal_h][modal_a]
     ev_modal = _ev(modal_h, modal_a, modal_p)
 
-    # Log Top-3 for transparency
+    # Log Top-3 for transparency (search goes to top-5)
     top3 = sim.score_grid.top_scores(3)
     print(
         "[sim] Top-3: "
@@ -307,9 +308,9 @@ def _competition_score_pick(
         + f"  | MC: H={p_home:.1%} D={p_draw:.1%} A={p_away:.1%}"
     )
 
-    # Find best EV candidate within Top-3 only (not top-20)
+    # Find best EV candidate within Top-5
     best_h, best_a, best_ev = modal_h, modal_a, ev_modal
-    for h, a, p in top3:
+    for h, a, p in sim.score_grid.top_scores(5):
         e = _ev(h, a, p)
         if e > best_ev:
             best_ev, best_h, best_a = e, h, a
@@ -318,12 +319,7 @@ def _competition_score_pick(
     if (best_h, best_a) != (modal_h, modal_a):
         candidate_p = sim.score_grid.probs[best_h][best_a]
         ev_delta    = best_ev - ev_modal
-        _reasons: list[str] = []
-        if candidate_p < MIN_CANDIDATE_PROB_FLOOR:
-            _reasons.append(f"p={candidate_p:.1%}<{MIN_CANDIDATE_PROB_FLOOR:.0%}floor")
-        if ev_delta < OVERRIDE_MIN_EV_DELTA:
-            _reasons.append(f"ΔEV={ev_delta:+.3f}<{OVERRIDE_MIN_EV_DELTA}")
-        if not _reasons:
+        if candidate_p >= MIN_CANDIDATE_PROB_FLOOR and ev_delta > 0:
             _pick_status = f"override ΔEV={ev_delta:+.3f} p={candidate_p:.1%}"
             print(
                 f"[ev-pick] Override: {modal_h}-{modal_a}({modal_p:.1%}) "
@@ -331,6 +327,11 @@ def _competition_score_pick(
             )
             return best_h, best_a, _pick_status
         else:
+            _reasons: list[str] = []
+            if candidate_p < MIN_CANDIDATE_PROB_FLOOR:
+                _reasons.append(f"p={candidate_p:.1%}<{MIN_CANDIDATE_PROB_FLOOR:.0%}floor")
+            if ev_delta <= 0:
+                _reasons.append(f"ΔEV={ev_delta:+.3f}≤0")
             _pick_status = f"suppressed ({', '.join(_reasons)})"
             print(
                 f"[ev-pick] Suppressed: {best_h}-{best_a}({candidate_p:.1%})  "

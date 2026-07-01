@@ -107,7 +107,6 @@ def _load_odds_file(path: str) -> list[dict]:
         "sg_01":        float | None,   # book odds for 0-1 goals
         "sg_23":        float | None,   # book odds for 2-3 goals
         "sg_4plus":     float | None,   # book odds for 4+ goals
-        "corners_range": dict | None,
     }
 
     Raises FileNotFoundError if path doesn't exist.
@@ -129,7 +128,6 @@ def _load_odds_file(path: str) -> list[dict]:
                 "sg_01":        None,
                 "sg_23":        None,
                 "sg_4plus":     None,
-                "corners_range": None,
             })
 
     elif isinstance(raw, dict):
@@ -159,7 +157,6 @@ def _load_odds_file(path: str) -> list[dict]:
                 "sg_01":        float(sg.get("0-1") or 0) or None,
                 "sg_23":        float(sg.get("2-3") or 0) or None,
                 "sg_4plus":     float(sg.get("+4")  or 0) or None,
-                "corners_range": sub.get("corners_range"),
             })
 
     return normalised

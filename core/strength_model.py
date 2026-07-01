@@ -159,6 +159,14 @@ _FIFA_PRIOR: dict[str, float] = {
 _DEFAULT_PRIOR: float = 1.05   # fallback for unlisted teams
 _PRIOR_WEIGHT:  float = 3.0    # equivalent to 3 "virtual" prior games
 
+# Hard caps on posterior values saved by save_wc_priors().
+# Prevents outlier matches from inflating a team's prior permanently.
+# Example: Senegal 5-0 vs Iraq (red card, 10 men) → inflated posterior ≈1.97
+# Cap: Senegal's saved prior cannot exceed 1.40.
+_POSTERIOR_CAPS: dict[str, float] = {
+    "senegal": 1.40,   # outlier: 5-0 vs Iraq (10 men, red card in 1st half)
+}
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -409,6 +417,7 @@ def save_wc_priors(all_matches: list[dict], path: str) -> None:
     for team_key, s in model._stats.items():
         if s.games > 0:
             posterior = _bayesian_attack(s.attack, team_key, s.games, model._priors)
+            posterior = min(posterior, _POSTERIOR_CAPS.get(team_key, float("inf")))
             priors[team_key] = round(posterior, 4)
 
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)

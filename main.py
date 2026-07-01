@@ -622,23 +622,67 @@ def run_daily_pipeline(
                 print(f"[pipeline] '{match.home_team} vs {match.away_team}' already finished — skipping.")
                 continue
 
-            # ── Prior-only path: no bookmaker odds → generate prediction from ──────
-            # strength model + FIFA priors + FDR (vice-captain.com) + motivation.
-            # No value-bet or edge analysis (no market to compare against).
+            # ── Prior-only path: Odds API has no data → use winner_odds.json if ──
+            # available, else fall back to strength model + FIFA priors.
+            # FDR (vice-captain.com) + motivation always applied on top.
             # Every scheduled match gets a prediction — no "No odds yet" gaps.
-            print(
-                f"[prior] ⚠️  NO ODDS — generating prior-only prediction for "
-                f"{match.home_team} vs {match.away_team}"
-            )
             _pr_stage = match.stage or TournamentStage.GROUP_STAGE
 
-            # λ from strength model (falls back to FIFA priors for teams with 0 WC games)
-            _pr_lh, _pr_la = (
-                strength_model.lambdas(match.home_team, match.away_team)
-                if strength_model else (1.30, 1.10)
+            # Check winner_odds.json first — manual market odds entered before the run
+            _pr_wo_entry = find_match_odds(match.home_team, match.away_team, _winner_odds_cache)
+            _pr_has_book  = (
+                _pr_wo_entry is not None and
+                (_pr_wo_entry.get("odds_home") or 0) > 1.0 and
+                (_pr_wo_entry.get("odds_away") or 0) > 1.0
             )
 
-            # FDR modifier — independent of odds, still applies
+            if _pr_has_book:
+                # ── Market-calibrated λ from winner_odds.json ──────────────────
+                print(
+                    f"[prior] 📒 Using manual odds from winner_odds.json for "
+                    f"{match.home_team} vs {match.away_team}"
+                )
+                _pr_1x2_odds = MatchOdds1X2(
+                    home=_pr_wo_entry["odds_home"],
+                    draw=_pr_wo_entry["odds_draw"],
+                    away=_pr_wo_entry["odds_away"],
+                )
+                _pr_true_probs = remove_overround(_pr_1x2_odds)
+                _pr_cal_model  = calibrate_dc(_pr_true_probs)
+                _pr_lh_market  = _pr_cal_model.lambda_home
+                _pr_la_market  = _pr_cal_model.lambda_away
+                print(
+                    f"[prior]   market → lam_home={_pr_lh_market:.2f}  lam_away={_pr_la_market:.2f}"
+                    f"  overround={_pr_true_probs.overround*100:.1f}%"
+                )
+
+                # Blend with strength model (same weight as odds path)
+                _pr_str_lh, _pr_str_la = calculate_lambda(match.home_team, match.away_team, strength_model)
+                if _pr_str_lh and strength_model and strength_model.n_matches >= MIN_BLEND:
+                    _pr_lh = round((1 - _dyn_blend) * _pr_lh_market + _dyn_blend * _pr_str_lh, 3)
+                    _pr_la = round((1 - _dyn_blend) * _pr_la_market + _dyn_blend * _pr_str_la, 3)
+                    print(
+                        f"[prior]   strength blend ({_dyn_blend:.0%}): "
+                        f"H={_pr_lh_market}→{_pr_lh}  A={_pr_la_market}→{_pr_la}"
+                    )
+                else:
+                    _pr_lh, _pr_la = _pr_lh_market, _pr_la_market
+                _pr_is_prior_only = False
+                _pr_predicted_by  = "manual_odds"
+            else:
+                # ── Strength model + FIFA priors only ──────────────────────────
+                print(
+                    f"[prior] ⚠️  NO ODDS — generating prior-only prediction for "
+                    f"{match.home_team} vs {match.away_team}"
+                )
+                _pr_lh, _pr_la = (
+                    strength_model.lambdas(match.home_team, match.away_team)
+                    if strength_model else (1.30, 1.10)
+                )
+                _pr_is_prior_only = True
+                _pr_predicted_by  = "prior_only"
+
+            # FDR modifier — independent of odds source, always applies
             _pr_fdr = fetch_fixture_mu(match.home_team, match.away_team)
             if _pr_fdr:
                 _pr_mx  = _build_matrix(_pr_lh, _pr_la)
@@ -673,16 +717,8 @@ def run_daily_pipeline(
                 )
             except Exception:
                 pass
-
-            # Why bullets — first bullet reflects data availability
-            _pr_wo_entry = find_match_odds(match.home_team, match.away_team, _winner_odds_cache)
-            _pr_has_book  = (
-                _pr_wo_entry is not None and
-                ((_pr_wo_entry.get("odds_home") or 0) > 0 or
-                 (_pr_wo_entry.get("odds_away") or 0) > 0)
-            )
             _pr_bullets: list[str] = [
-                "📊 Prior model (Odds API unavailable) — EV computed from provided sportsbook odds"
+                "📊 Calibrated from winner_odds.json (Odds API unavailable)"
                 if _pr_has_book else
                 "⚠️ אין מחירים — תחזית מבוססת מודל בלבד"
             ]
@@ -736,9 +772,14 @@ def run_daily_pipeline(
                 ) if _pr_show_ctx else None,
                 why_bullets    = _pr_bullets,
                 logic_chain    = (
-                    f"Prior (no odds): λ H={_pr_lh:.2f}/A={_pr_la:.2f} "
-                    f"— strength model + FIFA priors" +
-                    (f" + FDR(μ={_pr_fdr[0]:.2f}/{_pr_fdr[1]:.2f})" if _pr_fdr else "")
+                    (
+                        f"Manual odds (winner_odds.json): λ H={_pr_lh:.2f}/A={_pr_la:.2f}"
+                        + (f" + FDR(μ={_pr_fdr[0]:.2f}/{_pr_fdr[1]:.2f})" if _pr_fdr else "")
+                    ) if _pr_has_book else (
+                        f"Prior (no odds): λ H={_pr_lh:.2f}/A={_pr_la:.2f} "
+                        f"— strength model + FIFA priors"
+                        + (f" + FDR(μ={_pr_fdr[0]:.2f}/{_pr_fdr[1]:.2f})" if _pr_fdr else "")
+                    )
                 ),
                 sim_score_home = _pr_sh,
                 sim_score_away = _pr_sa,
@@ -751,7 +792,7 @@ def run_daily_pipeline(
                 lambda_home    = round(_pr_lh, 3),
                 lambda_away    = round(_pr_la, 3),
                 is_knockout    = (_pr_stage != TournamentStage.GROUP_STAGE),
-                prior_only     = True,
+                prior_only     = _pr_is_prior_only,
                 sim_top3       = _pr_top3,
                 pick_status    = _pr_pick_status,
             ))
@@ -777,10 +818,10 @@ def run_daily_pipeline(
                 "sim_p_away":    round(_pr_sim.p_away, 4),
                 "sim_top3":      _pr_top3,
                 "pick_status":   _pr_pick_status,
-                "prior_only":    True,
+                "prior_only":    _pr_is_prior_only,
                 "variance_mode": (_pr_sh != _pr_modal_h or _pr_sa != _pr_modal_a),
                 "is_knockout":   (_pr_stage != TournamentStage.GROUP_STAGE),
-                "predicted_by":  "prior_only",
+                "predicted_by":  _pr_predicted_by,
             })
             no_odds_matches.append(match)   # kept for reference; not shown as "no odds" in report
             continue

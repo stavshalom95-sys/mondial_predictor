@@ -1739,7 +1739,7 @@
   },
   {
     "id": "537426",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-07-01T16:00:00Z",
     "home": "ENG",
@@ -1755,8 +1755,8 @@
       }
     },
     "score": {
-      "ENG": null,
-      "COD": null
+      "ENG": 2,
+      "COD": 1
     }
   },
   {

@@ -829,5 +829,28 @@
     "market_p_home": 0.4316,
     "market_p_draw": 0.3372,
     "market_p_away": 0.2312
+  },
+  {
+    "date": "2026-07-01",
+    "home_team": "England",
+    "away_team": "Congo DR",
+    "stage": "32 האחרונות",
+    "predicted_home": 2,
+    "predicted_away": 0,
+    "actual_home": 2,
+    "actual_away": 1,
+    "exact_match": false,
+    "correct_result": true,
+    "points_earned": 2,
+    "points_possible": 5,
+    "bet_won": null,
+    "pnl_nis": null,
+    "predicted_by": "manual_odds",
+    "sim_p_home": 0.6688,
+    "sim_p_draw": 0.2136,
+    "sim_p_away": 0.1176,
+    "market_p_home": null,
+    "market_p_draw": null,
+    "market_p_away": null
   }
 ]

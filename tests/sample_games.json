@@ -1695,7 +1695,7 @@
   },
   {
     "id": "537416",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-06-30T21:00:00Z",
     "home": "FRA",
@@ -1711,13 +1711,13 @@
       }
     },
     "score": {
-      "FRA": null,
-      "SWE": null
+      "FRA": 3,
+      "SWE": 0
     }
   },
   {
     "id": "537425",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-07-01T01:00:00Z",
     "home": "MEX",
@@ -1733,8 +1733,8 @@
       }
     },
     "score": {
-      "MEX": null,
-      "ECU": null
+      "MEX": 2,
+      "ECU": 0
     }
   },
   {

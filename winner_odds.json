@@ -1,39 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-06-30T20:43:21Z. Fill in decimal odds before the daily pipeline runs.",
-  "France vs Sweden": {
-    "winner": {
-      "home": 1.25,
-      "draw": 5.6,
-      "away": 9.4
-    },
-    "sum_goals": {
-      "0-1": 5.2,
-      "2-3": 2.1,
-      "+4": 2
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "Mexico vs Ecuador": {
-    "winner": {
-      "home": 2.15,
-      "draw": 2.8,
-      "away": 3.75
-    },
-    "sum_goals": {
-      "0-1": 2.1,
-      "2-3": 1.95,
-      "+4": 5.3
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
+  "_note": "Reset by master_reset.py on 2026-07-01T06:08:10Z. Fill in decimal odds before the daily pipeline runs.",
   "England vs Congo DR": {
     "winner": {
       "home": 1.25,
@@ -68,8 +34,58 @@
       "12+": 0.0
     }
   },
+  "United States vs Bosnia-Herzegovina": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Spain vs Austria": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Portugal vs Croatia": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
   "_played_today": [
-    "Netherlands vs Morocco",
-    "Ivory Coast vs Norway"
+    "Mexico vs Ecuador"
   ]
 }

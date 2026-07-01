@@ -267,27 +267,31 @@ def _competition_score_pick(
     stage: "TournamentStage",
 ) -> tuple[int, int]:
     """
-    Return the score that maximises expected competition points.
+    Return the competition-optimal score pick.
 
-    EV(h, a) = P(exact h-a) × exact_pts
-             + (P(correct direction) - P(exact h-a)) × direction_pts
+    PRIMARY: Poisson modal (highest P(exact score) from DC-corrected MC sim).
 
-    Why not just the Poisson modal (highest P(exact))?
-    Because direction points change the optimal pick when one side is heavily
-    favoured.  Example — Ivory Coast vs Norway (R16, 5/3 pts):
-      EV(1-1) = 0.146×5 + (0.184−0.146)×3 = 0.84 pts  ← old modal pick
-      EV(0-1) = 0.133×5 + (0.614−0.133)×3 = 2.11 pts  ← correct EV pick
-    The modal (1-1) yielded 0 pts (wrong direction). EV-max (0-1) would have
-    yielded 3 pts (Norway won).  Same logic applies to Mexico/Ecuador 0-0 vs 1-0.
+    EV-MAX OVERRIDE is applied only when BOTH conditions hold:
+      1. P(candidate) >= OVERRIDE_MIN_PROB_RATIO * P(modal)
+         i.e. the probability spread is "marginal" — candidate is nearly as likely
+      2. EV gain > OVERRIDE_MIN_EV_DELTA
+         i.e. there is meaningful expected-value reason to deviate
 
-    Uses Monte Carlo (DC-corrected) probabilities (sim.p_*) for stability.
+    Calibration (41 matches, July 2026):
+      Direction: 68% accurate (well-calibrated vs market)
+      Exact:     17% accurate (typical for correct-score games)
+      Lesson: prioritise modal accuracy; avoid gaming scoring structure.
     """
     exact_pts     = SCORING[stage]["exact"]
     direction_pts = SCORING[stage]["direction"]
 
-    # Monte Carlo (DC-corrected) — more accurate than analytical Poisson because
-    # the Dixon-Coles matrix adjusts low-score joint probabilities empirically.
-    p_home = sim.p_home
+    # Override guardrails — tuned for 5-2 scoring (low direction bonus).
+    # With only 2 pts for direction, the EV advantage of a home-win score over
+    # a draw modal rarely justifies deviation from the simulation output.
+    OVERRIDE_MIN_PROB_RATIO = 0.70   # candidate P(exact) must be ≥70% of modal's
+    OVERRIDE_MIN_EV_DELTA   = 0.30   # EV improvement must exceed 0.30 pts
+
+    p_home = sim.p_home  # Monte Carlo DC-corrected probabilities
     p_draw = sim.p_draw
     p_away = sim.p_away
 
@@ -295,24 +299,45 @@ def _competition_score_pick(
         p_dir = p_home if h > a else (p_draw if h == a else p_away)
         return p_exact * exact_pts + (p_dir - p_exact) * direction_pts
 
-    best_h, best_a, best_ev = None, None, -1.0
-    for h, a, p in sim.score_grid.top_scores(20):
-        ev = _ev(h, a, p)
-        if ev > best_ev:
-            best_ev = ev
-            best_h, best_a = h, a
-
-    if best_h is None:
-        return sim.score_grid.most_likely_score()
-
     modal_h, modal_a = sim.score_grid.most_likely_score()
+    modal_p  = sim.score_grid.probs[modal_h][modal_a]
+    ev_modal = _ev(modal_h, modal_a, modal_p)
+
+    # Top-3 always logged for transparency
+    top3 = sim.score_grid.top_scores(3)
+    print(
+        "[sim] Top-3: "
+        + "  ".join(f"{h}-{a}({p:.1%})" for h, a, p in top3)
+        + f"  | MC: H={p_home:.1%} D={p_draw:.1%} A={p_away:.1%}"
+    )
+
+    # Find unconstrained EV-max candidate
+    best_h, best_a, best_ev = modal_h, modal_a, ev_modal
+    for h, a, p in sim.score_grid.top_scores(20):
+        e = _ev(h, a, p)
+        if e > best_ev:
+            best_ev, best_h, best_a = e, h, a
+
+    # Override only when both guardrails are satisfied
     if (best_h, best_a) != (modal_h, modal_a):
-        print(
-            f"[ev-pick] Modal {modal_h}-{modal_a} overridden by EV-max "
-            f"{best_h}-{best_a} (EV={best_ev:.3f}) "
-            f"[p_home={p_home:.1%} p_draw={p_draw:.1%} p_away={p_away:.1%}]"
-        )
-    return best_h, best_a
+        candidate_p = sim.score_grid.probs[best_h][best_a]
+        prob_ratio  = candidate_p / modal_p if modal_p > 0 else 0
+        ev_delta    = best_ev - ev_modal
+        if prob_ratio >= OVERRIDE_MIN_PROB_RATIO and ev_delta >= OVERRIDE_MIN_EV_DELTA:
+            print(
+                f"[ev-pick] Override: {modal_h}-{modal_a}({modal_p:.1%}) "
+                f"-> {best_h}-{best_a}({candidate_p:.1%})  "
+                f"ΔEV={ev_delta:+.3f}  ratio={prob_ratio:.2f}"
+            )
+            return best_h, best_a
+        else:
+            print(
+                f"[ev-pick] Suppressed: {best_h}-{best_a}({candidate_p:.1%}) "
+                f"ratio={prob_ratio:.2f}(need≥{OVERRIDE_MIN_PROB_RATIO}) "
+                f"ΔEV={ev_delta:+.3f}(need≥{OVERRIDE_MIN_EV_DELTA})"
+            )
+
+    return modal_h, modal_a
 
 
 # ---------------------------------------------------------------------------
@@ -742,6 +767,10 @@ def run_daily_pipeline(
                 "sim_p_home":    round(_pr_sim.p_home, 4),
                 "sim_p_draw":    round(_pr_sim.p_draw, 4),
                 "sim_p_away":    round(_pr_sim.p_away, 4),
+                "sim_top3": [
+                    {"h": h, "a": a, "p": round(p, 4)}
+                    for h, a, p in _pr_sim.score_grid.top_scores(3)
+                ],
                 "prior_only":    True,
                 "variance_mode": (_pr_sh != _pr_modal_h or _pr_sa != _pr_modal_a),
                 "is_knockout":   (_pr_stage != TournamentStage.GROUP_STAGE),
@@ -978,7 +1007,8 @@ def run_daily_pipeline(
             f"[sim] Monte Carlo (n={sim.n_sims:,}): "
             f"H={sim.p_home:.1%}  D={sim.p_draw:.1%}  A={sim.p_away:.1%}"
         )
-        print(f"[sim] Most-likely score: {_sim_h}-{_sim_a}  ({_sim_score_pct:.1%})")
+        _modal_label = f"{_modal_h}-{_modal_a}" if (_sim_h != _modal_h or _sim_a != _modal_a) else "same"
+        print(f"[sim] Competition pick: {_sim_h}-{_sim_a}  ({_sim_score_pct:.1%})  [modal: {_modal_label}]")
         # Compare sim vs market (true_probs already computed above)
         _VALUE_THRESHOLD      = 0.05
         _HIGH_VALUE_THRESHOLD = 0.20
@@ -1332,6 +1362,10 @@ def run_daily_pipeline(
             "sim_p_home":       round(sim.p_home,       4),
             "sim_p_draw":       round(sim.p_draw,       4),
             "sim_p_away":       round(sim.p_away,       4),
+            "sim_top3": [
+                {"h": h, "a": a, "p": round(p, 4)}
+                for h, a, p in sim.score_grid.top_scores(3)
+            ],
             "market_p_home":    round(true_probs.home,  4),
             "market_p_draw":    round(true_probs.draw,  4),
             "market_p_away":    round(true_probs.away,  4),

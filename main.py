@@ -265,33 +265,29 @@ def _competition_score_pick(
     gap: int,
     matches_remaining: int,
     stage: "TournamentStage",
-) -> tuple[int, int]:
+) -> tuple[int, int, str]:
     """
-    Return the competition-optimal score pick.
+    Return the competition-optimal score pick + status string.
 
-    PRIMARY: Poisson modal (highest P(exact score) from DC-corrected MC sim).
+    PRIMARY: Poisson modal (score with highest P(exact) from DC-corrected MC sim).
 
-    EV-MAX OVERRIDE is applied only when BOTH conditions hold:
-      1. P(candidate) >= OVERRIDE_MIN_PROB_RATIO * P(modal)
-         i.e. the probability spread is "marginal" — candidate is nearly as likely
-      2. EV gain > OVERRIDE_MIN_EV_DELTA
-         i.e. there is meaningful expected-value reason to deviate
+    EV-MAX OVERRIDE searches within Top-3 scores only and fires when ALL hold:
+      1. Candidate is one of the Top-3 most probable scores (hard constraint)
+      2. Candidate P(exact) >= MIN_CANDIDATE_PROB_FLOOR  (absolute 10% floor —
+         never submit a pick with < 1-in-10 chance of landing exactly)
+      3. EV gain vs modal > OVERRIDE_MIN_EV_DELTA  (clear, justified improvement)
 
-    Calibration (41 matches, July 2026):
-      Direction: 68% accurate (well-calibrated vs market)
-      Exact:     17% accurate (typical for correct-score games)
-      Lesson: prioritise modal accuracy; avoid gaming scoring structure.
+    Strategy (trailing, July 2026): gap ≥ 0 → need exact score hits to close gap.
+    Top-3 + 10% floor keeps picks grounded in statistical reality; ΔEV threshold
+    ensures we only deviate from modal when the scoring structure makes it worth it.
     """
     exact_pts     = SCORING[stage]["exact"]
     direction_pts = SCORING[stage]["direction"]
 
-    # Override guardrails — tuned for 5-2 scoring (low direction bonus).
-    # With only 2 pts for direction, the EV advantage of a home-win score over
-    # a draw modal rarely justifies deviation from the simulation output.
-    OVERRIDE_MIN_PROB_RATIO = 0.70   # candidate P(exact) must be ≥70% of modal's
-    OVERRIDE_MIN_EV_DELTA   = 0.30   # EV improvement must exceed 0.30 pts
+    MIN_CANDIDATE_PROB_FLOOR = 0.10   # absolute P(exact) floor — no pick < 10%
+    OVERRIDE_MIN_EV_DELTA    = 0.30   # EV improvement must be clear and justified
 
-    p_home = sim.p_home  # Monte Carlo DC-corrected probabilities
+    p_home = sim.p_home
     p_draw = sim.p_draw
     p_away = sim.p_away
 
@@ -303,7 +299,7 @@ def _competition_score_pick(
     modal_p  = sim.score_grid.probs[modal_h][modal_a]
     ev_modal = _ev(modal_h, modal_a, modal_p)
 
-    # Top-3 always logged for transparency
+    # Log Top-3 for transparency
     top3 = sim.score_grid.top_scores(3)
     print(
         "[sim] Top-3: "
@@ -311,35 +307,34 @@ def _competition_score_pick(
         + f"  | MC: H={p_home:.1%} D={p_draw:.1%} A={p_away:.1%}"
     )
 
-    # Find unconstrained EV-max candidate
+    # Find best EV candidate within Top-3 only (not top-20)
     best_h, best_a, best_ev = modal_h, modal_a, ev_modal
-    for h, a, p in sim.score_grid.top_scores(20):
+    for h, a, p in top3:
         e = _ev(h, a, p)
         if e > best_ev:
             best_ev, best_h, best_a = e, h, a
 
-    # Override only when both guardrails are satisfied
     _pick_status = "modal"
     if (best_h, best_a) != (modal_h, modal_a):
         candidate_p = sim.score_grid.probs[best_h][best_a]
-        prob_ratio  = candidate_p / modal_p if modal_p > 0 else 0
         ev_delta    = best_ev - ev_modal
-        if prob_ratio >= OVERRIDE_MIN_PROB_RATIO and ev_delta >= OVERRIDE_MIN_EV_DELTA:
-            _pick_status = f"override ΔEV={ev_delta:+.3f} ratio={prob_ratio:.2f}"
+        _reasons: list[str] = []
+        if candidate_p < MIN_CANDIDATE_PROB_FLOOR:
+            _reasons.append(f"p={candidate_p:.1%}<{MIN_CANDIDATE_PROB_FLOOR:.0%}floor")
+        if ev_delta < OVERRIDE_MIN_EV_DELTA:
+            _reasons.append(f"ΔEV={ev_delta:+.3f}<{OVERRIDE_MIN_EV_DELTA}")
+        if not _reasons:
+            _pick_status = f"override ΔEV={ev_delta:+.3f} p={candidate_p:.1%}"
             print(
                 f"[ev-pick] Override: {modal_h}-{modal_a}({modal_p:.1%}) "
-                f"-> {best_h}-{best_a}({candidate_p:.1%})  "
-                f"ΔEV={ev_delta:+.3f}  ratio={prob_ratio:.2f}"
+                f"-> {best_h}-{best_a}({candidate_p:.1%})  ΔEV={ev_delta:+.3f}"
             )
             return best_h, best_a, _pick_status
         else:
-            _pick_status = (
-                f"suppressed ΔEV={ev_delta:+.3f} ratio={prob_ratio:.2f}"
-            )
+            _pick_status = f"suppressed ({', '.join(_reasons)})"
             print(
-                f"[ev-pick] Suppressed: {best_h}-{best_a}({candidate_p:.1%}) "
-                f"ratio={prob_ratio:.2f}(need≥{OVERRIDE_MIN_PROB_RATIO}) "
-                f"ΔEV={ev_delta:+.3f}(need≥{OVERRIDE_MIN_EV_DELTA})"
+                f"[ev-pick] Suppressed: {best_h}-{best_a}({candidate_p:.1%})  "
+                + "  ".join(_reasons)
             )
 
     return modal_h, modal_a, _pick_status
@@ -1572,6 +1567,9 @@ def _validate_morning_picks(morning_data: list[dict]) -> list[str]:
     """
     errors: list[str] = []
     for rec in morning_data:
+        # EV-override intentionally deviates from modal — not a validation error
+        if str(rec.get("pick_status", "")).startswith("override"):
+            continue
         lh = rec.get("final_lambda_home") or rec.get("lambda_home")
         la = rec.get("final_lambda_away") or rec.get("lambda_away")
         if lh is None or la is None:

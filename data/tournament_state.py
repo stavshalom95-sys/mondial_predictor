@@ -6,9 +6,9 @@ it is overridden at every run by data_pipeline.matches_remaining_in_tournament()
 """
 
 MY_CURRENT_STATE: dict = {
-    "my_points":       40,     # updated 2026-06-28: user is in 1st place
-    "leader_points":   36,     # user leads — gap < 0 → SAFE strategy (protect lead)
-    "leader_name":     "me",
+    "my_points":       40,     # updated 2026-07-01: user is in 4th place, 5 pts behind leader
+    "leader_points":   45,     # gap = 5 → trailing → aggressive exact-score mode
+    "leader_name":     "leader",
     "matches_remaining": 10,   # runtime default; replaced by data_pipeline
 }
 

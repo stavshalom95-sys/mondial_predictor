@@ -267,13 +267,52 @@ def _competition_score_pick(
     stage: "TournamentStage",
 ) -> tuple[int, int]:
     """
-    Track A — Competition pick: always the Poisson modal score.
+    Return the score that maximises expected competition points.
 
-    Variance mode and KO override SUSPENDED (Measurement-First protocol June 2026).
-    Returning the highest P(exact score) scoreline with no additional overrides
-    until we have enough calibration data to validate alternative strategies.
+    EV(h, a) = P(exact h-a) × exact_pts
+             + (P(correct direction) - P(exact h-a)) × direction_pts
+
+    Why not just the Poisson modal (highest P(exact))?
+    Because direction points change the optimal pick when one side is heavily
+    favoured.  Example — Ivory Coast vs Norway (R16, 5/3 pts):
+      EV(1-1) = 0.146×5 + (0.184−0.146)×3 = 0.84 pts  ← old modal pick
+      EV(0-1) = 0.133×5 + (0.614−0.133)×3 = 2.11 pts  ← correct EV pick
+    The modal (1-1) yielded 0 pts (wrong direction). EV-max (0-1) would have
+    yielded 3 pts (Norway won).  Same logic applies to Mexico/Ecuador 0-0 vs 1-0.
+
+    Uses Monte Carlo (DC-corrected) probabilities (sim.p_*) for stability.
     """
-    return sim.score_grid.most_likely_score()
+    exact_pts     = SCORING[stage]["exact"]
+    direction_pts = SCORING[stage]["direction"]
+
+    # Monte Carlo (DC-corrected) — more accurate than analytical Poisson because
+    # the Dixon-Coles matrix adjusts low-score joint probabilities empirically.
+    p_home = sim.p_home
+    p_draw = sim.p_draw
+    p_away = sim.p_away
+
+    def _ev(h: int, a: int, p_exact: float) -> float:
+        p_dir = p_home if h > a else (p_draw if h == a else p_away)
+        return p_exact * exact_pts + (p_dir - p_exact) * direction_pts
+
+    best_h, best_a, best_ev = None, None, -1.0
+    for h, a, p in sim.score_grid.top_scores(20):
+        ev = _ev(h, a, p)
+        if ev > best_ev:
+            best_ev = ev
+            best_h, best_a = h, a
+
+    if best_h is None:
+        return sim.score_grid.most_likely_score()
+
+    modal_h, modal_a = sim.score_grid.most_likely_score()
+    if (best_h, best_a) != (modal_h, modal_a):
+        print(
+            f"[ev-pick] Modal {modal_h}-{modal_a} overridden by EV-max "
+            f"{best_h}-{best_a} (EV={best_ev:.3f}) "
+            f"[p_home={p_home:.1%} p_draw={p_draw:.1%} p_away={p_away:.1%}]"
+        )
+    return best_h, best_a
 
 
 # ---------------------------------------------------------------------------

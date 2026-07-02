@@ -2006,16 +2006,21 @@
     "status": "scheduled",
     "stage": "round_of_16",
     "start_time": "2026-07-06T00:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "MEX",
+    "away": "ENG",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "MEX": {
+        "name": "Mexico",
+        "abbreviation": "MEX"
+      },
+      "ENG": {
+        "name": "England",
+        "abbreviation": "ENG"
       }
     },
     "score": {
-      "null": null
+      "MEX": null,
+      "ENG": null
     }
   },
   {
@@ -2040,16 +2045,21 @@
     "status": "scheduled",
     "stage": "round_of_16",
     "start_time": "2026-07-07T00:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "USA",
+    "away": "BEL",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "USA": {
+        "name": "United States",
+        "abbreviation": "USA"
+      },
+      "BEL": {
+        "name": "Belgium",
+        "abbreviation": "BEL"
       }
     },
     "score": {
-      "null": null
+      "USA": null,
+      "BEL": null
     }
   },
   {

@@ -1805,7 +1805,7 @@
   },
   {
     "id": "537420",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-07-02T19:00:00Z",
     "home": "ESP",
@@ -1821,13 +1821,13 @@
       }
     },
     "score": {
-      "ESP": null,
-      "AUT": null
+      "ESP": 3,
+      "AUT": 0
     }
   },
   {
     "id": "537419",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-07-02T23:00:00Z",
     "home": "POR",
@@ -1843,13 +1843,13 @@
       }
     },
     "score": {
-      "POR": null,
-      "CRO": null
+      "POR": 2,
+      "CRO": 1
     }
   },
   {
     "id": "537429",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-07-03T03:00:00Z",
     "home": "SUI",
@@ -1865,8 +1865,8 @@
       }
     },
     "score": {
-      "SUI": null,
-      "ALG": null
+      "SUI": 2,
+      "ALG": 0
     }
   },
   {

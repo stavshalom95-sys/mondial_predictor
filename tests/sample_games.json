@@ -1871,7 +1871,7 @@
   },
   {
     "id": "537428",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-07-03T18:00:00Z",
     "home": "AUS",
@@ -1887,13 +1887,13 @@
       }
     },
     "score": {
-      "AUS": null,
-      "EGY": null
+      "AUS": 3,
+      "EGY": 5
     }
   },
   {
     "id": "537427",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-07-03T22:00:00Z",
     "home": "ARG",
@@ -1909,13 +1909,13 @@
       }
     },
     "score": {
-      "ARG": null,
-      "CPV": null
+      "ARG": 3,
+      "CPV": 2
     }
   },
   {
     "id": "537430",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_32",
     "start_time": "2026-07-04T01:30:00Z",
     "home": "COL",
@@ -1931,8 +1931,8 @@
       }
     },
     "score": {
-      "COL": null,
-      "GHA": null
+      "COL": 1,
+      "GHA": 0
     }
   },
   {
@@ -2028,16 +2028,21 @@
     "status": "scheduled",
     "stage": "round_of_16",
     "start_time": "2026-07-06T19:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "POR",
+    "away": "ESP",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "POR": {
+        "name": "Portugal",
+        "abbreviation": "POR"
+      },
+      "ESP": {
+        "name": "Spain",
+        "abbreviation": "ESP"
       }
     },
     "score": {
-      "null": null
+      "POR": null,
+      "ESP": null
     }
   },
   {
@@ -2067,16 +2072,21 @@
     "status": "scheduled",
     "stage": "round_of_16",
     "start_time": "2026-07-07T16:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "ARG",
+    "away": "EGY",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "ARG": {
+        "name": "Argentina",
+        "abbreviation": "ARG"
+      },
+      "EGY": {
+        "name": "Egypt",
+        "abbreviation": "EGY"
       }
     },
     "score": {
-      "null": null
+      "ARG": null,
+      "EGY": null
     }
   },
   {
@@ -2084,16 +2094,21 @@
     "status": "scheduled",
     "stage": "round_of_16",
     "start_time": "2026-07-07T20:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "SUI",
+    "away": "COL",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "SUI": {
+        "name": "Switzerland",
+        "abbreviation": "SUI"
+      },
+      "COL": {
+        "name": "Colombia",
+        "abbreviation": "COL"
       }
     },
     "score": {
-      "null": null
+      "SUI": null,
+      "COL": null
     }
   },
   {

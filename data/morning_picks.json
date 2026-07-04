@@ -1,165 +1,49 @@
 [
   {
-    "date": "2026-07-03",
-    "home_team": "Australia",
-    "away_team": "Egypt",
-    "stage": "32 האחרונות",
-    "lambda_home": 0.7127,
-    "lambda_away": 0.9431,
-    "final_lambda_home": 0.632,
-    "final_lambda_away": 1.512,
+    "date": "2026-07-04",
+    "home_team": "Canada",
+    "away_team": "Morocco",
+    "stage": "שמינית גמר",
+    "lambda_home": 0.6742,
+    "lambda_away": 1.3482,
+    "final_lambda_home": 0.974,
+    "final_lambda_away": 2.814,
     "final_home_goals": 0,
-    "final_away_goals": 1,
-    "sim_p_home": 0.1553,
-    "sim_p_draw": 0.2537,
-    "sim_p_away": 0.591,
+    "final_away_goals": 2,
+    "sim_p_home": 0.105,
+    "sim_p_draw": 0.1449,
+    "sim_p_away": 0.7501,
     "sim_top3": [
       {
         "h": 0,
-        "a": 1,
-        "p": 0.1626
-      },
-      {
-        "h": 0,
         "a": 2,
-        "p": 0.134
+        "p": 0.0899
+      },
+      {
+        "h": 1,
+        "a": 2,
+        "p": 0.0875
       },
       {
         "h": 0,
-        "a": 0,
-        "p": 0.1317
+        "a": 3,
+        "p": 0.0843
       }
     ],
     "pick_status": "modal",
-    "market_p_home": 0.2638,
-    "market_p_draw": 0.3425,
-    "market_p_away": 0.3936,
+    "market_p_home": 0.1867,
+    "market_p_draw": 0.2829,
+    "market_p_away": 0.5304,
     "sim_value_bet": "away",
-    "model_sg_01": 0.3539,
-    "model_sg_23": 0.4764,
-    "model_sg_4plus": 0.1697,
+    "model_sg_01": 0.1006,
+    "model_sg_23": 0.3766,
+    "model_sg_4plus": 0.5229,
     "home_motivation": "knockout",
     "away_motivation": "knockout",
     "home_lambda_multiplier": 1.0,
     "away_lambda_multiplier": 1.0,
     "kelly_value_bet": "Away Win",
-    "kelly_value_bet_odds": 2.48,
-    "kelly_value_bet_stake": 25,
-    "variance_mode": false,
-    "is_knockout": true,
-    "predicted_by": "poisson_only",
-    "ev_home": -0.503,
-    "ev_draw": -0.3023,
-    "ev_away": 0.4184,
-    "ev_winner": 0.4184,
-    "ev_winner_outcome": "away",
-    "ev_sg_01": -0.2391,
-    "ev_sg_23": -0.0948,
-    "ev_sg_4plus": -0.0836
-  },
-  {
-    "date": "2026-07-03",
-    "home_team": "Argentina",
-    "away_team": "Cape Verde Islands",
-    "stage": "32 האחרונות",
-    "lambda_home": 2.8877,
-    "lambda_away": 0.5475,
-    "final_lambda_home": 2.753,
-    "final_lambda_away": 0.717,
-    "final_home_goals": 2,
-    "final_away_goals": 0,
-    "sim_p_home": 0.7987,
-    "sim_p_draw": 0.1325,
-    "sim_p_away": 0.0688,
-    "sim_top3": [
-      {
-        "h": 2,
-        "a": 0,
-        "p": 0.1182
-      },
-      {
-        "h": 3,
-        "a": 0,
-        "p": 0.1084
-      },
-      {
-        "h": 2,
-        "a": 1,
-        "p": 0.0847
-      }
-    ],
-    "pick_status": "modal",
-    "market_p_home": 0.8456,
-    "market_p_draw": 0.1081,
-    "market_p_away": 0.0463,
-    "sim_value_bet": null,
-    "model_sg_01": 0.1314,
-    "model_sg_23": 0.4129,
-    "model_sg_4plus": 0.4557,
-    "home_motivation": "knockout",
-    "away_motivation": "knockout",
-    "home_lambda_multiplier": 1.0,
-    "away_lambda_multiplier": 1.0,
-    "kelly_value_bet": "Draw",
-    "kelly_value_bet_odds": 9.0,
-    "kelly_value_bet_stake": 25,
-    "variance_mode": false,
-    "is_knockout": true,
-    "predicted_by": "poisson_only",
-    "ev_home": -0.0815,
-    "ev_draw": -0.152,
-    "ev_away": 0.1008,
-    "ev_winner": 0.1008,
-    "ev_winner_outcome": "away",
-    "ev_sg_01": -0.4613,
-    "ev_sg_23": -0.1948,
-    "ev_sg_4plus": 0.0937
-  },
-  {
-    "date": "2026-07-03",
-    "home_team": "Colombia",
-    "away_team": "Ghana",
-    "stage": "32 האחרונות",
-    "lambda_home": 1.7856,
-    "lambda_away": 0.5248,
-    "final_lambda_home": 1.466,
-    "final_lambda_away": 0.711,
-    "final_home_goals": 1,
-    "final_away_goals": 0,
-    "sim_p_home": 0.5523,
-    "sim_p_draw": 0.2659,
-    "sim_p_away": 0.1818,
-    "sim_top3": [
-      {
-        "h": 1,
-        "a": 0,
-        "p": 0.1509
-      },
-      {
-        "h": 1,
-        "a": 1,
-        "p": 0.1335
-      },
-      {
-        "h": 0,
-        "a": 0,
-        "p": 0.1287
-      }
-    ],
-    "pick_status": "modal",
-    "market_p_home": 0.6811,
-    "market_p_draw": 0.2164,
-    "market_p_away": 0.1025,
-    "sim_value_bet": "away",
-    "model_sg_01": 0.3449,
-    "model_sg_23": 0.479,
-    "model_sg_4plus": 0.1761,
-    "home_motivation": "knockout",
-    "away_motivation": "knockout",
-    "home_lambda_multiplier": 1.0,
-    "away_lambda_multiplier": 1.0,
-    "kelly_value_bet": "Draw",
-    "kelly_value_bet_odds": 4.5,
+    "kelly_value_bet_odds": 1.76,
     "kelly_value_bet_stake": 25,
     "variance_mode": false,
     "is_knockout": true,
@@ -174,79 +58,92 @@
     "ev_sg_4plus": null
   },
   {
-    "date": "2026-07-03",
-    "home_team": "Canada",
-    "away_team": "Morocco",
-    "stage": "שמינית גמר",
-    "lambda_home": 2.048,
-    "lambda_away": 1.607,
-    "final_lambda_home": 2.048,
-    "final_lambda_away": 1.607,
-    "final_home_goals": 2,
-    "final_away_goals": 1,
-    "sim_p_home": 0.4836,
-    "sim_p_draw": 0.2061,
-    "sim_p_away": 0.3103,
-    "sim_top3": [
-      {
-        "h": 1,
-        "a": 1,
-        "p": 0.0962
-      },
-      {
-        "h": 2,
-        "a": 1,
-        "p": 0.0872
-      },
-      {
-        "h": 2,
-        "a": 2,
-        "p": 0.0701
-      }
-    ],
-    "pick_status": "override ΔEV=+0.528 p=8.7%",
-    "prior_only": true,
-    "variance_mode": true,
-    "is_knockout": true,
-    "predicted_by": "prior_only",
-    "ev_home": null,
-    "ev_draw": null,
-    "ev_away": null,
-    "ev_winner": null,
-    "ev_winner_outcome": null,
-    "ev_sg_01": null,
-    "ev_sg_23": null,
-    "ev_sg_4plus": null
-  },
-  {
-    "date": "2026-07-03",
+    "date": "2026-07-04",
     "home_team": "Paraguay",
     "away_team": "France",
     "stage": "שמינית גמר",
-    "lambda_home": 0.991,
-    "lambda_away": 3.483,
-    "final_lambda_home": 0.991,
-    "final_lambda_away": 3.483,
-    "final_home_goals": 0,
+    "lambda_home": 0.5258,
+    "lambda_away": 2.6777,
+    "final_lambda_home": 1.949,
+    "final_lambda_away": 3.757,
+    "final_home_goals": 1,
     "final_away_goals": 3,
-    "sim_p_home": 0.0683,
-    "sim_p_draw": 0.0979,
-    "sim_p_away": 0.8338,
+    "sim_p_home": 0.1612,
+    "sim_p_draw": 0.1325,
+    "sim_p_away": 0.7063,
     "sim_top3": [
-      {
-        "h": 0,
-        "a": 3,
-        "p": 0.0811
-      },
       {
         "h": 1,
         "a": 3,
-        "p": 0.0803
+        "p": 0.0582
       },
       {
-        "h": 0,
+        "h": 2,
+        "a": 3,
+        "p": 0.0567
+      },
+      {
+        "h": 1,
         "a": 4,
-        "p": 0.0706
+        "p": 0.0546
+      }
+    ],
+    "pick_status": "modal",
+    "market_p_home": 0.0513,
+    "market_p_draw": 0.1219,
+    "market_p_away": 0.8267,
+    "sim_value_bet": "home",
+    "model_sg_01": 0.0194,
+    "model_sg_23": 0.1628,
+    "model_sg_4plus": 0.8178,
+    "home_motivation": "knockout",
+    "away_motivation": "knockout",
+    "home_lambda_multiplier": 1.0,
+    "away_lambda_multiplier": 1.0,
+    "kelly_value_bet": "Home Win",
+    "kelly_value_bet_odds": 19.0,
+    "kelly_value_bet_stake": 25,
+    "variance_mode": false,
+    "is_knockout": true,
+    "predicted_by": "poisson_only",
+    "ev_home": null,
+    "ev_draw": null,
+    "ev_away": null,
+    "ev_winner": null,
+    "ev_winner_outcome": null,
+    "ev_sg_01": null,
+    "ev_sg_23": null,
+    "ev_sg_4plus": null
+  },
+  {
+    "date": "2026-07-04",
+    "home_team": "Brazil",
+    "away_team": "Norway",
+    "stage": "שמינית גמר",
+    "lambda_home": 2.472,
+    "lambda_away": 1.349,
+    "final_lambda_home": 2.472,
+    "final_lambda_away": 1.349,
+    "final_home_goals": 2,
+    "final_away_goals": 1,
+    "sim_p_home": 0.6175,
+    "sim_p_draw": 0.185,
+    "sim_p_away": 0.1975,
+    "sim_top3": [
+      {
+        "h": 2,
+        "a": 1,
+        "p": 0.0904
+      },
+      {
+        "h": 1,
+        "a": 1,
+        "p": 0.0826
+      },
+      {
+        "h": 3,
+        "a": 1,
+        "p": 0.0745
       }
     ],
     "pick_status": "modal",

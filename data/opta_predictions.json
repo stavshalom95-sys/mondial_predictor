@@ -1,0 +1,23 @@
+{
+  "_source": "Opta Analyst — FIFA World Cup 2026 Tournament Predictions",
+  "_date": "2026-07-04",
+  "_note": "Stage advancement probabilities (%). Used to update wc_priors.json via 50/50 blend with historical priors (cube-root scaling to λ domain).",
+  "teams": {
+    "france":        { "quarter_finals": 86.6, "semi_finals": 67.4, "final": 44.7, "winner": 28.9 },
+    "argentina":     { "quarter_finals": 79.7, "semi_finals": 53.9, "final": 31.1, "winner": 16.3 },
+    "spain":         { "quarter_finals": 62.2, "semi_finals": 43.6, "final": 22.6, "winner": 13.0 },
+    "brazil":        { "quarter_finals": 65.6, "semi_finals": 35.9, "final": 19.7, "winner":  9.1 },
+    "england":       { "quarter_finals": 55.6, "semi_finals": 30.5, "final": 17.1, "winner":  8.1 },
+    "portugal":      { "quarter_finals": 37.8, "semi_finals": 23.2, "final": 10.1, "winner":  5.0 },
+    "colombia":      { "quarter_finals": 56.6, "semi_finals": 22.5, "final":  9.2, "winner":  3.4 },
+    "morocco":       { "quarter_finals": 67.0, "semi_finals": 20.7, "final":  8.4, "winner":  3.2 },
+    "norway":        { "quarter_finals": 34.5, "semi_finals": 15.7, "final":  7.0, "winner":  2.9 },
+    "mexico":        { "quarter_finals": 44.4, "semi_finals": 17.9, "final":  7.4, "winner":  2.7 },
+    "switzerland":   { "quarter_finals": 43.4, "semi_finals": 16.2, "final":  6.3, "winner":  2.1 },
+    "united states": { "quarter_finals": 51.0, "semi_finals": 16.8, "final":  5.5, "winner":  2.1 },
+    "belgium":       { "quarter_finals": 49.0, "semi_finals": 16.4, "final":  5.5, "winner":  2.0 },
+    "canada":        { "quarter_finals": 33.0, "semi_finals":  6.7, "final":  1.9, "winner":  0.5 },
+    "egypt":         { "quarter_finals": 20.3, "semi_finals":  7.4, "final":  2.1, "winner":  0.5 },
+    "paraguay":      { "quarter_finals": 13.4, "semi_finals":  5.2, "final":  1.4, "winner":  0.3 }
+  }
+}

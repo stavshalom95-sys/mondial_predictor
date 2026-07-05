@@ -327,6 +327,58 @@ def brier_score(records: list[dict]) -> Optional[float]:
     return round(total_bs / len(scored_records), 4)
 
 
+def build_model_health(history: list[dict], n_recent: int = 7) -> dict:
+    """
+    Compute 3-KPI model health summary from prediction history.
+
+    KPIs:
+      1. goals_ratio: actual_avg / predicted_avg goals per game
+      2. direction_rate_7: fraction correct 1X2 in last n_recent scored matches
+      3. exact_rate_7: fraction exact scores in last n_recent scored matches
+
+    Optional enrichment keys (set by caller):
+      cal_temp, goal_scale
+
+    Returns empty dict if history is empty.
+    """
+    if not history:
+        return {}
+
+    total_pred = total_actual = n_goals = 0
+    for r in history:
+        try:
+            ph = int(r["predicted_home"])
+            pa = int(r["predicted_away"])
+            ah = int(r["actual_home"])
+            aa = int(r["actual_away"])
+            total_pred   += ph + pa
+            total_actual += ah + aa
+            n_goals      += 1
+        except (KeyError, TypeError, ValueError):
+            continue
+
+    pred_avg    = round(total_pred   / n_goals, 2) if n_goals else 0.0
+    actual_avg  = round(total_actual / n_goals, 2) if n_goals else 0.0
+    goals_ratio = round(actual_avg / pred_avg, 3)  if pred_avg > 0 else 1.0
+
+    scored = [r for r in history if r.get("actual_home") is not None]
+    recent = scored[-n_recent:]
+    n_rec  = len(recent)
+
+    direction_rate = round(sum(1 for r in recent if r.get("correct_result")) / n_rec, 3) if n_rec else None
+    exact_rate     = round(sum(1 for r in recent if r.get("exact_match"))    / n_rec, 3) if n_rec else None
+
+    return {
+        "pred_goals_avg":   pred_avg,
+        "actual_goals_avg": actual_avg,
+        "goals_ratio":      goals_ratio,
+        "direction_rate_7": direction_rate,
+        "exact_rate_7":     exact_rate,
+        "n_total":          n_goals,
+        "n_recent":         n_rec,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------

@@ -50,7 +50,7 @@ from core.ai_ensemble import enhance, get_ai_offline_reason
 from data.context_fetcher import fetch_match_context
 from data.backup_scraper import fetch_match_context_espn
 from data.results_fetcher import fetch_yesterday_results
-from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats
+from data.performance_tracker import ingest_results, load_history, save_history, yesterday_stats, compute_stats, build_model_health
 from data.opta_priors import build_opta_context, get_whatsapp_sentiment_note, opta_tiebreak, get_team_opta
 from core.correct_score_predictor import predict as predict_correct_score, get_external_xg, load_external_xg
 from notifications.notifier import format_dual_track_section
@@ -611,6 +611,12 @@ def run_daily_pipeline(
         print(f"[goal_scale] Warning: goal rate scaler failed: {_gs_exc} — no scaling applied.")
         _goal_scaler = None
 
+    # Build 3-KPI model health summary (enriched with cal T + goal scale below)
+    _model_health = build_model_health(history)
+    if _model_health:
+        _model_health["cal_temp"]   = getattr(_calibrator,  "temperature", None)
+        _model_health["goal_scale"] = getattr(_goal_scaler, "scale",       None)
+
     picks:           list[DailyPick] = []
     morning_data:    list[dict]      = []
     no_odds_matches: list            = []   # schedule matches with no bookmaker odds yet
@@ -651,7 +657,8 @@ def run_daily_pipeline(
                     away=_pr_wo_entry["odds_away"],
                 )
                 _pr_true_probs = remove_overround(_pr_1x2_odds)
-                _pr_cal_model  = calibrate_dc(_pr_true_probs)
+                _pr_dc_rho     = -0.08 if _pr_stage != TournamentStage.GROUP_STAGE else -0.13
+                _pr_cal_model  = calibrate_dc(_pr_true_probs, rho=_pr_dc_rho)
                 _pr_lh_market  = _pr_cal_model.lambda_home
                 _pr_la_market  = _pr_cal_model.lambda_away
                 print(
@@ -705,6 +712,11 @@ def run_daily_pipeline(
             if _goal_scaler is not None and abs(_goal_scaler.scale - 1.0) >= 0.005:
                 _pr_lh = _goal_scaler.apply(_pr_lh)
                 _pr_la = _goal_scaler.apply(_pr_la)
+
+            # KO dampener (mirrors main path — see comment above)
+            if _pr_stage != TournamentStage.GROUP_STAGE:
+                _pr_lh = round(_pr_lh * 0.90, 3)
+                _pr_la = round(_pr_la * 0.90, 3)
 
             print(f"[prior]   λ  home={_pr_lh}  away={_pr_la}")
 
@@ -865,7 +877,9 @@ def run_daily_pipeline(
         )
 
         # true probabilities → Poisson model (DC-corrected matrix)
-        model = calibrate_dc(true_probs, ou_probs)
+        # KO rho is less negative (weaker score correlation in tight knockout games)
+        _dc_rho = -0.08 if stage != TournamentStage.GROUP_STAGE else -0.13
+        model = calibrate_dc(true_probs, ou_probs, rho=_dc_rho)
         print(f"[pipeline]   lam_home={model.lambda_home:.2f}  lam_away={model.lambda_away:.2f}")
 
         # FDR Strength Modifier: blend calibrated lambdas with vice-captain.com mu values
@@ -1021,13 +1035,18 @@ def run_daily_pipeline(
         else:
             print(f"[api-stats] Context unavailable — stats adjustment skipped")
 
-        # KO intensity boost REMOVED (Measurement-First protocol June 2026).
-        # Market odds already price knockout intensity — uncalibrated ×1.20 produced
-        # inflated modal scores (e.g. France 4-1 instead of true modal 2-0).
+        # ── Knockout-phase λ dampener ─────────────────────────────────────────
+        # GoalRateScaler is fitted on predominantly group-stage data where goals
+        # run higher. KO football trends more cautious (tactical, no-risk) and
+        # the DC rho is already less negative. Apply ×0.90 to counteract
+        # group-stage scale inflation for these matches.
         if stage != TournamentStage.GROUP_STAGE:
+            _old_h, _old_a = lam_h, lam_a
+            lam_h = round(lam_h * 0.90, 3)
+            lam_a = round(lam_a * 0.90, 3)
             print(
-                f"[motivation] Knockout stage ({stage.value}) — no λ boost applied "
-                f"(market-calibrated baseline: lam_h={lam_h}  lam_a={lam_a})"
+                f"[ko_damp] KO stage ({stage.value}) ×0.90: "
+                f"lam_h {_old_h}→{lam_h}  lam_a {_old_a}→{lam_a}"
             )
 
         # ── Logic chain (visible in WhatsApp — shows which factors moved λ) ──
@@ -1525,6 +1544,7 @@ def run_daily_pipeline(
     message = format_daily_message(
         picks, context, perf_report=perf_report,
         ticket=_ticket, prob_ticket=_prob_ticket, conf_ticket=_conf_ticket,
+        model_health=_model_health if _model_health else None,
     )
 
     # no_odds_matches now receive prior-only predictions (included in picks above).

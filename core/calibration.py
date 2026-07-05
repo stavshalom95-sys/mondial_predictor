@@ -38,7 +38,7 @@ import math
 from dataclasses import dataclass
 
 MIN_SAMPLES = 20    # require ≥ this many records before trusting the fitted T
-_T_BOUNDS   = (0.5, 3.0)
+_T_BOUNDS   = (0.30, 3.0)  # widened — optimizer was wall-pinned at lower bound
 _EPS        = 1e-7   # clamp probabilities away from 0/1 to avoid log(0)
 
 

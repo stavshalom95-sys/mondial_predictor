@@ -244,12 +244,13 @@ def _score_reasoning(cp) -> str:
 
 
 def format_daily_message(
-    picks:       list[DailyPick],
-    context:     TournamentContext,
-    perf_report: Optional[dict]             = None,
-    ticket:      Optional[Ticket]           = None,
-    prob_ticket: Optional[Ticket]           = None,
-    conf_ticket: Optional[ConfidenceTicket] = None,
+    picks:        list[DailyPick],
+    context:      TournamentContext,
+    perf_report:  Optional[dict]             = None,
+    ticket:       Optional[Ticket]           = None,
+    prob_ticket:  Optional[Ticket]           = None,
+    conf_ticket:  Optional[ConfidenceTicket] = None,
+    model_health: Optional[dict]             = None,
 ) -> str:
     """
     Pure function — build the WhatsApp message string.
@@ -328,6 +329,36 @@ def format_daily_message(
             if at_pnl is not None:
                 _sign2 = "+" if at_pnl >= 0 else ""
                 lines.append(f"   💹 P&L מצטבר: {_sign2}{at_pnl:.0f} ₪")
+        lines.append("")
+
+    if model_health:
+        _pred_g  = model_health.get("pred_goals_avg", 0.0)
+        _act_g   = model_health.get("actual_goals_avg", 0.0)
+        _ratio   = model_health.get("goals_ratio", 1.0)
+        _dir_7   = model_health.get("direction_rate_7")
+        _exact_7 = model_health.get("exact_rate_7")
+        _n_total = model_health.get("n_total", 0)
+        _n_rec   = model_health.get("n_recent", 7)
+        _cal_t   = model_health.get("cal_temp")
+        _gscale  = model_health.get("goal_scale")
+
+        _g_icon = "🟢" if 0.90 <= _ratio <= 1.10 else ("🟡" if 0.80 <= _ratio <= 1.20 else "🔴")
+        _d_icon = "🟢" if (_dir_7 or 0) >= 0.65 else ("🟡" if (_dir_7 or 0) >= 0.50 else "🔴")
+        _e_icon = "🟢" if (_exact_7 or 0) >= 0.20 else ("🟡" if (_exact_7 or 0) >= 0.10 else "🔴")
+
+        lines.append("🔬 *Model Health*")
+        lines.append(
+            f"   {_g_icon} Goals: {_pred_g:.2f} pred → {_act_g:.2f} actual/game (n={_n_total})"
+        )
+        _dir_str   = f"{_dir_7:.0%}"   if _dir_7   is not None else "N/A"
+        _exact_str = f"{_exact_7:.0%}" if _exact_7 is not None else "N/A"
+        lines.append(
+            f"   {_d_icon} Direction (last {_n_rec}): {_dir_str}"
+            f"  |  {_e_icon} Exact: {_exact_str}"
+        )
+        if _cal_t is not None:
+            _scale_str = f"  |  Scale x{_gscale:.3f}" if _gscale is not None else ""
+            lines.append(f"   Cal T={_cal_t:.3f}{_scale_str}")
         lines.append("")
 
     for pick in picks:

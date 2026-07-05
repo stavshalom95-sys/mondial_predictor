@@ -1937,7 +1937,7 @@
   },
   {
     "id": "537376",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_16",
     "start_time": "2026-07-04T17:00:00Z",
     "home": "CAN",
@@ -1953,13 +1953,13 @@
       }
     },
     "score": {
-      "CAN": null,
-      "MAR": null
+      "CAN": 0,
+      "MAR": 3
     }
   },
   {
     "id": "537375",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_16",
     "start_time": "2026-07-04T21:00:00Z",
     "home": "PAR",
@@ -1975,8 +1975,8 @@
       }
     },
     "score": {
-      "PAR": null,
-      "FRA": null
+      "PAR": 0,
+      "FRA": 1
     }
   },
   {
@@ -2116,16 +2116,21 @@
     "status": "scheduled",
     "stage": "quarter_final",
     "start_time": "2026-07-09T20:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "FRA",
+    "away": "MAR",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "FRA": {
+        "name": "France",
+        "abbreviation": "FRA"
+      },
+      "MAR": {
+        "name": "Morocco",
+        "abbreviation": "MAR"
       }
     },
     "score": {
-      "null": null
+      "FRA": null,
+      "MAR": null
     }
   },
   {

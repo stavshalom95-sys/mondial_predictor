@@ -185,10 +185,12 @@ def build_calibrator(history: list[dict]) -> ProbabilityCalibrator:
         else:
             actual_outcome = "away"
 
-        # Use stored Poisson probs if available; otherwise use proxies
-        p_home_raw = rec.get("poisson_p_home")
-        p_draw_raw = rec.get("poisson_p_draw")
-        p_away_raw = rec.get("poisson_p_away")
+        # Use stored Poisson probs if available; otherwise use proxies.
+        # Records written by main.py use "sim_p_*" keys; legacy records used
+        # "poisson_p_*" — try both so we use real data when present.
+        p_home_raw = rec.get("sim_p_home") or rec.get("poisson_p_home")
+        p_draw_raw = rec.get("sim_p_draw") or rec.get("poisson_p_draw")
+        p_away_raw = rec.get("sim_p_away") or rec.get("poisson_p_away")
 
         if p_home_raw and p_draw_raw and p_away_raw:
             prob_map = {

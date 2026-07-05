@@ -54,7 +54,7 @@ from data.performance_tracker import ingest_results, load_history, save_history,
 from data.opta_priors import build_opta_context, get_whatsapp_sentiment_note, opta_tiebreak, get_team_opta
 from core.correct_score_predictor import predict as predict_correct_score, get_external_xg, load_external_xg
 from notifications.notifier import format_dual_track_section
-from core.bias_corrector import build_bias_corrector
+from core.bias_corrector import build_bias_corrector, build_goal_rate_scaler
 from data.fdr_fetcher import fetch_fixture_mu, apply_fdr_modifier
 from core.kelly import analyse_match as analyse_match_bets, BetAnalysis, build_ticket, build_probability_ticket, build_confidence_value_ticket, ConfidenceTicket
 from core.simulator import simulate
@@ -604,6 +604,13 @@ def run_daily_pipeline(
         print(f"[bias] Warning: bias corrector failed: {_bc_exc} — no bias correction applied.")
         _bias = None
 
+    # Build tournament-wide goal-rate scaler (actual vs predicted goals/game)
+    try:
+        _goal_scaler = build_goal_rate_scaler(history)
+    except Exception as _gs_exc:
+        print(f"[goal_scale] Warning: goal rate scaler failed: {_gs_exc} — no scaling applied.")
+        _goal_scaler = None
+
     picks:           list[DailyPick] = []
     morning_data:    list[dict]      = []
     no_odds_matches: list            = []   # schedule matches with no bookmaker odds yet
@@ -693,6 +700,12 @@ def run_daily_pipeline(
             )
             _pr_lh = round(_pr_lh * _pr_motiv.home.lambda_multiplier, 3)
             _pr_la = round(_pr_la * _pr_motiv.away.lambda_multiplier, 3)
+
+            # Apply tournament-wide goal-rate scaling (same scaler as main path)
+            if _goal_scaler is not None and abs(_goal_scaler.scale - 1.0) >= 0.005:
+                _pr_lh = _goal_scaler.apply(_pr_lh)
+                _pr_la = _goal_scaler.apply(_pr_la)
+
             print(f"[prior]   λ  home={_pr_lh}  away={_pr_la}")
 
             # Build model + simulate
@@ -920,6 +933,16 @@ def run_daily_pipeline(
                 print(f"[bias] {match.away_team} offset {_a_off:+.3f} → lam_a={lam_a}")
         _lam_h_post_bias = lam_h   # snapshot after bias correction
         _lam_a_post_bias = lam_a
+
+        # ── Global Goal-Rate Scaling (tournament-wide λ correction) ──────────
+        if _goal_scaler is not None and abs(_goal_scaler.scale - 1.0) >= 0.005:
+            _old_h, _old_a = lam_h, lam_a
+            lam_h = _goal_scaler.apply(lam_h)
+            lam_a = _goal_scaler.apply(lam_a)
+            print(
+                f"[goal_scale] ×{_goal_scaler.scale:.3f}: "
+                f"H={_old_h}→{lam_h}  A={_old_a}→{lam_a}"
+            )
 
         # ── Pre-match context (API-Football — injuries, form, goals stats, H2H) ──
         # Fetched here so the stats feed the λ adjustment below; result is

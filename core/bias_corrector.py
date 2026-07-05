@@ -23,12 +23,22 @@ from __future__ import annotations
 
 import unicodedata
 from dataclasses import dataclass, field
+from typing import Optional
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
-BIAS_MIN_MATCHES: int   = 2    # require ≥ 2 WC records before trusting the average
-BIAS_THRESHOLD:   float = 0.3  # min |avg_error| to apply any correction
-BIAS_DECAY:       float = 0.5  # apply 50% of observed error as the λ correction
+BIAS_MIN_MATCHES: int   = 3    # require ≥ 3 WC records before trusting the average
+BIAS_THRESHOLD:   float = 0.25 # min |avg_error| to apply any correction (was 0.30)
+BIAS_DECAY:       float = 0.55 # apply 55% of observed error as the λ correction (was 0.50)
+
+# ── Goal-rate scaler constants ─────────────────────────────────────────────────
+# SCALE_BLEND is deliberately low (0.30) because per-team bias already accounts
+# for most team-specific under/over-prediction. The global scaler is a gentle
+# residual correction for teams with insufficient history (< BIAS_MIN_MATCHES).
+SCALE_MIN_MATCHES: int   = 10    # min games before trusting the tournament-wide scale
+SCALE_BLEND:       float = 0.30  # conservative blend: 30% of observed deviation applied
+SCALE_MAX:         float = 2.0   # upper cap to prevent extreme values
+SCALE_MIN_SCALE:   float = 0.50  # lower cap
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -65,7 +75,7 @@ class BiasCorrector:
     def summary(self) -> str:
         if not self._offsets:
             return "[bias] No bias corrections active (insufficient data or errors within threshold)."
-        lines = ["[bias] Per-team λ corrections:"]
+        lines = ["[bias] Per-team lam corrections:"]
         for team, off in sorted(self._offsets.items(), key=lambda x: abs(x[1]), reverse=True):
             direction = "↑ under-predicted" if off > 0 else "↓ over-predicted"
             lines.append(f"  {team}: {off:+.3f}  ({direction})")
@@ -128,3 +138,103 @@ def build_bias_corrector(history: list[dict]) -> BiasCorrector:
     corrector = BiasCorrector(_offsets=offsets)
     print(corrector.summary())
     return corrector
+
+
+# ── Global goal-rate scaler ────────────────────────────────────────────────────
+
+@dataclass
+class GoalRateScaler:
+    """
+    Tournament-wide multiplicative λ correction derived from actual vs predicted
+    goals-per-game across all history records.
+
+    If the model has been systematically under-predicting goals (actual_avg >
+    predicted_avg), scale > 1.0 and all λ values are nudged up.  The blend is
+    conservative: only SCALE_BLEND of the observed deviation is applied.
+
+    Example (WC 2026 after 44 games):
+        predicted_avg = 2.0  actual_avg = 3.2  → raw_scale = 1.60
+        blended_scale = 1.0 + 0.65 × (1.60 − 1.0) = 1.39
+    """
+    scale:         float
+    n_samples:     int
+    predicted_avg: float
+    actual_avg:    float
+
+    def apply(self, lam: float) -> float:
+        """Scale a single λ value; identity when scale ≈ 1.0."""
+        if abs(self.scale - 1.0) < 0.005:
+            return lam
+        return round(max(0.10, lam * self.scale), 3)
+
+    def summary(self) -> str:
+        if self.n_samples < SCALE_MIN_MATCHES:
+            return (
+                f"[goal_scale] Identity — only {self.n_samples} sample(s) "
+                f"(need ≥{SCALE_MIN_MATCHES})."
+            )
+        if abs(self.scale - 1.0) < 0.005:
+            return "[goal_scale] No adjustment — predicted/actual within tolerance."
+        direction = (
+            "under-predicting goals → λ scaled UP"
+            if self.scale > 1.0
+            else "over-predicting goals → λ scaled DOWN"
+        )
+        return (
+            f"[goal_scale] scale={self.scale:.3f}  "
+            f"({self.predicted_avg:.2f} predicted → {self.actual_avg:.2f} actual "
+            f"goals/game, n={self.n_samples})  — {direction}"
+        )
+
+
+def build_goal_rate_scaler(history: list[dict]) -> GoalRateScaler:
+    """
+    Compute a tournament-wide λ scaling factor from prediction history.
+
+    For each finished match record, computes predicted total goals and actual
+    total goals. Derives raw scale = actual_avg / predicted_avg, then blends
+    conservatively with 1.0 to avoid over-fitting on early data.
+
+    Args:
+        history: list of records from data/history.json.
+
+    Returns:
+        GoalRateScaler (scale=1.0 when insufficient data).
+    """
+    pairs: list[tuple[int, int]] = []  # (predicted_total, actual_total)
+    for rec in history:
+        try:
+            ph = int(rec["predicted_home"])
+            pa = int(rec["predicted_away"])
+            ah = int(rec["actual_home"])
+            aa = int(rec["actual_away"])
+            pairs.append((ph + pa, ah + aa))
+        except (KeyError, TypeError, ValueError):
+            continue
+
+    n = len(pairs)
+    if n < SCALE_MIN_MATCHES:
+        scaler = GoalRateScaler(scale=1.0, n_samples=n, predicted_avg=0.0, actual_avg=0.0)
+        print(scaler.summary())
+        return scaler
+
+    pred_avg   = sum(p for p, _ in pairs) / n
+    actual_avg = sum(a for _, a in pairs) / n
+
+    if pred_avg < 0.1:
+        scaler = GoalRateScaler(scale=1.0, n_samples=n, predicted_avg=pred_avg, actual_avg=actual_avg)
+        print(scaler.summary())
+        return scaler
+
+    raw_scale = actual_avg / pred_avg
+    blended   = 1.0 + SCALE_BLEND * (raw_scale - 1.0)
+    blended   = max(SCALE_MIN_SCALE, min(SCALE_MAX, blended))
+
+    scaler = GoalRateScaler(
+        scale         = round(blended, 3),
+        n_samples     = n,
+        predicted_avg = round(pred_avg, 3),
+        actual_avg    = round(actual_avg, 3),
+    )
+    print(scaler.summary())
+    return scaler

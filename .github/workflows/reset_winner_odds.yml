@@ -55,6 +55,7 @@ jobs:
             echo "winner_odds.json unchanged — nothing to commit."
           else
             git commit -m "chore: reset winner_odds $(date -u '+%Y-%m-%d') [skip ci]"
+            git pull --rebase
             git push
             echo "winner_odds.json pushed."
           fi

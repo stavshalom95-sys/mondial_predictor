@@ -101,17 +101,28 @@ def _candidate_matches(
 
 
 def _blank_entry() -> dict:
-    """Placeholder entry for a new match — user fills in odds."""
+    """Placeholder entry for a new match — user fills in odds. No corners field."""
     return {
-        "winner":          {"home": 0.0, "draw": 0.0, "away": 0.0},
-        "sum_goals":       {"0-1": 0.0, "2-3": 0.0, "+4": 0.0},
-        "corners_range":   {"0-8": 0.0, "9-11": 0.0, "12+": 0.0},
+        "winner":    {"home": 0.0, "draw": 0.0, "away": 0.0},
+        "sum_goals": {"0-1": 0.0, "2-3": 0.0, "+4": 0.0},
     }
 
 
+def _strip_corners(entry: dict) -> dict:
+    """Return a copy of entry without the corners_range sub-dict."""
+    return {k: v for k, v in entry.items() if k != "corners_range"}
+
+
 def _has_nonzero_odds(entry: dict) -> bool:
-    """Return True if ANY numeric odds value in the entry is > 0.0."""
-    for sub in entry.values():
+    """
+    Return True if ANY non-corners numeric odds value in the entry is > 0.0.
+
+    corners_range is deliberately excluded: corner data is optional and must
+    not prevent a --reset from zeroing out match odds.
+    """
+    for key, sub in entry.items():
+        if key == "corners_range":
+            continue
         if isinstance(sub, dict):
             if any(isinstance(v, (int, float)) and v > 0.0 for v in sub.values()):
                 return True
@@ -163,9 +174,12 @@ def sync(schedule_path: str = "tests/sample_games.json",
     existing = _load_existing(odds_path)
 
     new_data: dict = {}
+    _note_suffix = " corner_kicks field excluded." if reset else ""
     new_data["_note"] = (
-        f"Synced by sync_winner_odds.py on {now.strftime('%Y-%m-%dT%H:%M:%SZ')}. "
-        "Filled odds are preserved; blanks need to be filled before the pipeline runs."
+        f"{'Reset' if reset else 'Synced'} by sync_winner_odds.py on "
+        f"{now.strftime('%Y-%m-%dT%H:%M:%SZ')}. "
+        f"Filled odds are preserved; blanks need to be filled before the pipeline runs."
+        f"{_note_suffix}"
     )
 
     preserved = 0
@@ -201,8 +215,9 @@ def sync(schedule_path: str = "tests/sample_games.json",
 
         # ── CASE 2: upcoming match with filled odds ───────────────────────
         # Preserve regardless of --reset; real odds must never be wiped.
+        # corners_range is always stripped — it is excluded from reset runs.
         if existing_entry is not None and _has_nonzero_odds(existing_entry):
-            new_data[canonical_key] = existing_entry
+            new_data[canonical_key] = _strip_corners(existing_entry)
             preserved += 1
             print(f"[sync] PRESERVED  {canonical_key}  (odds filled — not overwritten)")
             continue

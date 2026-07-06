@@ -10,24 +10,24 @@
     "final_lambda_away": 1.886,
     "final_home_goals": 0,
     "final_away_goals": 2,
-    "sim_p_home": 0.1854,
-    "sim_p_draw": 0.2232,
-    "sim_p_away": 0.5914,
+    "sim_p_home": 0.1853,
+    "sim_p_draw": 0.2195,
+    "sim_p_away": 0.5952,
     "sim_top3": [
       {
-        "h": 1,
+        "h": 0,
         "a": 1,
-        "p": 0.1189
+        "p": 0.1355
       },
       {
         "h": 0,
         "a": 2,
-        "p": 0.102
+        "p": 0.1092
       },
       {
         "h": 1,
         "a": 2,
-        "p": 0.0992
+        "p": 0.1019
       }
     ],
     "pick_status": "modal",
@@ -48,10 +48,10 @@
     "variance_mode": true,
     "is_knockout": true,
     "predicted_by": "poisson_only",
-    "ev_home": -0.2399,
-    "ev_draw": -0.2969,
-    "ev_away": 0.1237,
-    "ev_winner": 0.1237,
+    "ev_home": -0.2403,
+    "ev_draw": -0.3086,
+    "ev_away": 0.1309,
+    "ev_winner": 0.1309,
     "ev_winner_outcome": "away",
     "ev_sg_01": -0.1488,
     "ev_sg_23": -0.1517,
@@ -62,40 +62,40 @@
     "home_team": "United States",
     "away_team": "Belgium",
     "stage": "שמינית גמר",
-    "lambda_home": 1.2444,
-    "lambda_away": 1.1876,
-    "final_lambda_home": 1.643,
-    "final_lambda_away": 2.087,
+    "lambda_home": 1.2228,
+    "lambda_away": 1.1667,
+    "final_lambda_home": 1.628,
+    "final_lambda_away": 2.072,
     "final_home_goals": 1,
     "final_away_goals": 2,
-    "sim_p_home": 0.3015,
-    "sim_p_draw": 0.221,
-    "sim_p_away": 0.4775,
+    "sim_p_home": 0.3085,
+    "sim_p_draw": 0.2076,
+    "sim_p_away": 0.4839,
     "sim_top3": [
       {
         "h": 1,
+        "a": 0,
+        "p": 0.1135
+      },
+      {
+        "h": 0,
         "a": 1,
-        "p": 0.093
+        "p": 0.1077
       },
       {
         "h": 1,
-        "a": 2,
-        "p": 0.0859
-      },
-      {
-        "h": 2,
-        "a": 2,
-        "p": 0.0706
+        "a": 1,
+        "p": 0.1025
       }
     ],
     "pick_status": "modal",
-    "market_p_home": 0.3765,
-    "market_p_draw": 0.2743,
-    "market_p_away": 0.3491,
+    "market_p_home": 0.375,
+    "market_p_draw": 0.2772,
+    "market_p_away": 0.3478,
     "sim_value_bet": "away",
-    "model_sg_01": 0.1028,
-    "model_sg_23": 0.3853,
-    "model_sg_4plus": 0.5119,
+    "model_sg_01": 0.1054,
+    "model_sg_23": 0.3889,
+    "model_sg_4plus": 0.5057,
     "home_motivation": "knockout",
     "away_motivation": "knockout",
     "home_lambda_multiplier": 1.0,
@@ -106,14 +106,14 @@
     "variance_mode": true,
     "is_knockout": true,
     "predicted_by": "poisson_only",
-    "ev_home": -0.2764,
-    "ev_draw": -0.2817,
-    "ev_away": 0.3131,
-    "ev_winner": 0.3131,
+    "ev_home": -0.2596,
+    "ev_draw": -0.3253,
+    "ev_away": 0.3307,
+    "ev_winner": 0.3307,
     "ev_winner_outcome": "away",
-    "ev_sg_01": -0.5528,
-    "ev_sg_23": -0.3065,
-    "ev_sg_4plus": 0.3053
+    "ev_sg_01": -0.5415,
+    "ev_sg_23": -0.3,
+    "ev_sg_4plus": 0.2895
   },
   {
     "date": "2026-07-06",
@@ -126,24 +126,24 @@
     "final_lambda_away": 0.992,
     "final_home_goals": 2,
     "final_away_goals": 0,
-    "sim_p_home": 0.6441,
-    "sim_p_draw": 0.1981,
-    "sim_p_away": 0.1578,
+    "sim_p_home": 0.6501,
+    "sim_p_draw": 0.199,
+    "sim_p_away": 0.1509,
     "sim_top3": [
-      {
-        "h": 1,
-        "a": 1,
-        "p": 0.1021
-      },
       {
         "h": 2,
         "a": 0,
-        "p": 0.0996
+        "p": 0.1069
       },
       {
         "h": 2,
         "a": 1,
-        "p": 0.0988
+        "p": 0.106
+      },
+      {
+        "h": 1,
+        "a": 0,
+        "p": 0.0977
       }
     ],
     "pick_status": "modal",
@@ -151,10 +151,10 @@
     "variance_mode": true,
     "is_knockout": true,
     "predicted_by": "manual_odds",
-    "ev_home": -0.1305,
-    "ev_draw": -0.1284,
-    "ev_away": 0.294,
-    "ev_winner": 0.294,
+    "ev_home": -0.1224,
+    "ev_draw": -0.1244,
+    "ev_away": 0.2374,
+    "ev_winner": 0.2374,
     "ev_winner_outcome": "away",
     "ev_sg_01": null,
     "ev_sg_23": null,
@@ -171,24 +171,24 @@
     "final_lambda_away": 1.065,
     "final_home_goals": 0,
     "final_away_goals": 1,
-    "sim_p_home": 0.3202,
-    "sim_p_draw": 0.3038,
-    "sim_p_away": 0.376,
+    "sim_p_home": 0.3153,
+    "sim_p_draw": 0.3093,
+    "sim_p_away": 0.3754,
     "sim_top3": [
+      {
+        "h": 0,
+        "a": 1,
+        "p": 0.1563
+      },
+      {
+        "h": 1,
+        "a": 0,
+        "p": 0.1419
+      },
       {
         "h": 1,
         "a": 1,
-        "p": 0.1525
-      },
-      {
-        "h": 0,
-        "a": 0,
-        "p": 0.1486
-      },
-      {
-        "h": 0,
-        "a": 1,
-        "p": 0.122
+        "p": 0.0982
       }
     ],
     "pick_status": "modal",
@@ -196,10 +196,10 @@
     "variance_mode": true,
     "is_knockout": true,
     "predicted_by": "manual_odds",
-    "ev_home": 0.0567,
-    "ev_draw": -0.1038,
-    "ev_away": -0.154,
-    "ev_winner": 0.0567,
+    "ev_home": 0.0405,
+    "ev_draw": -0.0876,
+    "ev_away": -0.1553,
+    "ev_winner": 0.0405,
     "ev_winner_outcome": "home",
     "ev_sg_01": null,
     "ev_sg_23": null,

@@ -176,6 +176,30 @@ class PoissonMatchModel:
         ]
         return sorted(scores, key=lambda s: s.probability, reverse=True)[:n]
 
+    def apply_draw_damp(self, factor: float) -> "PoissonMatchModel":
+        """
+        Return a new model with all drawn-score cells (h == a) multiplied by
+        `factor`, then renormalised so the matrix still sums to 1.0.
+
+        Use in knockout rounds to reflect that teams push for a decisive win
+        rather than playing for a draw.  Draws remain possible (factor > 0)
+        but their probability is suppressed.
+
+        Recommended: factor = 0.65  (draws dampened ≈ 35%, decisive boosted).
+        """
+        raw = [
+            [
+                self._matrix[h][a] * (factor if h == a else 1.0)
+                for a in range(MAX_GOALS + 1)
+            ]
+            for h in range(MAX_GOALS + 1)
+        ]
+        total = sum(raw[h][a] for h in range(MAX_GOALS + 1) for a in range(MAX_GOALS + 1))
+        if total <= 0:
+            return self  # degenerate fallback
+        norm = [[raw[h][a] / total for a in range(MAX_GOALS + 1)] for h in range(MAX_GOALS + 1)]
+        return PoissonMatchModel(lambda_home=self.lambda_home, lambda_away=self.lambda_away, _matrix=norm)
+
     def probability_of(self, home_goals: int, away_goals: int) -> float:
         if 0 <= home_goals <= MAX_GOALS and 0 <= away_goals <= MAX_GOALS:
             return self._matrix[home_goals][away_goals]

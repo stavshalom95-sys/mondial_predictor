@@ -411,12 +411,30 @@ def format_daily_message(
 
         # ── Score distribution (Top-3 + pick status) ─────────────────────────
         if pick.sim_top3:
-            # KO: drawn scores are impossible after 120 min — filter display
-            _t3_scores = [s for s in pick.sim_top3 if not (pick.is_knockout and s['h'] == s['a'])]
+            if pick.is_knockout:
+                # KO: draws are dampened in the model — only show if genuinely
+                # significant (prob >= threshold).  Low-prob draws are replaced
+                # by the next most-likely decisive score so the list stays informative.
+                _DRAW_THRESHOLD = 0.10
+                _decisive = [s for s in pick.sim_top3 if s['h'] != s['a']]
+                _t3_scores: list[dict] = []
+                _dec_ptr   = 0
+                for _s in pick.sim_top3:
+                    if len(_t3_scores) >= 3:
+                        break
+                    if _s['h'] == _s['a'] and _s['p'] < _DRAW_THRESHOLD:
+                        # Swap in next decisive score not already in list
+                        while _dec_ptr < len(_decisive) and _decisive[_dec_ptr] in _t3_scores:
+                            _dec_ptr += 1
+                        if _dec_ptr < len(_decisive):
+                            _t3_scores.append(_decisive[_dec_ptr])
+                            _dec_ptr += 1
+                    else:
+                        _t3_scores.append(_s)
+            else:
+                _t3_scores = pick.sim_top3[:3]
             if _t3_scores:
-                _t3 = "  ".join(
-                    f"{s['h']}-{s['a']}({s['p']:.1%})" for s in _t3_scores[:3]
-                )
+                _t3 = "  ".join(f"{s['h']}-{s['a']}({s['p']:.1%})" for s in _t3_scores)
                 lines.append(f"   📊 Top-3: {_t3}")
         if pick.pick_status:
             if pick.pick_status == "modal":

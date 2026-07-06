@@ -65,6 +65,11 @@ from data.winner_odds_loader import enrich_picks, get_all_odds, find_match_odds
 from data.motivation import load_group_tables, build_match_motivation
 from data.stats_collector import build_form_cache, FORM_BLEND_WEIGHT
 
+# KO draw dampening: teams push for decisive wins rather than drawing.
+# Applied to the model for strategy recommendations and Top-3 display.
+# Does NOT affect the MC simulation's hard-ban safety net.
+KO_DRAW_DAMP_FACTOR = 0.65   # draw cells multiplied by this, matrix renormalised
+
 _DATA_DIR            = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 _MORNING_PICKS_PATH  = os.path.join(_DATA_DIR, "morning_picks.json")
 _LAST_RUN_PATH       = os.path.join(_DATA_DIR, "last_run.json")
@@ -742,8 +747,11 @@ def run_daily_pipeline(
             _pr_modal_h, _pr_modal_a = _pr_sim.score_grid.most_likely_score()
             _pr_sh, _pr_sa, _pr_pick_status = _competition_score_pick(_pr_sim, _gap, context.matches_remaining, _pr_stage)
             _pr_is_ko = (_pr_stage != TournamentStage.GROUP_STAGE)
-            _pr_top3_raw = [x for x in _pr_sim.score_grid.top_scores(10) if not (_pr_is_ko and x[0] == x[1])][:3]
-            _pr_top3 = [{"h": h, "a": a, "p": round(p, 4)} for h, a, p in _pr_top3_raw]
+            # KO: dampen draws in the model so Top-3 reflects realistic KO probabilities
+            if _pr_is_ko:
+                _pr_model = _pr_model.apply_draw_damp(KO_DRAW_DAMP_FACTOR)
+            _pr_top3 = [{"h": s.home_goals, "a": s.away_goals, "p": round(s.probability, 4)}
+                        for s in _pr_model.top_n(3)]
 
             # Sub-markets (for O/U bullet)
             _pr_markets = None
@@ -1100,8 +1108,8 @@ def run_daily_pipeline(
         sim = simulate(lam_h, lam_a)
         _modal_h, _modal_a = sim.score_grid.most_likely_score()
         _sim_h, _sim_a, _sim_pick_status = _competition_score_pick(sim, _gap, context.matches_remaining, stage)
-        _sim_top3_raw = [x for x in sim.score_grid.top_scores(10) if not (is_ko and x[0] == x[1])][:3]
-        _sim_top3 = [{"h": h, "a": a, "p": round(p, 4)} for h, a, p in _sim_top3_raw]
+        # Temporary top3 from raw sim — will be rebuilt from dampened model below
+        _sim_top3 = [{"h": h, "a": a, "p": round(p, 4)} for h, a, p in sim.score_grid.top_scores(3)]
         _sim_score_pct  = sim.score_grid.probs[_sim_h][_sim_a]
         print(
             f"[sim] Poisson (analytical): "
@@ -1223,6 +1231,17 @@ def run_daily_pipeline(
             )
         else:
             _kvb_stake = None
+
+        # KO draw dampener — teams push for decisive wins; draws remain possible
+        # but dampened by KO_DRAW_DAMP_FACTOR before recommendation + display.
+        # The MC sim (_competition_score_pick) stays undampened; its hard-ban is the safety net.
+        if stage != TournamentStage.GROUP_STAGE:
+            model = model.apply_draw_damp(KO_DRAW_DAMP_FACTOR)
+            # Rebuild Top-3 from dampened model so report probabilities are consistent
+            _sim_top3 = [
+                {"h": s.home_goals, "a": s.away_goals, "p": round(s.probability, 4)}
+                for s in model.top_n(3)
+            ]
 
         # Poisson model → strategy recommendation
         rec = recommend(model, context, stage)

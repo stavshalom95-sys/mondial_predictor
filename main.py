@@ -296,7 +296,17 @@ def _competition_score_pick(
         p_dir = p_home if h > a else (p_draw if h == a else p_away)
         return p_exact * exact_pts + (p_dir - p_exact) * direction_pts
 
+    # In knockout stages results are decided after 120 min (ET + pens).
+    # Drawn scores can never be the final result — filter them out of the candidate pool.
+    is_ko = (stage != TournamentStage.GROUP_STAGE)
+
     modal_h, modal_a = sim.score_grid.most_likely_score()
+    if is_ko and modal_h == modal_a:
+        decisive = [(h, a, p) for h, a, p in sim.score_grid.top_scores(25) if h != a]
+        if decisive:
+            modal_h, modal_a = decisive[0][0], decisive[0][1]
+            print(f"[ko-draw-filter] Modal was draw {decisive[0][0]}-{decisive[0][1]}... "
+                  f"shifted to most-likely decisive: {modal_h}-{modal_a}")
     modal_p  = sim.score_grid.probs[modal_h][modal_a]
     ev_modal = _ev(modal_h, modal_a, modal_p)
 
@@ -308,9 +318,14 @@ def _competition_score_pick(
         + f"  | MC: H={p_home:.1%} D={p_draw:.1%} A={p_away:.1%}"
     )
 
-    # Find best EV candidate within Top-5
+    # Find best EV candidate within Top-5 (KO: skip drawn scores)
     best_h, best_a, best_ev = modal_h, modal_a, ev_modal
-    for h, a, p in sim.score_grid.top_scores(5):
+    top5_candidates = sim.score_grid.top_scores(5)
+    if is_ko:
+        top5_candidates = [(h, a, p) for h, a, p in top5_candidates if h != a]
+        if not top5_candidates:
+            top5_candidates = [(h, a, p) for h, a, p in sim.score_grid.top_scores(25) if h != a][:5]
+    for h, a, p in top5_candidates:
         e = _ev(h, a, p)
         if e > best_ev:
             best_ev, best_h, best_a = e, h, a

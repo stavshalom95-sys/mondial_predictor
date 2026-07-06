@@ -27,6 +27,16 @@ TIEBREAK_BOOST = 1.15
 POINT_GAP_THRESHOLD_BASE = 2.0  # gap-per-match above which we go contrarian (group-stage equivalent)
 _CONSENSUS_TOP_N = 2             # top-N Poisson picks counted as "consensus"
 
+# Stages where the result is decided after 120 min (ET + pens) — draws impossible.
+KNOCKOUT_STAGES = {
+    TournamentStage.ROUND_OF_32,
+    TournamentStage.ROUND_OF_16,
+    TournamentStage.QUARTER_FINAL,
+    TournamentStage.SEMI_FINAL,
+    TournamentStage.THIRD_PLACE,
+    TournamentStage.FINAL,
+}
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -83,9 +93,11 @@ def _is_likely_consensus_pick(
     score: ScoreProb,
     model: PoissonMatchModel,
     top_n_for_consensus: int = _CONSENSUS_TOP_N,
+    no_draw: bool = False,
 ) -> bool:
-    """True if `score` falls in the top-N most-likely Poisson outcomes."""
-    top = model.top_n(top_n_for_consensus)
+    """True if `score` falls in the top-N most-likely Poisson outcomes.
+    In knockout mode (no_draw=True) consensus is measured among decisive scores only."""
+    top = model.top_n_decisive(top_n_for_consensus) if no_draw else model.top_n(top_n_for_consensus)
     return any(s.home_goals == score.home_goals and s.away_goals == score.away_goals for s in top)
 
 
@@ -93,6 +105,7 @@ def find_contrarian_candidate(
     model: PoissonMatchModel,
     min_probability: float = 0.05,
     top_k_to_scan: int = 20,
+    no_draw: bool = False,
 ) -> Optional[ScoreProb]:
     """
     Scan the top_k_to_scan most-likely scorelines.
@@ -101,12 +114,13 @@ def find_contrarian_candidate(
       (b) above the min_probability floor (not a long-shot).
 
     Falls back by softening the probability floor: 0.05 -> 0.03 -> 0.015.
+    In knockout mode (no_draw=True), drawn scores are excluded entirely.
     Returns None only if truly no candidate found.
     """
-    candidates = model.top_n(top_k_to_scan)
+    candidates = model.top_n_decisive(top_k_to_scan) if no_draw else model.top_n(top_k_to_scan)
     for threshold in [min_probability, 0.03, 0.015]:
         for score in candidates:
-            if not _is_likely_consensus_pick(score, model) and score.probability >= threshold:
+            if not _is_likely_consensus_pick(score, model, no_draw=no_draw) and score.probability >= threshold:
                 return score
     return None
 
@@ -161,10 +175,15 @@ def recommend(
     multiplier         = stage_value_multiplier(stage)
     adjusted_threshold = POINT_GAP_THRESHOLD_BASE / multiplier
 
-    safe_pick        = model.top_n(1)[0]
-    contrarian_pick  = find_contrarian_candidate(model)
+    # In knockout stages results are decided after 120 min (ET + pens).
+    # Drawn scores can never be the final result — filter them out.
+    is_ko = stage in KNOCKOUT_STAGES
+
+    safe_pick        = model.top_n_decisive(1)[0] if is_ko else model.top_n(1)[0]
+    contrarian_pick  = find_contrarian_candidate(model, no_draw=is_ko)
     if contrarian_pick is None:
-        contrarian_pick = model.top_n(3)[-1]  # fallback: 3rd most likely
+        candidates = model.top_n_decisive(3) if is_ko else model.top_n(3)
+        contrarian_pick = candidates[-1]  # fallback: 3rd most likely decisive score
 
     ev_safe        = _expected_value(safe_pick, model, stage)
     ev_contrarian  = _expected_value(contrarian_pick, model, stage)

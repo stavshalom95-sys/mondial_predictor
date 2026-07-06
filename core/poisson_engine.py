@@ -162,6 +162,20 @@ class PoissonMatchModel:
         ]
         return sorted(scores, key=lambda s: s.probability, reverse=True)[:n]
 
+    def top_n_decisive(self, n: int) -> list[ScoreProb]:
+        """
+        Like top_n() but excludes drawn scores (home_goals == away_goals).
+        Use in knockout stages where results are decided after 120 minutes
+        (extra time + penalties) — draws can never be the final result.
+        """
+        scores = [
+            ScoreProb(h, a, self._matrix[h][a])
+            for h in range(MAX_GOALS + 1)
+            for a in range(MAX_GOALS + 1)
+            if h != a
+        ]
+        return sorted(scores, key=lambda s: s.probability, reverse=True)[:n]
+
     def probability_of(self, home_goals: int, away_goals: int) -> float:
         if 0 <= home_goals <= MAX_GOALS and 0 <= away_goals <= MAX_GOALS:
             return self._matrix[home_goals][away_goals]

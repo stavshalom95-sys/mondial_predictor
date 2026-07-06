@@ -741,7 +741,9 @@ def run_daily_pipeline(
             _pr_sim    = simulate(_pr_lh, _pr_la)
             _pr_modal_h, _pr_modal_a = _pr_sim.score_grid.most_likely_score()
             _pr_sh, _pr_sa, _pr_pick_status = _competition_score_pick(_pr_sim, _gap, context.matches_remaining, _pr_stage)
-            _pr_top3 = [{"h": h, "a": a, "p": round(p, 4)} for h, a, p in _pr_sim.score_grid.top_scores(3)]
+            _pr_is_ko = (_pr_stage != TournamentStage.GROUP_STAGE)
+            _pr_top3_raw = [x for x in _pr_sim.score_grid.top_scores(10) if not (_pr_is_ko and x[0] == x[1])][:3]
+            _pr_top3 = [{"h": h, "a": a, "p": round(p, 4)} for h, a, p in _pr_top3_raw]
 
             # Sub-markets (for O/U bullet)
             _pr_markets = None
@@ -1098,7 +1100,8 @@ def run_daily_pipeline(
         sim = simulate(lam_h, lam_a)
         _modal_h, _modal_a = sim.score_grid.most_likely_score()
         _sim_h, _sim_a, _sim_pick_status = _competition_score_pick(sim, _gap, context.matches_remaining, stage)
-        _sim_top3 = [{"h": h, "a": a, "p": round(p, 4)} for h, a, p in sim.score_grid.top_scores(3)]
+        _sim_top3_raw = [x for x in sim.score_grid.top_scores(10) if not (is_ko and x[0] == x[1])][:3]
+        _sim_top3 = [{"h": h, "a": a, "p": round(p, 4)} for h, a, p in _sim_top3_raw]
         _sim_score_pct  = sim.score_grid.probs[_sim_h][_sim_a]
         print(
             f"[sim] Poisson (analytical): "

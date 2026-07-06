@@ -380,6 +380,11 @@ def format_daily_message(
             _sh    = getattr(_cp, "score_home", 0)
             _sa    = getattr(_cp, "score_away", 0)
             _sp    = getattr(_cp, "score_prob", 0.0)
+            # KO guard: draws impossible after 120 min — fall back to top decisive score
+            if pick.is_knockout and _sh == _sa and pick.sim_top3:
+                _decisive = [s for s in pick.sim_top3 if s['h'] != s['a']]
+                if _decisive:
+                    _sh, _sa, _sp = _decisive[0]['h'], _decisive[0]['a'], _decisive[0]['p']
             _conf  = getattr(_cp, "confidence", "MEDIUM")
             _c_icon = {"HIGH": "🔥", "MEDIUM": "📊", "LOW": "❄️"}.get(_conf, "📊")
             _strat     = getattr(_cp, "strategy", "")
@@ -406,10 +411,13 @@ def format_daily_message(
 
         # ── Score distribution (Top-3 + pick status) ─────────────────────────
         if pick.sim_top3:
-            _t3 = "  ".join(
-                f"{s['h']}-{s['a']}({s['p']:.1%})" for s in pick.sim_top3
-            )
-            lines.append(f"   📊 Top-3: {_t3}")
+            # KO: drawn scores are impossible after 120 min — filter display
+            _t3_scores = [s for s in pick.sim_top3 if not (pick.is_knockout and s['h'] == s['a'])]
+            if _t3_scores:
+                _t3 = "  ".join(
+                    f"{s['h']}-{s['a']}({s['p']:.1%})" for s in _t3_scores[:3]
+                )
+                lines.append(f"   📊 Top-3: {_t3}")
         if pick.pick_status:
             if pick.pick_status == "modal":
                 _ps_icon, _ps_label = "✅", "Modal (highest P(exact))"

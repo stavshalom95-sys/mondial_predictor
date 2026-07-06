@@ -282,7 +282,12 @@ def predict(
         source  = "internal_only"
 
     # ── Track A: Poisson modal score — highest P(exact score), no overrides ─────
-    sh, sa, sp = score_grid.top_scores(1)[0]
+    # In knockout stages draws are impossible after 120 min — skip them.
+    if is_knockout:
+        decisive = [(h, a, p) for h, a, p in score_grid.top_scores(25) if h != a]
+        sh, sa, sp = decisive[0] if decisive else score_grid.top_scores(1)[0]
+    else:
+        sh, sa, sp = score_grid.top_scores(1)[0]
 
     # ── Prior inflation ───────────────────────────────────────────────────────
     prior_inflation = False

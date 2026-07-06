@@ -1981,7 +1981,7 @@
   },
   {
     "id": "537377",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_16",
     "start_time": "2026-07-05T20:00:00Z",
     "home": "BRA",
@@ -1997,15 +1997,15 @@
       }
     },
     "score": {
-      "BRA": null,
-      "NOR": null
+      "BRA": 1,
+      "NOR": 2
     }
   },
   {
     "id": "537378",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_16",
-    "start_time": "2026-07-06T00:00:00Z",
+    "start_time": "2026-07-06T01:00:00Z",
     "home": "MEX",
     "away": "ENG",
     "teams": {
@@ -2019,8 +2019,8 @@
       }
     },
     "score": {
-      "MEX": null,
-      "ENG": null
+      "MEX": 2,
+      "ENG": 3
     }
   },
   {
@@ -2155,16 +2155,21 @@
     "status": "scheduled",
     "stage": "quarter_final",
     "start_time": "2026-07-11T21:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "NOR",
+    "away": "ENG",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "NOR": {
+        "name": "Norway",
+        "abbreviation": "NOR"
+      },
+      "ENG": {
+        "name": "England",
+        "abbreviation": "ENG"
       }
     },
     "score": {
-      "null": null
+      "NOR": null,
+      "ENG": null
     }
   },
   {

@@ -1,39 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-07-05T19:36:11Z. Fill in decimal odds before the daily pipeline runs.",
-  "Brazil vs Norway": {
-    "winner": {
-      "home": 1.7,
-      "draw": 3.55,
-      "away": 4.6
-    },
-    "sum_goals": {
-      "0-1": 4.15,
-      "2-3": 1.9,
-      "+4": 2.45
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
-  "Mexico vs England": {
-    "winner": {
-      "home": 3,
-      "draw": 3.05,
-      "away": 2.3
-    },
-    "sum_goals": {
-      "0-1": 2.65,
-      "2-3": 1.85,
-      "+4": 3.9
-    },
-    "corners_range": {
-      "0-8": 0.0,
-      "9-11": 0.0,
-      "12+": 0.0
-    }
-  },
+  "_note": "Reset by master_reset.py on 2026-07-06T08:55:51Z. Fill in decimal odds before the daily pipeline runs.",
   "Portugal vs Spain": {
     "winner": {
       "home": 3.85,
@@ -50,5 +16,59 @@
       "9-11": 0.0,
       "12+": 0.0
     }
-  }
+  },
+  "United States vs Belgium": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Argentina vs Egypt": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Switzerland vs Colombia": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "_played_today": [
+    "Mexico vs England"
+  ]
 }

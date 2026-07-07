@@ -1,5 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-07-07T09:27:56Z. Fill in decimal odds before the daily pipeline runs.",
+  "_note": "Reset by sync_winner_odds.py on 2026-07-07T09:30:41Z. Filled odds are preserved; blanks need to be filled before the pipeline runs. corner_kicks field excluded.",
   "Argentina vs Egypt": {
     "winner": {
       "home": 1.35,
@@ -23,8 +23,5 @@
       "2-3": 1.85,
       "+4": 3.9
     }
-  },
-  "_played_today": [
-    "United States vs Belgium"
-  ]
+  }
 }

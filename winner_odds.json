@@ -1,29 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-07-06T11:36:39Z. Fill in decimal odds before the daily pipeline runs.",
-  "Portugal vs Spain": {
-    "winner": {
-      "home": 4.1,
-      "draw": 3.15,
-      "away": 1.9
-    },
-    "sum_goals": {
-      "0-1": 4.1,
-      "2-3": 1.8,
-      "+4": 2.65
-    }
-  },
-  "United States vs Belgium": {
-    "winner": {
-      "home": 2.4,
-      "draw": 3.25,
-      "away": 2.75
-    },
-    "sum_goals": {
-      "0-1": 4.35,
-      "2-3": 1.8,
-      "+4": 2.55
-    }
-  },
+  "_note": "Reset by master_reset.py on 2026-07-07T08:16:20Z. Fill in decimal odds before the daily pipeline runs.",
   "Argentina vs Egypt": {
     "winner": {
       "home": 1.35,
@@ -49,6 +25,6 @@
     }
   },
   "_played_today": [
-    "Mexico vs England"
+    "United States vs Belgium"
   ]
 }

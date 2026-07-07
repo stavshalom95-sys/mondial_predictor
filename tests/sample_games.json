@@ -2025,7 +2025,7 @@
   },
   {
     "id": "537379",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_16",
     "start_time": "2026-07-06T19:00:00Z",
     "home": "POR",
@@ -2041,13 +2041,13 @@
       }
     },
     "score": {
-      "POR": null,
-      "ESP": null
+      "POR": 0,
+      "ESP": 1
     }
   },
   {
     "id": "537380",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_16",
     "start_time": "2026-07-07T00:00:00Z",
     "home": "USA",
@@ -2063,8 +2063,8 @@
       }
     },
     "score": {
-      "USA": null,
-      "BEL": null
+      "USA": 1,
+      "BEL": 4
     }
   },
   {
@@ -2138,16 +2138,21 @@
     "status": "scheduled",
     "stage": "quarter_final",
     "start_time": "2026-07-10T19:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "ESP",
+    "away": "BEL",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "ESP": {
+        "name": "Spain",
+        "abbreviation": "ESP"
+      },
+      "BEL": {
+        "name": "Belgium",
+        "abbreviation": "BEL"
       }
     },
     "score": {
-      "null": null
+      "ESP": null,
+      "BEL": null
     }
   },
   {

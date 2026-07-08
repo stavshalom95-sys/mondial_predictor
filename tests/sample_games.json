@@ -2069,7 +2069,7 @@
   },
   {
     "id": "537381",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_16",
     "start_time": "2026-07-07T16:00:00Z",
     "home": "ARG",
@@ -2085,13 +2085,13 @@
       }
     },
     "score": {
-      "ARG": null,
-      "EGY": null
+      "ARG": 3,
+      "EGY": 2
     }
   },
   {
     "id": "537382",
-    "status": "scheduled",
+    "status": "final",
     "stage": "round_of_16",
     "start_time": "2026-07-07T20:00:00Z",
     "home": "SUI",
@@ -2107,8 +2107,8 @@
       }
     },
     "score": {
-      "SUI": null,
-      "COL": null
+      "SUI": 4,
+      "COL": 3
     }
   },
   {
@@ -2182,16 +2182,21 @@
     "status": "scheduled",
     "stage": "quarter_final",
     "start_time": "2026-07-12T01:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "ARG",
+    "away": "SUI",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "ARG": {
+        "name": "Argentina",
+        "abbreviation": "ARG"
+      },
+      "SUI": {
+        "name": "Switzerland",
+        "abbreviation": "SUI"
       }
     },
     "score": {
-      "null": null
+      "ARG": null,
+      "SUI": null
     }
   },
   {

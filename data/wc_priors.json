@@ -8,7 +8,7 @@
   "united states": 1.8625,
   "paraguay": 1.25,
   "qatar": 0.7833,
-  "switzerland": 1.8429,
+  "switzerland": 2.1125,
   "brazil": 1.85,
   "morocco": 2.0938,
   "haiti": 0.7583,
@@ -26,7 +26,7 @@
   "spain": 1.7063,
   "cape verde islands": 0.9571,
   "belgium": 2.1688,
-  "egypt": 1.9214,
+  "egypt": 1.9312,
   "saudi arabia": 0.6417,
   "uruguay": 1.175,
   "iran": 1.05,
@@ -35,7 +35,7 @@
   "senegal": 1.4,
   "iraq": 0.5167,
   "norway": 2.055,
-  "argentina": 2.2571,
+  "argentina": 2.35,
   "algeria": 1.1643,
   "austria": 1.3929,
   "jordan": 1.0,
@@ -46,5 +46,5 @@
   "ghana": 0.7357,
   "panama": 0.46,
   "uzbekistan": 0.7833,
-  "colombia": 1.2929
+  "colombia": 1.5063
 }

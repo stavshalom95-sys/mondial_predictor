@@ -2113,7 +2113,7 @@
   },
   {
     "id": "537383",
-    "status": "scheduled",
+    "status": "final",
     "stage": "quarter_final",
     "start_time": "2026-07-09T20:00:00Z",
     "home": "FRA",
@@ -2129,8 +2129,8 @@
       }
     },
     "score": {
-      "FRA": null,
-      "MAR": null
+      "FRA": 2,
+      "MAR": 0
     }
   },
   {
@@ -2204,15 +2204,20 @@
     "status": "scheduled",
     "stage": "semi_final",
     "start_time": "2026-07-14T19:00:00Z",
-    "home": null,
+    "home": "FRA",
     "away": null,
     "teams": {
+      "FRA": {
+        "name": "France",
+        "abbreviation": "FRA"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "FRA": null,
       "null": null
     }
   },

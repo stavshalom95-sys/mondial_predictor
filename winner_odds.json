@@ -1,6 +1,6 @@
 {
-  "_note": "Reset by master_reset.py on 2026-07-09T09:27:33Z. Fill in decimal odds before the daily pipeline runs.",
-  "France vs Morocco": {
+  "_note": "Reset by master_reset.py on 2026-07-10T08:16:26Z. Fill in decimal odds before the daily pipeline runs.",
+  "Spain vs Belgium": {
     "winner": {
       "home": 0.0,
       "draw": 0.0,
@@ -17,7 +17,7 @@
       "12+": 0.0
     }
   },
-  "Spain vs Belgium": {
+  "Norway vs England": {
     "winner": {
       "home": 0.0,
       "draw": 0.0,

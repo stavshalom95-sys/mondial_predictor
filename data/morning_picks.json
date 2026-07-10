@@ -1,49 +1,49 @@
 [
   {
-    "date": "2026-07-09",
-    "home_team": "France",
-    "away_team": "Morocco",
+    "date": "2026-07-10",
+    "home_team": "Spain",
+    "away_team": "Belgium",
     "stage": "רבע גמר",
-    "lambda_home": 1.5847,
-    "lambda_away": 0.6055,
-    "final_lambda_home": 2.131,
-    "final_lambda_away": 2.112,
+    "lambda_home": 1.6589,
+    "lambda_away": 0.7522,
+    "final_lambda_home": 1.807,
+    "final_lambda_away": 1.637,
     "final_home_goals": 2,
     "final_away_goals": 1,
-    "sim_p_home": 0.4118,
-    "sim_p_draw": 0.1968,
-    "sim_p_away": 0.3914,
+    "sim_p_home": 0.4268,
+    "sim_p_draw": 0.2233,
+    "sim_p_away": 0.3499,
     "sim_top3": [
       {
         "h": 1,
         "a": 0,
-        "p": 0.186
+        "p": 0.1539
       },
       {
         "h": 2,
         "a": 0,
-        "p": 0.1549
+        "p": 0.1358
       },
       {
         "h": 2,
         "a": 1,
-        "p": 0.0938
+        "p": 0.1021
       }
     ],
     "pick_status": "modal",
-    "market_p_home": 0.6121,
-    "market_p_draw": 0.248,
-    "market_p_away": 0.1399,
+    "market_p_home": 0.5907,
+    "market_p_draw": 0.2418,
+    "market_p_away": 0.1675,
     "sim_value_bet": "away",
-    "model_sg_01": 0.067,
-    "model_sg_23": 0.3208,
-    "model_sg_4plus": 0.6122,
+    "model_sg_01": 0.1297,
+    "model_sg_23": 0.4192,
+    "model_sg_4plus": 0.4511,
     "home_motivation": "knockout",
     "away_motivation": "knockout",
     "home_lambda_multiplier": 1.0,
     "away_lambda_multiplier": 1.0,
     "kelly_value_bet": "Away Win",
-    "kelly_value_bet_odds": 7.0,
+    "kelly_value_bet_odds": 5.82,
     "kelly_value_bet_stake": 25,
     "variance_mode": true,
     "is_knockout": true,
@@ -58,39 +58,39 @@
     "ev_sg_4plus": null
   },
   {
-    "date": "2026-07-09",
-    "home_team": "Spain",
-    "away_team": "Belgium",
+    "date": "2026-07-10",
+    "home_team": "Norway",
+    "away_team": "England",
     "stage": "רבע גמר",
-    "lambda_home": 1.429,
-    "lambda_away": 0.925,
-    "final_lambda_home": 1.429,
-    "final_lambda_away": 0.925,
+    "lambda_home": 1.759,
+    "lambda_away": 2.39,
+    "final_lambda_home": 1.759,
+    "final_lambda_away": 2.39,
     "final_home_goals": 1,
-    "final_away_goals": 0,
-    "sim_p_home": 0.4931,
-    "sim_p_draw": 0.2656,
-    "sim_p_away": 0.2413,
+    "final_away_goals": 2,
+    "sim_p_home": 0.2822,
+    "sim_p_draw": 0.1949,
+    "sim_p_away": 0.5229,
     "sim_top3": [
       {
         "h": 1,
-        "a": 0,
-        "p": 0.1498
+        "a": 2,
+        "p": 0.0852
       },
       {
-        "h": 2,
-        "a": 0,
-        "p": 0.1071
+        "h": 1,
+        "a": 3,
+        "p": 0.0678
       },
       {
         "h": 2,
         "a": 1,
-        "p": 0.099
+        "p": 0.0627
       }
     ],
     "pick_status": "modal",
     "prior_only": true,
-    "variance_mode": true,
+    "variance_mode": false,
     "is_knockout": true,
     "predicted_by": "prior_only",
     "ev_home": null,

@@ -2135,7 +2135,7 @@
   },
   {
     "id": "537384",
-    "status": "scheduled",
+    "status": "final",
     "stage": "quarter_final",
     "start_time": "2026-07-10T19:00:00Z",
     "home": "ESP",
@@ -2151,8 +2151,8 @@
       }
     },
     "score": {
-      "ESP": null,
-      "BEL": null
+      "ESP": 2,
+      "BEL": 1
     }
   },
   {
@@ -2205,20 +2205,20 @@
     "stage": "semi_final",
     "start_time": "2026-07-14T19:00:00Z",
     "home": "FRA",
-    "away": null,
+    "away": "ESP",
     "teams": {
       "FRA": {
         "name": "France",
         "abbreviation": "FRA"
       },
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "ESP": {
+        "name": "Spain",
+        "abbreviation": "ESP"
       }
     },
     "score": {
       "FRA": null,
-      "null": null
+      "ESP": null
     }
   },
   {

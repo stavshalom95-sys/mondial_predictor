@@ -1243,5 +1243,28 @@
     "market_p_home": 0.6121,
     "market_p_draw": 0.248,
     "market_p_away": 0.1399
+  },
+  {
+    "date": "2026-07-10",
+    "home_team": "Spain",
+    "away_team": "Belgium",
+    "stage": "רבע גמר",
+    "predicted_home": 2,
+    "predicted_away": 1,
+    "actual_home": 2,
+    "actual_away": 1,
+    "exact_match": true,
+    "correct_result": true,
+    "points_earned": 8,
+    "points_possible": 8,
+    "bet_won": false,
+    "pnl_nis": -25.0,
+    "predicted_by": "poisson_only",
+    "sim_p_home": 0.4268,
+    "sim_p_draw": 0.2233,
+    "sim_p_away": 0.3499,
+    "market_p_home": 0.5907,
+    "market_p_draw": 0.2418,
+    "market_p_away": 0.1675
   }
 ]

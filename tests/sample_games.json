@@ -2157,7 +2157,7 @@
   },
   {
     "id": "537385",
-    "status": "scheduled",
+    "status": "final",
     "stage": "quarter_final",
     "start_time": "2026-07-11T21:00:00Z",
     "home": "NOR",
@@ -2173,13 +2173,13 @@
       }
     },
     "score": {
-      "NOR": null,
-      "ENG": null
+      "NOR": 1,
+      "ENG": 2
     }
   },
   {
     "id": "537386",
-    "status": "scheduled",
+    "status": "final",
     "stage": "quarter_final",
     "start_time": "2026-07-12T01:00:00Z",
     "home": "ARG",
@@ -2195,8 +2195,8 @@
       }
     },
     "score": {
-      "ARG": null,
-      "SUI": null
+      "ARG": 3,
+      "SUI": 1
     }
   },
   {
@@ -2226,16 +2226,21 @@
     "status": "scheduled",
     "stage": "semi_final",
     "start_time": "2026-07-15T19:00:00Z",
-    "home": null,
-    "away": null,
+    "home": "ENG",
+    "away": "ARG",
     "teams": {
-      "null": {
-        "name": null,
-        "abbreviation": null
+      "ENG": {
+        "name": "England",
+        "abbreviation": "ENG"
+      },
+      "ARG": {
+        "name": "Argentina",
+        "abbreviation": "ARG"
       }
     },
     "score": {
-      "null": null
+      "ENG": null,
+      "ARG": null
     }
   },
   {

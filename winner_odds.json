@@ -1,27 +1,6 @@
 {
-  "_note": "Reset by sync_winner_odds.py on 2026-07-11T07:45:17Z. Filled odds are preserved; blanks need to be filled before the pipeline runs. corner_kicks field excluded.",
-  "Norway vs England": {
-    "winner": {
-      "home": 0.0,
-      "draw": 0.0,
-      "away": 0.0
-    },
-    "sum_goals": {
-      "0-1": 0.0,
-      "2-3": 0.0,
-      "+4": 0.0
-    }
-  },
-  "Argentina vs Switzerland": {
-    "winner": {
-      "home": 0.0,
-      "draw": 0.0,
-      "away": 0.0
-    },
-    "sum_goals": {
-      "0-1": 0.0,
-      "2-3": 0.0,
-      "+4": 0.0
-    }
-  }
+  "_note": "Reset by master_reset.py on 2026-07-12T07:25:29Z. Fill in decimal odds before the daily pipeline runs.",
+  "_played_today": [
+    "Argentina vs Switzerland"
+  ]
 }

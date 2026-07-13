@@ -1,3 +1,15 @@
 {
-  "_note": "Reset by sync_winner_odds.py on 2026-07-12T08:06:51Z. Filled odds are preserved; blanks need to be filled before the pipeline runs. corner_kicks field excluded."
+  "_note": "Reset by sync_winner_odds.py on 2026-07-13T08:56:48Z. Filled odds are preserved; blanks need to be filled before the pipeline runs. corner_kicks field excluded.",
+  "France vs Spain": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    }
+  }
 }

@@ -2201,7 +2201,7 @@
   },
   {
     "id": "537387",
-    "status": "scheduled",
+    "status": "final",
     "stage": "semi_final",
     "start_time": "2026-07-14T19:00:00Z",
     "home": "FRA",
@@ -2217,8 +2217,8 @@
       }
     },
     "score": {
-      "FRA": null,
-      "ESP": null
+      "FRA": 0,
+      "ESP": 2
     }
   },
   {
@@ -2248,15 +2248,20 @@
     "status": "scheduled",
     "stage": "third_place",
     "start_time": "2026-07-18T21:00:00Z",
-    "home": null,
+    "home": "FRA",
     "away": null,
     "teams": {
+      "FRA": {
+        "name": "France",
+        "abbreviation": "FRA"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "FRA": null,
       "null": null
     }
   },
@@ -2265,15 +2270,20 @@
     "status": "scheduled",
     "stage": "final_stage",
     "start_time": "2026-07-19T19:00:00Z",
-    "home": null,
+    "home": "ESP",
     "away": null,
     "teams": {
+      "ESP": {
+        "name": "Spain",
+        "abbreviation": "ESP"
+      },
       "null": {
         "name": null,
         "abbreviation": null
       }
     },
     "score": {
+      "ESP": null,
       "null": null
     }
   }

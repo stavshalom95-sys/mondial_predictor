@@ -1312,5 +1312,28 @@
     "market_p_home": 0.5683,
     "market_p_draw": 0.2753,
     "market_p_away": 0.1564
+  },
+  {
+    "date": "2026-07-14",
+    "home_team": "France",
+    "away_team": "Spain",
+    "stage": "חצי גמר",
+    "predicted_home": 1,
+    "predicted_away": 0,
+    "actual_home": 0,
+    "actual_away": 2,
+    "exact_match": false,
+    "correct_result": false,
+    "points_earned": 0,
+    "points_possible": 10,
+    "bet_won": null,
+    "pnl_nis": null,
+    "predicted_by": "poisson_only",
+    "sim_p_home": 0.4212,
+    "sim_p_draw": 0.2693,
+    "sim_p_away": 0.3095,
+    "market_p_home": 0.3934,
+    "market_p_draw": 0.2837,
+    "market_p_away": 0.3229
   }
 ]

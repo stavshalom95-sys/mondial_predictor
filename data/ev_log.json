@@ -2560,5 +2560,47 @@
     "kelly_fraction": 0.0,
     "half_kelly": 0.0,
     "is_value": false
+  },
+  {
+    "date": "2026-07-15",
+    "home_team": "England",
+    "away_team": "Argentina",
+    "outcome": "Home Win",
+    "our_prob": 0.2256,
+    "decimal_odds": 2.79,
+    "implied_prob": 0.3584,
+    "edge_pct": -37.06,
+    "ev_per_unit": -0.3706,
+    "kelly_fraction": 0.0,
+    "half_kelly": 0.0,
+    "is_value": false
+  },
+  {
+    "date": "2026-07-15",
+    "home_team": "England",
+    "away_team": "Argentina",
+    "outcome": "Draw",
+    "our_prob": 0.2488,
+    "decimal_odds": 2.89,
+    "implied_prob": 0.346,
+    "edge_pct": -28.09,
+    "ev_per_unit": -0.2809,
+    "kelly_fraction": 0.0,
+    "half_kelly": 0.0,
+    "is_value": false
+  },
+  {
+    "date": "2026-07-15",
+    "home_team": "England",
+    "away_team": "Argentina",
+    "outcome": "Away Win",
+    "our_prob": 0.5256,
+    "decimal_odds": 3.1,
+    "implied_prob": 0.3226,
+    "edge_pct": 62.93,
+    "ev_per_unit": 0.6293,
+    "kelly_fraction": 0.25,
+    "half_kelly": 0.125,
+    "is_value": true
   }
 ]

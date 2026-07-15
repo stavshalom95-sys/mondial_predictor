@@ -1,5 +1,5 @@
 {
-  "_note": "Reset by master_reset.py on 2026-07-15T07:28:49Z. Fill in decimal odds before the daily pipeline runs.",
+  "_note": "Reset by master_reset.py on 2026-07-15T07:54:14Z. Fill in decimal odds before the daily pipeline runs.",
   "England vs Argentina": {
     "winner": {
       "home": 0.0,

@@ -1,3 +1,37 @@
 {
-  "_note": "Reset by sync_winner_odds.py on 2026-07-17T07:59:03Z. Filled odds are preserved; blanks need to be filled before the pipeline runs. corner_kicks field excluded."
+  "_note": "Reset by master_reset.py on 2026-07-18T06:57:45Z. Fill in decimal odds before the daily pipeline runs.",
+  "France vs England": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  },
+  "Spain vs Argentina": {
+    "winner": {
+      "home": 0.0,
+      "draw": 0.0,
+      "away": 0.0
+    },
+    "sum_goals": {
+      "0-1": 0.0,
+      "2-3": 0.0,
+      "+4": 0.0
+    },
+    "corners_range": {
+      "0-8": 0.0,
+      "9-11": 0.0,
+      "12+": 0.0
+    }
+  }
 }

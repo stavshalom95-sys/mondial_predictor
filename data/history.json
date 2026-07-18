@@ -1335,5 +1335,28 @@
     "market_p_home": 0.3934,
     "market_p_draw": 0.2837,
     "market_p_away": 0.3229
+  },
+  {
+    "date": "2026-07-15",
+    "home_team": "England",
+    "away_team": "Argentina",
+    "stage": "חצי גמר",
+    "predicted_home": 1,
+    "predicted_away": 2,
+    "actual_home": 1,
+    "actual_away": 2,
+    "exact_match": true,
+    "correct_result": true,
+    "points_earned": 10,
+    "points_possible": 10,
+    "bet_won": true,
+    "pnl_nis": 52.5,
+    "predicted_by": "poisson_only",
+    "sim_p_home": 0.2391,
+    "sim_p_draw": 0.2206,
+    "sim_p_away": 0.5403,
+    "market_p_home": 0.349,
+    "market_p_draw": 0.3369,
+    "market_p_away": 0.3141
   }
 ]

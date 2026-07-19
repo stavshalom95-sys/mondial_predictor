@@ -2245,7 +2245,7 @@
   },
   {
     "id": "537389",
-    "status": "scheduled",
+    "status": "final",
     "stage": "third_place",
     "start_time": "2026-07-18T21:00:00Z",
     "home": "FRA",
@@ -2261,8 +2261,8 @@
       }
     },
     "score": {
-      "FRA": null,
-      "ENG": null
+      "FRA": 4,
+      "ENG": 6
     }
   },
   {
